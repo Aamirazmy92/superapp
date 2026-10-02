@@ -1,0 +1,74 @@
+{
+  "name": "superapp",
+  "productName": "Superapp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "overrides": {
+    "dompurify": "^3.4.15"
+  },
+  "description": "A local desktop coding workspace",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build",
+    "start": "electron .",
+    "test": "node --experimental-strip-types --test tests/*.test.cjs",
+    "package": "node scripts/assert-electron-version.mjs && npm run build && electron-builder --win dir --config.npmRebuild=false --config.electronDist=node_modules/electron/dist"
+  },
+  "build": {
+    "appId": "local.superapp.workspace",
+    "productName": "Superapp",
+    "electronVersion": "44.4.5",
+    "electronFuses": {
+      "runAsNode": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**/*"
+    ],
+    "win": {
+      "target": "dir"
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.282",
+    "@fontsource-variable/figtree": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "lucide-react": "^1.41.0",
+    "monaco-editor": "^0.56.0",
+    "motion": "^13.4.1",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@playwright/cli": "^0.1.19",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "44.4.5",
+    "electron-builder": "^26.15.3",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  }
+}

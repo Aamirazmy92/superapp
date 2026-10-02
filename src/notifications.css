@@ -1,0 +1,258 @@
+/* Notification menu. Scoped under .notification-popover so it wins over the
+   older rules in styles.css and design.css. Secondary text uses <small> so
+   typography.css sizes it as secondary text. The popover is compact, so it
+   sets its own type scale. */
+.anchored-popover.notification-popover {
+  --type-body: 13px;
+  --type-small: 11.5px;
+  width: min(340px, calc(100vw - 16px));
+}
+
+.notification-popover .notification-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 8px 10px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.notification-popover .notification-popover-header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-popover .notification-popover-header strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.notification-popover .notification-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 16%, transparent);
+  font-size: var(--type-micro, 11px);
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.notification-popover .notification-mark-read,
+.notification-popover .notification-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  background: transparent;
+  font-size: var(--type-small, 12px);
+}
+
+.notification-popover .notification-mark-read:hover:not(:disabled),
+.notification-popover .notification-mark-read:focus-visible,
+.notification-popover .notification-clear:hover,
+.notification-popover .notification-clear:focus-visible {
+  color: var(--text);
+  background: var(--pressed);
+}
+
+.notification-popover .notification-clear:hover {
+  color: var(--danger);
+}
+
+.notification-popover .notification-mark-read:disabled {
+  color: var(--faint);
+  opacity: 0.6;
+}
+
+.notification-popover .notification-list {
+  padding: 4px 6px 6px;
+}
+
+.notification-popover .notification-group-label {
+  display: block;
+  padding: 10px 8px 4px;
+  color: var(--faint);
+  font-size: var(--type-micro, 11px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notification-popover .notification-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  text-align: left;
+  background: transparent;
+}
+
+.notification-popover .notification-item:hover,
+.notification-popover .notification-item:focus-visible {
+  background: var(--pressed);
+}
+
+/* Unread: a small dot in the left gutter instead of a full-height bar. */
+.notification-popover .notification-item.unread::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--focus);
+}
+
+.notification-popover .notification-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+}
+
+.notification-popover .notification-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.notification-popover .notification-icon.success {
+  color: var(--running);
+  background: color-mix(in srgb, var(--running) 14%, transparent);
+}
+
+.notification-popover .notification-icon.failure {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.notification-popover .notification-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-popover .notification-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notification-popover .notification-line strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-fast, 120ms) var(--ease, ease);
+}
+
+.notification-popover .notification-item.read .notification-line strong {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.notification-popover .notification-line time {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.notification-popover .notification-detail {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-popover .notification-unread-dot {
+  display: none;
+}
+
+.notification-popover .notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 20px 28px;
+  text-align: center;
+}
+
+.notification-popover .notification-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--pressed);
+}
+
+.notification-popover .notification-empty strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.notification-popover .notification-empty small {
+  max-width: 230px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.notification-popover .notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 14px;
+  border-top: 1px solid var(--hairline);
+  background: transparent;
+  text-align: left;
+}
+
+.notification-popover .notification-footer small {
+  color: var(--faint);
+}
+
+/* Trigger badge: a small pill tucked onto the bell's top-right corner. */
+:root:root:root:root .notification-wrap .notification-trigger .notification-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 2px solid var(--chrome, var(--bg));
+  border-radius: 999px;
+  color: var(--on-primary, #fff);
+  background: var(--primary, var(--focus));
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--primary, var(--focus)) 60%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  pointer-events: none;
+}

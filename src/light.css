@@ -1,0 +1,238 @@
+/* Light palette and the few surfaces that still use fixed dark colors. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --chrome: #f0f2f5;
+  --stage: #ffffff;
+  --well: #f7f8fa;
+  --raised: #e8ecf1;
+  --overlay: #ffffff;
+  --hover: rgba(37, 68, 108, 0.07);
+  --pressed: rgba(37, 68, 108, 0.12);
+  --hairline: rgba(31, 30, 29, 0.10);
+  --hairline-strong: rgba(31, 30, 29, 0.17);
+  --edge: rgba(37, 88, 165, 0.35);
+  --text: #202936;
+  --text-soft: #3b485a;
+  --muted: #4f6074;
+  --faint: #58677a;
+  --primary: #2558a5;
+  --primary-hover: #194b96;
+  --on-primary: #ffffff;
+  --focus: #2558a5;
+  --running: #18754f;
+  --warning: #926315;
+  --done: #1f63c7;
+  --danger: #bc3e45;
+  --accent: #2558a5;
+  --accent-strong: #194b96;
+  --accent-soft: rgba(37, 88, 165, 0.12);
+  --accent-faint: rgba(37, 88, 165, 0.06);
+  --surface-hover: #e6ebf2;
+  --surface-active: #dce5f0;
+  --shadow-float: 0 0 0 1px rgba(31, 30, 29, 0.10), 0 12px 32px rgba(31, 30, 29, 0.16);
+  --shadow-dialog: 0 0 0 1px rgba(31, 30, 29, 0.12), 0 32px 90px rgba(31, 30, 29, 0.22);
+}
+
+:root[data-theme='light'] ::selection {
+  color: var(--text);
+  background: #f1d6c9;
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(31, 30, 29, 0.24) padding-box;
+}
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 30, 29, 0.38) padding-box;
+}
+
+:root[data-theme='light'] .chat-layout {
+  --chat-bubble: #f0eee6;
+  --chat-panel: #ffffff;
+  --chat-code-bg: var(--well);
+}
+
+:root[data-theme='light'] .mode-switch,
+:root[data-theme='light'] .preferences-search,
+:root[data-theme='light'] .chat-layout .message-content :not(pre) > code,
+:root[data-theme='light'] .chat-layout .message-content th,
+:root[data-theme='light'] .chat-layout .chat-code-header {
+  background: var(--hover);
+}
+:root[data-theme='light'] .mode-switch-pill {
+  background: var(--stage);
+  box-shadow: 0 1px 3px rgba(31, 30, 29, 0.14);
+}
+:root[data-theme='light'] .primary-button:hover:not(:disabled) {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+:root[data-theme='light'] .primary-button:disabled {
+  color: var(--faint) !important;
+  background: var(--raised);
+}
+:root[data-theme='light'] .chat-send:disabled {
+  color: var(--faint) !important;
+  background: transparent;
+}
+:root[data-theme='light'] .chat-send:disabled svg {
+  color: var(--faint);
+}
+:root[data-theme='light'] .chat-composer,
+:root[data-theme='light'] .chat-composer:focus-within {
+  background: #ffffff;
+  box-shadow: none;
+}
+:root[data-theme='light'] .chat-message.user {
+  background: var(--chat-bubble);
+}
+:root[data-theme='light'] .chat-layout .chat-message.user {
+  background: transparent;
+}
+:root[data-theme='light'] .chat-layout .message-content a {
+  color: var(--primary);
+  text-decoration-color: var(--edge);
+}
+:root[data-theme='light'] .chat-layout .message-content :not(pre) > code,
+:root[data-theme='light'] .chat-layout .chat-code pre {
+  color: var(--text);
+}
+:root[data-theme='light'] .chat-select-menu {
+  background: var(--overlay);
+  box-shadow: var(--shadow-float);
+}
+:root[data-theme='light'] .modal-backdrop,
+:root[data-theme='light'] .agent-backdrop {
+  background: rgba(31, 30, 29, 0.25);
+}
+:root[data-theme='light'] .preferences-sidebar {
+  background: transparent;
+}
+:root[data-theme='light'] .preferences-footer .preferences-error {
+  color: var(--danger);
+}
+:root[data-theme='light'] .preferences-switch {
+  background: #d9d6ca;
+}
+:root[data-theme='light'] .preferences-switch:before {
+  background: #ffffff;
+}
+:root[data-theme='light'] .preview-comment { color: #73726c; }
+:root[data-theme='light'] .preview-keyword { color: #7345a9; }
+:root[data-theme='light'] .preview-string,
+:root[data-theme='light'] .preferences-info { color: #176b4b; }
+:root[data-theme='light'] .tool-error { color: var(--danger); }
+:root[data-theme='light'] .chat-layout .chat-error,
+:root[data-theme='light'] .chat-layout .chat-notice.error,
+:root[data-theme='light'] .chat-settings-status.error { color: var(--danger); }
+
+/* Static agent marks are drawn for dark surfaces. Keep their shapes legible
+   anywhere they appear on the light workspace, including the chat welcome. */
+:root[data-theme='light'] .agent-logo-codex img,
+:root[data-theme='light'] .agent-logo-cursor img,
+:root[data-theme='light'] .agent-logo-copilot img,
+:root[data-theme='light'] .agent-logo-droid img,
+:root[data-theme='light'] .agent-logo-opencode img {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(16%) saturate(893%) hue-rotate(174deg);
+}
+
+:root[data-theme='light'] .agent-logo img.agent-logo-kimi-dark {
+  display: none;
+}
+
+:root[data-theme='light'] .agent-logo img.agent-logo-kimi-light {
+  display: block;
+}
+
+/* Header and workspace chrome */
+:root[data-theme='light'] .mode-switch {
+  background: var(--accent-faint);
+}
+:root[data-theme='light'] .mode-switch-pill {
+  background: var(--stage);
+  box-shadow: 0 1px 3px rgba(31, 30, 29, 0.14);
+}
+:root[data-theme='light'] .terminal-beacon {
+  --beacon-color: #f04a00;
+}
+:root[data-theme='light'] .terminal-beacon-dot {
+  stroke: #ffb08f;
+}
+:root[data-theme='light'] .terminal-pane.active {
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 3px rgba(31, 30, 29, 0.26),
+    0 5px 18px rgba(31, 30, 29, 0.09);
+}
+:root[data-theme='light'] .resize-handle:active,
+:root[data-theme='light'] .resize-handle:focus-visible {
+  background: var(--accent-soft);
+}
+:root[data-theme='light'] .conflict-banner,
+:root[data-theme='light'] .chat-layout .chat-welcome-alert {
+  border-color: rgba(146, 99, 21, 0.28);
+  color: var(--warning);
+  background: rgba(146, 99, 21, 0.07);
+}
+
+/* Agent selection and workspace setup */
+:root[data-theme='light'] .agent-picker-option {
+  background: var(--stage);
+}
+:root[data-theme='light'] .agent-picker-option:hover:not(.unavailable) {
+  background: var(--hover);
+}
+:root[data-theme='light'] .agent-picker-option.selected,
+:root[data-theme='light'] .agent-picker-option.selected:hover:not(.unavailable) {
+  border-color: var(--edge);
+  color: var(--text);
+  background: var(--accent-faint);
+}
+:root[data-theme='light'] .agent-picker-option.unavailable {
+  background: var(--well);
+}
+
+/* Chat content, controls and portalled menus */
+:root[data-theme='light'] .chat-layout .chat-message.user .message-content {
+  background: var(--chat-bubble);
+}
+:root[data-theme='light'] .chat-layout .chat-attach.on {
+  border-color: var(--edge);
+  background: var(--accent-faint);
+}
+:root[data-theme='light'] .chat-layout .chat-attach.on em {
+  color: var(--primary);
+}
+:root[data-theme='light'] .chat-layout .chat-send:disabled,
+:root[data-theme='light'] .chat-send:disabled {
+  color: var(--faint);
+  background: transparent;
+  opacity: 1;
+}
+:root[data-theme='light'] .chat-layout .chat-send:disabled svg {
+  color: var(--faint);
+}
+:root[data-theme='light'] .chat-select-menu {
+  background: var(--overlay);
+  box-shadow: var(--shadow-float);
+}
+:root[data-theme='light'] .chat-select-option.highlight {
+  background: var(--hover);
+}
+:root[data-theme='light'] .chat-settings-status {
+  border-color: rgba(24, 117, 79, 0.25);
+  color: var(--running);
+  background: rgba(24, 117, 79, 0.07);
+}
+:root[data-theme='light'] .chat-settings-status.error,
+:root[data-theme='light'] .chat-layout .chat-error,
+:root[data-theme='light'] .chat-layout .chat-notice.error,
+:root[data-theme='light'] .tool-error {
+  border-color: rgba(188, 62, 69, 0.26);
+  color: var(--danger);
+  background: rgba(188, 62, 69, 0.06);
+}
+:root[data-theme='light'] .chat-layout .message-content :not(pre) > code,
+:root[data-theme='light'] .chat-layout .chat-code pre {
+  color: var(--text);
+}
+

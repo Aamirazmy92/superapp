@@ -1,0 +1,728 @@
+/* Claude look ------------------------------------------------------------------
+   Loads last. Re-points the design tokens of the default dark theme ("graphite")
+   and the light theme at the Claude desktop app's palette, sampled from the app
+   itself: near-neutral blacks (#111 sidebar, #151515 main, #212121 cards,
+   #383838 tiles), soft off-white text, off-white primary actions, blue for links
+   and "on" states, and Claude's clay orange reserved for brand marks.
+   Headings are sans; only assistant prose in chat uses the serif chat font.
+   Midnight and Plum keep their own palettes but share the shapes defined here. */
+
+:root {
+  --font-sans: 'Figtree Variable', Figtree, 'Segoe UI Variable Text', system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+
+  --clay: #d97757;
+  --clay-strong: #c6613f;
+  --link: #6da7ec;
+  --switch-on: #2c84db;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+:root,
+:root[data-theme='graphite'] {
+  --chrome: #111111;
+  --stage: #151515;
+  --well: #111111;
+  --raised: #212121;
+  --overlay: #1a1a19;
+  --tile: #2d2d2d;
+  --selected: #383838;
+  --hover: rgba(255, 255, 255, 0.06);
+  --pressed: #343434;
+  --hairline: #262625;
+  --hairline-strong: #343434;
+  --edge: #4d4d4c;
+  --divider: #292929;
+
+  --text: #f0efec;
+  --text-soft: #c3c2b7;
+  --muted: #898781;
+  --faint: #85837d;
+
+  --primary: #f0efec;
+  --primary-hover: #ffffff;
+  --on-primary: #151515;
+  --focus: #6da7ec;
+  --running: #5fb97c;
+  --warning: #d9a84e;
+  --done: #6da7ec;
+  --danger: #e5695b;
+
+  --accent: #f0efec;
+  --accent-strong: #ffffff;
+  --accent-soft: rgba(109, 167, 236, 0.22);
+  --accent-faint: rgba(255, 255, 255, 0.04);
+  --surface-hover: #2a2a29;
+  --surface-active: #313130;
+  --caret: var(--clay);
+
+  --shadow-float: 0 0 0 1px #2d2d2d, 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-dialog: 0 0 0 1px #262625, 0 24px 70px rgba(0, 0, 0, 0.6);
+
+  --preview-comment: #85837d;
+  --preview-keyword: #c792ea;
+  --preview-string: #a5d6a7;
+}
+
+:root[data-theme='light'] {
+  --chrome: #f4f4f1;
+  --stage: #faf9f7;
+  --well: #f4f4f1;
+  --raised: #ffffff;
+  --overlay: #ffffff;
+  --tile: #ededea;
+  --selected: #e4e3df;
+  --hover: rgba(0, 0, 0, 0.045);
+  --pressed: #e4e3df;
+  --hairline: #e7e6e2;
+  --hairline-strong: #dcdbd6;
+  --edge: #c3c2bc;
+  --divider: #e2e1dd;
+
+  --text: #141413;
+  --text-soft: #3d3d3a;
+  --muted: #6f6e69;
+  --faint: #7a7973;
+
+  --primary: #141413;
+  --primary-hover: #2e2e2c;
+  --on-primary: #ffffff;
+  --focus: #2c84db;
+  --running: #2f7d45;
+  --warning: #8a5d0f;
+  --done: #2c6ab0;
+  --danger: #b53b2c;
+
+  --accent: #141413;
+  --accent-strong: #000000;
+  --accent-soft: rgba(44, 132, 219, 0.18);
+  --accent-faint: rgba(0, 0, 0, 0.03);
+  --surface-hover: #efeeea;
+  --surface-active: #e8e7e3;
+  --caret: var(--clay-strong);
+  --link: #2c6ab0;
+
+  --shadow-float: 0 0 0 1px #e2e1dd, 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-dialog: 0 0 0 1px #dcdbd6, 0 24px 70px rgba(0, 0, 0, 0.16);
+
+  --preview-comment: #7a7973;
+  --preview-keyword: #7d3fb0;
+  --preview-string: #2f7d45;
+}
+
+:root {
+  font-family: var(--font-sans);
+}
+
+:root:not([data-theme='midnight']):not([data-theme='plum']) ::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Scrollbars ------------------------------------------------------------------ */
+:root:not([data-theme='midnight']):not([data-theme='plum']) ::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 999px;
+}
+:root:not([data-theme='midnight']):not([data-theme='plum']) ::-webkit-scrollbar-thumb:hover {
+  background: var(--edge);
+}
+
+/* Surfaces ---------------------------------------------------------------------
+   Claude separates panes with a flat 1px line rather than shadows. */
+:root:not([data-theme='midnight']):not([data-theme='plum']) :is(.workspace, .chat-main) {
+  border-color: var(--divider);
+  box-shadow: none;
+}
+
+/* Headings ---------------------------------------------------------------------
+   Sans, medium weight, led by Claude's clay spark. */
+:root .welcome h1,
+:root:root .chat-layout .chat-welcome h1 {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* Chat prose uses the serif chat font, as in Claude. */
+:root:root .chat-layout .chat-message.assistant .message-content {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 15.5px;
+  line-height: 1.65;
+}
+
+:root:root .chat-layout .chat-message.assistant .message-content :is(pre, code, kbd) {
+  font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+  font-size: 13px;
+}
+
+:root:root .chat-layout .chat-message.assistant .message-content table {
+  font-family: var(--font-sans);
+}
+
+:root:root .chat-layout .message-content a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+:root:root .chat-layout .message-content a:hover {
+  text-decoration: underline;
+}
+
+/* Brand mark ---------------------------------------------------------------- */
+.brand-symbol {
+  color: #ffffff;
+  background: var(--clay) !important;
+}
+
+/* Title bar ------------------------------------------------------------------- */
+
+/* Segmented controls copy Claude's "System | Reduced": a #262625 track with the
+   chosen option on a lifted #3c3c3b tile whose top edge catches the light. */
+.mode-switch,
+:root[data-theme='light'] .mode-switch {
+  padding: 2px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: #262625;
+}
+
+:root[data-theme='light'] .mode-switch {
+  background: var(--tile);
+}
+
+.mode-switch button {
+  border-radius: 8px;
+}
+
+.mode-switch-pill,
+:root[data-theme='light'] .mode-switch-pill {
+  border-radius: 8px !important;
+  background: #3c3c3b;
+  box-shadow: inset 0 1px 0 #50504f;
+}
+
+:root[data-theme='light'] .mode-switch-pill {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.mode-switch button.active,
+.mode-switch button.active:hover {
+  background: #3c3c3b;
+  box-shadow: inset 0 1px 0 #50504f;
+}
+
+:root[data-theme='light'] .mode-switch button.active {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Sidebar rows ---------------------------------------------------------------- */
+.project-row,
+.project-row-wrap,
+:root:root .chat-layout .chat-thread-open,
+:root:root .chat-layout .chat-new-button {
+  border-radius: var(--radius);
+}
+
+/* Buttons --------------------------------------------------------------------- */
+.primary-button {
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.primary-button:hover:not(:disabled) {
+  color: var(--on-primary);
+  background: var(--primary-hover);
+}
+
+.primary-button svg {
+  color: var(--on-primary);
+}
+
+.secondary-button {
+  color: var(--text);
+  background: var(--tile);
+  border: 0;
+}
+
+.secondary-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--selected);
+}
+
+:root:root :is(.primary-button, .secondary-button, .danger-button) {
+  border-radius: var(--radius);
+}
+
+/* Chat ------------------------------------------------------------------------ */
+:root .chat-layout {
+  --chat-bubble: var(--tile);
+  --chat-panel: #20201f;
+  --chat-code-bg: var(--well);
+}
+
+:root[data-theme='light'] .chat-layout {
+  --chat-bubble: var(--tile);
+  --chat-panel: #ffffff;
+}
+
+/* Claude's composer: a flat #20201f box with a 1px #4d4d4c outline. */
+:root:root .chat-layout .chat-composer,
+:root:root .chat-layout .chat-composer:focus-within {
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: var(--chat-panel);
+  box-shadow: none;
+}
+
+:root:root .chat-layout .chat-composer:focus-within {
+  border-color: #6b6b69;
+}
+
+:root[data-theme='light'] .chat-layout .chat-composer:focus-within {
+  border-color: #a8a7a1;
+}
+
+:root:root .chat-layout .chat-message.user .message-content {
+  border-radius: 12px;
+}
+
+/* Send is a quiet return glyph inside the box; only Stop gets a fill. */
+:root:root .chat-layout .chat-send {
+  border-radius: var(--radius);
+  color: var(--text);
+  background: transparent;
+}
+
+:root:root .chat-layout .chat-send svg {
+  color: currentColor;
+}
+
+:root:root .chat-layout .chat-send:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+:root:root .chat-layout .chat-send.stop {
+  color: #ffffff;
+  background: var(--clay-strong);
+}
+
+:root:root .chat-layout .chat-send.stop:hover {
+  background: var(--clay);
+}
+
+:root:root .chat-layout .chat-send:disabled,
+:root:root[data-theme='light'] .chat-layout .chat-send:disabled {
+  color: var(--faint);
+  background: transparent;
+  opacity: 1;
+}
+
+:root:root .chat-layout .chat-send:disabled svg,
+:root:root[data-theme='light'] .chat-layout .chat-send:disabled svg {
+  color: var(--faint);
+}
+
+:root:root .chat-layout .chat-starter {
+  border-radius: var(--radius-lg);
+  border-color: var(--hairline);
+  background: var(--raised);
+}
+
+:root:root .chat-layout .chat-starter:hover {
+  background: var(--surface-hover);
+}
+
+/* Settings dialog --------------------------------------------------------------
+   Matches Claude's settings: a #151515 nav column beside a #1a1a19 content
+   pane, a #383838 selected row, and plain divided setting rows. */
+.preferences {
+  background: var(--overlay);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+}
+
+.preferences-header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--stage);
+}
+
+.preferences-header h2 {
+  font-size: 17px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+.preferences-header p {
+  display: none;
+}
+
+.preferences-sidebar,
+:root[data-theme='light'] .preferences-sidebar {
+  width: 236px;
+  padding: 14px 14px 18px;
+  border-right: 1px solid var(--divider);
+  background: var(--stage);
+}
+
+.preferences-search {
+  padding: 8px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: #212121;
+}
+
+:root[data-theme='light'] .preferences-search {
+  background: var(--raised);
+}
+
+.preferences-search input {
+  font-size: 13.5px;
+}
+
+.preferences-sidebar nav {
+  gap: 2px;
+  margin-top: 16px;
+}
+
+.preferences-sidebar nav button {
+  gap: 12px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 460;
+  color: var(--text-soft);
+}
+
+.preferences-sidebar nav button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.preferences-sidebar nav button[aria-current] {
+  font-weight: 560;
+  color: var(--text);
+  background: var(--selected);
+}
+
+.preferences-content {
+  padding: 20px 34px 28px 30px;
+}
+
+.preferences-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.preferences .preferences-row {
+  padding: 16px 0;
+  border-color: var(--hairline);
+}
+
+.preferences-row strong,
+.preferences-theme-setting > strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.preferences-row small,
+.preferences-theme-setting > small {
+  font-size: 13px;
+}
+
+.preferences-row select {
+  padding: 7px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: #262625;
+}
+
+:root[data-theme='light'] .preferences-row select {
+  background: var(--raised);
+}
+
+.preferences-footer {
+  border-top: 1px solid var(--hairline);
+  padding: 12px 22px 14px;
+}
+
+.preferences-footer button {
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--tile);
+}
+
+.preferences-footer button:hover {
+  background: var(--selected);
+}
+
+.preferences-theme {
+  border-radius: var(--radius-lg);
+  border-color: var(--hairline-strong);
+}
+
+.preferences-theme[aria-pressed='true'] {
+  border-color: var(--text-soft);
+  box-shadow: none;
+}
+
+.preferences-theme > svg {
+  color: var(--text);
+}
+
+/* Toggles: #313130 track with a white knob; blue when on. */
+.preferences-switch,
+:root[data-theme='light'] .preferences-switch {
+  width: 36px;
+  height: 20px;
+  border: 0;
+  background: #313130;
+}
+
+:root[data-theme='light'] .preferences-switch {
+  background: #d6d5d0;
+}
+
+.preferences-switch:before,
+:root[data-theme='light'] .preferences-switch:before {
+  left: 3px;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:root:root .preferences-switch:checked {
+  border: 0;
+  background: var(--switch-on);
+}
+
+:root:root .preferences-switch:checked:before {
+  left: 19px;
+  background: #ffffff;
+}
+
+/* Dialogs & popovers ------------------------------------------------------------ */
+/* modals.css owns the dialog surface; point its tokens at Claude's values. */
+:root,
+:root[data-theme='graphite'] {
+  --dialog-surface: var(--overlay);
+  --dialog-border: #262625;
+  /* Measured from Claude: the backdrop drops everything to 48% brightness
+     (#151515 -> #0a0a0a) and a 3px blur matches how far its text smears. */
+  --dialog-scrim: rgba(0, 0, 0, 0.52);
+  --dialog-blur: 3px;
+}
+
+:root[data-theme='light'] {
+  --dialog-surface: var(--overlay);
+  --dialog-border: #dcdbd6;
+  --dialog-scrim: rgba(0, 0, 0, 0.3);
+}
+
+/* Like Claude, the dimmed blur covers the whole window, title bar included.
+   The older layer stopped it 49px from the top and 25px from the bottom (a
+   status bar that no longer exists), which left sharp strips at both edges. */
+.modal-backdrop {
+  inset: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* The palette and Quick Open sit at the same height as before. */
+.modal-backdrop:has(> .command-modal) {
+  padding-top: calc(12vh + 46px);
+}
+
+/* Window controls stay sharp and usable above the blur, as in Claude. The
+   title bar is normally its own stacking layer (z-index 50, for its popovers),
+   which would trap the controls under the backdrop; while a dialog is open it
+   joins the page layer so only the controls rise above the blur. */
+body:has(.modal-backdrop) .titlebar {
+  z-index: auto;
+}
+
+.window-controls {
+  position: relative;
+  z-index: 51;
+}
+
+/* Settings → Commands: divided rows like the other settings, runnable on click. */
+.preferences-commands {
+  display: grid;
+}
+
+.preferences-command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0 -10px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  color: var(--text-soft);
+  font-size: 14px;
+  text-align: left;
+}
+
+.preferences-command + .preferences-command {
+  box-shadow: 0 -1px 0 var(--hairline);
+}
+
+.preferences-command > svg:first-child {
+  color: var(--muted);
+}
+
+.preferences-command > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.preferences-command kbd {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: var(--tile, var(--raised));
+  font-size: 11.5px;
+}
+
+.preferences-command-run {
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.preferences-command:hover:not(:disabled),
+.preferences-command:focus-visible {
+  color: var(--text);
+  background: var(--hover);
+  box-shadow: none;
+}
+
+.preferences-command:hover + .preferences-command,
+.preferences-command:focus-visible + .preferences-command {
+  box-shadow: none;
+}
+
+.preferences-command:hover .preferences-command-run,
+.preferences-command:focus-visible .preferences-command-run {
+  opacity: 1;
+}
+
+/* Compact menus, everywhere ------------------------------------------------------
+   Claude's menus are dense: ~25px text-only rows, 4px of padding, 6px corners,
+   shortcuts and chevrons pinned right, thin separators between groups. Generic
+   icons are dropped; agent and provider logos stay because they identify the
+   choice. :root:root outranks chat.css, which loads after this file. */
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu, .chat-select-menu) {
+  min-width: 172px;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button,
+:root:root .chat-select-menu .chat-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 25px;
+  padding: 0 8px 0 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 450;
+  line-height: 1.2;
+  text-align: left;
+}
+
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button:not(:has(small)) {
+  height: 25px;
+}
+
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Text-only rows: hide generic leading icons, keep logos and state marks. */
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content)
+  button > svg:first-child:not(.menu-chevron):not(.menu-check):not(.views-check):not(.spinning) {
+  display: none;
+}
+
+:root:root .context-menu .menu-back > svg:first-child {
+  display: block;
+  margin-left: -4px;
+}
+
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) kbd {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  color: var(--faint);
+  background: transparent;
+  font-size: 12px;
+}
+
+:root:root :is(.views-check, .menu-check, .menu-chevron) {
+  margin-left: auto;
+  color: var(--faint);
+}
+
+/* New agent menu: a slim header and hairline-separated groups. */
+:root:root .new-pane-menu-header {
+  padding: 6px 10px 6px;
+  gap: 2px;
+}
+
+:root:root .new-pane-menu-header strong {
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--muted);
+}
+
+:root:root .new-pane-menu-header span {
+  font-size: 11.5px;
+}
+
+:root:root .new-pane-menu-section {
+  padding: 4px 0;
+  border-top: 1px solid var(--hairline-strong);
+}
+
+:root:root .new-pane-menu-section:first-of-type {
+  border-top: 0;
+}
+
+/* Chat dropdowns: same density; two-line options stay two lines, tighter. */
+:root:root .chat-select-menu .chat-select-option:has(small) {
+  min-height: 34px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+:root:root .chat-select-menu .chat-select-heading {
+  padding: 5px 10px 3px;
+  font-size: 11.5px;
+}
+
+/* Agent logos in the New agent menu keep their size (the label rule above
+   would otherwise stretch their wrapper). */
+:root:root .new-pane-menu-content button > .new-pane-agent-mark {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  overflow: visible;
+}

@@ -1,0 +1,617 @@
+/* The desktop dashboard is docked; narrower layouts keep it as an overlay. */
+.app-body { position: relative; }
+
+.dashboard-drawer.docked {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-drawer.docked > .panel-separator-dashboard {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+}
+
+.dashboard-drawer.overlay {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(var(--dashboard-width, clamp(340px, 28vw, 400px)), 410px, calc(100% - 180px));
+  max-width: 100%;
+}
+
+.dashboard-drawer > .agent-dashboard {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  background: var(--stage);
+}
+
+.dashboard-drawer.docked > .agent-dashboard {
+  width: var(--dashboard-width, clamp(340px, 28vw, 400px));
+  box-shadow: -14px 0 36px rgba(0, 0, 0, 0.16);
+}
+
+.dashboard-drawer.overlay > .agent-dashboard {
+  width: 100%;
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.48);
+}
+
+.preview-panel.workspace-browser { animation: none; }
+
+/* Top bar ------------------------------------------------------------------ */
+.agent-dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  flex: none;
+  padding: 0 10px 0 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-dashboard-topbar h2 {
+  margin: 0;
+  font-size: var(--font-lg);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.agent-dashboard-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent-dashboard-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  font-size: var(--font-xs);
+  font-weight: 560;
+}
+
+.agent-dashboard-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+
+.agent-dashboard-new:hover:not(:disabled),
+.agent-dashboard-close:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+/* Body --------------------------------------------------------------------- */
+.agent-dashboard-inner {
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 16px 28px;
+}
+
+.agent-dashboard-scope {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: var(--well);
+}
+
+.agent-dashboard-scope button {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--font-xs);
+  font-weight: 540;
+  white-space: nowrap;
+}
+
+.agent-dashboard-scope button:hover:not(:disabled) { color: var(--text); }
+
+.agent-dashboard-scope button.active {
+  color: var(--text);
+  background: var(--raised);
+  box-shadow: 0 0 0 1px var(--hairline-strong);
+}
+
+/* Status strip: the counts are the filters. */
+.agent-dashboard-summary {
+  overflow: hidden;
+  margin-bottom: 22px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  background: var(--well);
+}
+
+.agent-dashboard-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.agent-dashboard-filters button {
+  --tone: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 12px 10px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.agent-dashboard-filters button + button { box-shadow: inset 1px 0 0 var(--hairline); }
+.agent-dashboard-filters button.working { --tone: var(--running); }
+.agent-dashboard-filters button.idle { --tone: var(--warning); }
+.agent-dashboard-filters button.done { --tone: var(--done); }
+
+.agent-dashboard-filters strong {
+  color: var(--tone);
+  font-size: 26px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.agent-dashboard-filters span {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: var(--font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-dashboard-filters button.zero strong { color: var(--faint); opacity: 0.55; }
+.agent-dashboard-filters button:hover:not(:disabled) { background: var(--hover); }
+
+.agent-dashboard-filters button.active {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.agent-dashboard-meter {
+  display: flex;
+  height: 3px;
+  background: var(--hairline-strong);
+}
+
+.agent-dashboard-meter span { height: 100%; transition: width 240ms var(--ease); }
+.agent-dashboard-meter .working { background: var(--running); }
+.agent-dashboard-meter .idle { background: var(--warning); }
+.agent-dashboard-meter .done { background: var(--done); }
+
+/* Groups ------------------------------------------------------------------- */
+.agent-dashboard-sections {
+  display: grid;
+  gap: 20px;
+}
+
+.agent-dashboard-section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 2px 8px;
+}
+
+.agent-dashboard-section-heading h2 {
+  margin: 0;
+  font-size: var(--font-sm);
+  font-weight: 640;
+}
+
+.agent-dashboard-section-heading span {
+  color: var(--faint);
+  font-size: var(--font-xs);
+}
+
+.agent-dashboard-list {
+  display: grid;
+  gap: 2px;
+}
+
+.agent-dashboard-agent {
+  --tone: var(--faint);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 11px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px 8px 8px;
+  border-radius: var(--radius);
+  color: var(--text);
+  text-align: left;
+}
+
+.agent-dashboard-agent.working { --tone: var(--running); }
+.agent-dashboard-agent.idle { --tone: var(--warning); }
+.agent-dashboard-agent.done { --tone: var(--done); }
+.agent-dashboard-agent.failed { --tone: var(--danger); }
+
+.agent-dashboard-agent:hover:not(:disabled) { background: var(--hover); }
+
+.agent-dashboard-agent-logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--raised);
+}
+
+/* Status badge on the logo; the group heading already names the status. */
+.agent-dashboard-agent-logo i {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--stage);
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+.agent-dashboard-agent-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-dashboard-agent-identity strong,
+.agent-dashboard-agent-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-dashboard-agent-identity strong {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.agent-dashboard-agent-identity small {
+  color: var(--faint);
+  font-size: var(--font-xs);
+}
+
+.agent-dashboard-agent-time {
+  color: var(--faint);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.agent-dashboard-agent.working .agent-dashboard-agent-time { color: var(--text-soft); }
+.agent-dashboard-agent.failed .agent-dashboard-agent-time { color: var(--danger); }
+
+.agent-dashboard-section-empty {
+  margin: 0 2px;
+  color: var(--faint);
+  font-size: var(--font-xs);
+}
+
+/* Working agents breathe; the only ambient motion on the panel. */
+:root:not(.reduce-motion) .agent-dashboard-agent.working .agent-dashboard-agent-logo i::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: var(--tone);
+  animation: agent-dashboard-pulse 1.8s var(--ease) infinite;
+}
+
+@keyframes agent-dashboard-pulse {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 0; transform: scale(2.4); }
+}
+
+:root.reduce-motion .agent-dashboard-meter span { transition: none; }
+
+/* Plan usage ---------------------------------------------------------------- */
+.usage-panel { margin-bottom: 8px; }
+
+.agent-dashboard-tabs {
+  display: flex;
+  gap: 18px;
+  flex: none;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-dashboard-tabs {
+  position: relative;
+}
+
+.agent-dashboard-tabs button {
+  position: relative;
+  padding: 11px 0 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 560;
+  transition: color 140ms ease;
+}
+
+.agent-dashboard-tabs button:hover { color: var(--text); }
+.agent-dashboard-tabs button.active { color: var(--text); }
+.agent-dashboard-tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: var(--tab-w, 0);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  transform: translateX(var(--tab-x, 0));
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1), width 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.agent-dashboard-pane { animation: agent-dashboard-pane-in 140ms ease-out; }
+@keyframes agent-dashboard-pane-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+:root.reduce-motion .agent-dashboard-tab-indicator,
+:root.reduce-motion .agent-dashboard-tabs button { transition: none; }
+:root.reduce-motion .agent-dashboard-pane { animation: none; }
+.agent-dashboard-tabs button:focus-visible { outline: 2px solid var(--text-soft); outline-offset: 2px; }
+
+.usage-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.usage-panel-heading .usage-panel-description { margin: 0; }
+
+.usage-panel-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--faint);
+}
+
+.usage-panel-refresh:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.usage-panel-refresh:disabled { opacity: 0.5; cursor: default; }
+.usage-panel-refresh.loading { cursor: wait; }
+.usage-panel-refresh:focus-visible { outline: 2px solid var(--text-soft); outline-offset: 2px; }
+:root:not(.reduce-motion) .usage-panel-refresh.loading svg { animation: usage-spin 0.9s linear infinite; }
+
+@keyframes usage-spin { to { transform: rotate(360deg); } }
+
+.usage-panel-cards {
+  display: grid;
+  gap: 28px;
+}
+
+.usage-panel-description,
+.usage-panel-error {
+  margin: 0 2px 10px;
+  color: var(--faint);
+  font-size: var(--font-xs);
+  line-height: 1.5;
+}
+.usage-panel-error { color: var(--warning); }
+
+.usage-card {
+  display: grid;
+  gap: 16px;
+}
+
+.usage-card header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.usage-card header strong {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.usage-card-plan {
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--raised);
+  font-size: 10.5px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+.usage-card-status {
+  overflow: hidden;
+  margin-left: auto;
+  color: var(--faint);
+  font-size: var(--font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.usage-card-updated { color: var(--faint); font-size: var(--font-xs); }
+.usage-card.status-stale .usage-card-status,
+.usage-card.status-expired .usage-card-status,
+.usage-card.status-error .usage-card-status { color: var(--warning); }
+
+.usage-meter {
+  --tone: var(--running);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label value'
+    'track track'
+    'reset reset';
+  align-items: baseline;
+  row-gap: 7px;
+}
+
+.usage-meter.high .usage-meter-value,
+.usage-meter.critical .usage-meter-value { color: var(--tone); }
+
+.usage-meter-label {
+  grid-area: label;
+  color: var(--muted);
+  font-size: var(--font-xs);
+}
+
+.usage-meter-track {
+  position: relative;
+  grid-area: track;
+  align-self: center;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hairline-strong);
+}
+
+.usage-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tone);
+  transition: width 240ms var(--ease);
+}
+
+.usage-meter-value {
+  grid-area: value;
+  color: var(--text);
+  font-size: var(--font-lg);
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.usage-meter.critical .usage-meter-value { color: var(--danger); }
+
+.usage-meter-reset {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  grid-area: reset;
+  color: var(--faint);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-meter-warning {
+  color: var(--warning);
+  font-style: normal;
+  font-weight: 560;
+}
+
+.usage-meter.critical .usage-meter-warning { color: var(--danger); }
+.usage-card.status-stale .usage-meter-fill { opacity: 0.6; }
+.usage-meter.pending .usage-meter-value { color: var(--faint); }
+
+.usage-card-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: 1.45;
+}
+
+.usage-card.status-error .usage-card-message,
+.usage-card.status-expired .usage-card-message { color: var(--warning); }
+
+:root.reduce-motion .usage-meter-fill { transition: none; }
+
+/* Empty state -------------------------------------------------------------- */
+.agent-dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 20px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.agent-dashboard-empty-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--raised);
+}
+
+.agent-dashboard-empty h2 {
+  margin: 0 0 4px;
+  font-size: var(--font-lg);
+  font-weight: 600;
+}
+
+.agent-dashboard-empty p {
+  max-width: 240px;
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.agent-dashboard-empty button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-size: var(--font-sm);
+  font-weight: 560;
+}
+
+.agent-dashboard-note {
+  margin: 28px 2px 0;
+  color: var(--faint);
+  font-size: var(--font-xs);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .dashboard-drawer.overlay {
+    width: min(var(--dashboard-width, clamp(340px, 28vw, 400px)), 390px, calc(100% - 156px));
+  }
+  .agent-dashboard-inner { padding: 14px 12px 24px; }
+  .agent-dashboard-filters button { padding: 10px 9px 9px; }
+  .agent-dashboard-filters strong { font-size: 22px; }
+}

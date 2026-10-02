@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+output/
+*.log
+.superapp-dev/
+.npm-cache/
+.playwright-cli/
+.pnpm-store/
+.dashboard-diagnostic/
+tmp/
+.tmp/
+.env
+.env.*

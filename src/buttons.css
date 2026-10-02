@@ -1,0 +1,30 @@
+/* Buttons ----------------------------------------------------------------------
+   Loads last. Every text button is sized from its own font: height 2.3em, side
+   padding 1em, corners 0.6em. A button at 13px and one at 14px therefore have
+   the same proportions, and any place that changes font-size keeps them.
+   Colours stay with each theme / context; this file only owns shape and size.
+   The doubled :root outranks the contextual size overrides scattered through
+   the older layers (.confirm-actions .danger-button, ...). */
+:root:root :is(.primary-button, .secondary-button, .danger-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 2.3em;
+  height: auto;
+  padding: 0 1em;
+  border-radius: 0.6em;
+  font-weight: 540;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+
+/* Icons follow the text size instead of a fixed pixel size. */
+:root:root :is(.primary-button, .secondary-button, .danger-button) svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}

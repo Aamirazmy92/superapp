@@ -1,0 +1,12 @@
+/* Desktop setup is a single-screen workflow; this file loads after the app theme. */
+
+.agent-picker-option {
+  height: 40px;
+  min-height: 40px;
+}
+
+.agent-picker-select {
+  min-height: 38px;
+  gap: 9px;
+  padding: 5px 10px;
+}

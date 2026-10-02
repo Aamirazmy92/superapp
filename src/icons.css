@@ -1,0 +1,35 @@
+/* Icon system: thin, compact line icons everywhere. Loaded last so it wins over
+   the per-component rules and the strokeWidth / size props on lucide icons. */
+
+svg.lucide {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Oversized request sizes collapse to the 16px standard. */
+svg.lucide:is([width='17'], [width='18'], [width='19']) {
+  width: 16px;
+  height: 16px;
+}
+
+/* 13/15px inline icons snap to 14px so mixed rows line up. */
+svg.lucide:is([width='13'], [width='15']) {
+  width: 14px;
+  height: 14px;
+}
+
+/* Tiny glyphs need a touch more weight to stay legible. */
+svg.lucide:is([width='11'], [width='12']) {
+  stroke-width: 1.75;
+}
+
+/* The filled stop square is a solid glyph, not a line icon. */
+.chat-send.stop svg.lucide {
+  stroke-width: 0;
+}
+
+/* Large empty-state / hero icons go lighter. */
+svg.lucide:is([width='24'], [width='26'], [width='28'], [width='38']) {
+  stroke-width: 1.25;
+}

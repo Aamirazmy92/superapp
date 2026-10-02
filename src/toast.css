@@ -1,0 +1,85 @@
+/* Toast --------------------------------------------------------------------------
+   Loads last. A compact single-line pill at the bottom right, like Claude's
+   "Transcript deleted": status icon, short message, dismiss only on hover. */
+.toast {
+  position: fixed;
+  z-index: 100;
+  right: 20px;
+  bottom: 28px;
+  left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: min(460px, calc(100vw - 32px));
+  min-height: 36px;
+  padding: 7px 10px 7px 14px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 480;
+  transform-origin: bottom right;
+}
+
+.motion-surface-toast {
+  border-color: var(--hairline-strong);
+  border-radius: 10px;
+  background: #000000;
+  transform-origin: bottom right;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.toast > span {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.toast .toast-icon {
+  flex: 0 0 auto;
+}
+
+.toast-success .toast-icon {
+  color: var(--running, #4caf7d);
+}
+
+.toast-error .toast-icon {
+  color: var(--danger, #e5484d);
+}
+
+.toast .toast-action {
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--text);
+  font-weight: 600;
+  background: var(--hover);
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.toast .toast-action:hover {
+  background: var(--hairline-strong);
+}
+
+.toast .toast-dismiss {
+  flex: 0 0 auto;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  border-radius: 6px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.toast:is(:hover, :focus-within) .toast-dismiss {
+  opacity: 1;
+}
+
+.toast .toast-dismiss:hover {
+  color: var(--text);
+  background: var(--hover);
+}

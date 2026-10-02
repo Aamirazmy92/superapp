@@ -1,0 +1,121 @@
+/* Type scale ------------------------------------------------------------------
+   Loads last and owns every font size in the app. Five steps, nothing else:
+
+     display 26px  greetings
+     title   16px  dialog and section titles
+     body    14px  everything you read or click
+     small   12.5px secondary text: descriptions, counts, shortcut keys, labels
+     micro   11px  tiny badges
+
+   Body is applied to every UI element first; the other steps are then assigned
+   by role. Code surfaces (Monaco, xterm, code blocks, the settings preview) keep
+   the editor/terminal font-size preferences instead. The :root chains outrank
+   the component layers, including chat.css, which loads lazily after this file. */
+:root {
+  --type-display: 26px;
+  --type-title: 16px;
+  --type-body: 14px;
+  --type-small: 12.5px;
+  --type-micro: 11px;
+}
+
+/* Body: every UI element that isn't code, a heading, or a small/micro role. */
+:root:root:root :is(.app, .modal-backdrop, .context-menu, .workspace-views-menu, .new-pane-menu, .chat-select-menu, .toast, .notification-popover, .browser-notice)
+  :not(svg, svg *, .monaco-editor, .monaco-editor *, .xterm, .xterm *, pre, pre *, code, .preferences-preview *, h1, h1 *, h2, h2 *, h3, h3 *, small, kbd) {
+  font-size: var(--type-body);
+}
+
+/* Titles. */
+:root:root:root :is(.app, .modal-backdrop, .notification-popover) :is(h2, h3),
+:root:root:root :is(.app, .modal-backdrop, .notification-popover) :is(h2, h3) * {
+  font-size: var(--type-title);
+}
+
+/* The chat header title and dashboard card titles read as body text. */
+:root:root:root .app :is(.chat-title, .chat-title *) {
+  font-size: var(--type-body);
+}
+
+/* Display: the greetings. */
+:root:root:root .app :is(h1, h1 *) {
+  font-size: var(--type-display);
+}
+
+/* Small: secondary text. */
+:root:root:root :is(.app, .modal-backdrop, .context-menu, .workspace-views-menu, .new-pane-menu, .chat-select-menu, .toast, .notification-popover)
+  :is(
+    small,
+    kbd,
+    .muted,
+    .preferences-description,
+    .preferences-local,
+    .preferences-footer,
+    .preferences-footer *,
+    .preferences-search-help,
+    .projects-heading,
+    .projects-heading *,
+    .project-section-heading,
+    .project-section-heading *,
+    .workspace-group-heading,
+    .workspace-archived-toggle,
+    .workspace-archived-toggle *,
+    .home-greeting p,
+    .home-meter p,
+    .home-meter p *,
+    .home-refresh,
+    .home-notice,
+    .home-notice *,
+    .home-field-error,
+    .new-pane-menu-header,
+    .new-pane-menu-header *,
+    .chat-select-heading,
+    .chat-provider-note,
+    .chat-provider-note *,
+    .chat-local-note,
+    .chat-thread-empty,
+    .chat-thread-group > :first-child:not(button),
+    .chat-starter span,
+    .chat-header-model,
+    .command-footer,
+    .command-footer *,
+    .terminal-link-copy small,
+    .notification-popover-header span,
+    .toast small,
+    .preferences-preview > div,
+    .preferences-preview > div *
+  ) {
+  font-size: var(--type-small);
+}
+
+/* Micro: badges. */
+:root:root:root:root :is(.app, .modal-backdrop)
+  :is(.alpha, .home-chip small, .sidebar-actions small, .notification-unread-dot) {
+  font-size: var(--type-micro);
+}
+
+/* Agent dashboard: status counts are display figures, group names read as body. */
+:root:root:root:root .app :is(.agent-dashboard-filters strong) {
+  font-size: var(--type-display);
+}
+
+:root:root:root:root .app :is(.agent-dashboard-section-heading h2, .agent-dashboard-section-heading h2 *) {
+  font-size: var(--type-body);
+}
+
+/* Workspace home: the Quick start and Agents labels read as body text. */
+:root:root:root:root .app :is(.home-card-title, .home-presets-head h2) {
+  font-size: var(--type-body);
+}
+
+:root:root:root:root .app
+  :is(
+    .agent-dashboard-scope button,
+    .agent-dashboard-filters span,
+    .agent-dashboard-section-heading span,
+    .agent-dashboard-agent-time,
+    .agent-dashboard-section-empty,
+    .agent-dashboard-note,
+    .agent-dashboard-new
+  ) {
+  font-size: var(--type-small);
+}

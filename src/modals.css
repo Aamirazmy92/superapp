@@ -1,0 +1,400 @@
+/* Dialogs ----------------------------------------------------------------------
+   Loads last. Compact, quiet dialogs over a dimmed, blurred workspace: title and
+   close on one line, description directly under it, no divider, and a slim
+   action row. The panel colour lives on .motion-surface-dialog (see motion.tsx),
+   so the dialog element itself stays transparent. */
+:root {
+  --dialog-surface: color-mix(in srgb, var(--overlay), #fff 4%);
+  --dialog-border: rgba(255, 255, 255, 0.1);
+  --dialog-scrim: rgba(0, 0, 0, 0.5);
+  --dialog-blur: 4px;
+  --dialog-radius: 14px;
+}
+
+:root[data-theme='light'] {
+  --dialog-surface: var(--overlay);
+  --dialog-border: rgba(0, 0, 0, 0.1);
+  --dialog-scrim: rgba(20, 24, 30, 0.16);
+}
+
+/* Blurred scrim. The backdrop only fades opacity, so the blur is rasterised once
+   rather than animated. */
+.modal-backdrop,
+.agent-backdrop,
+.modal-backdrop.preferences-backdrop {
+  background: var(--dialog-scrim);
+  -webkit-backdrop-filter: blur(var(--dialog-blur)) saturate(0.9);
+  backdrop-filter: blur(var(--dialog-blur)) saturate(0.9);
+}
+
+/* Dialogs sit in the middle of the window. The command palette and Quick Open
+   stay near the top, where the eye already is when typing. */
+.modal-backdrop:not(:has(> .command-modal)),
+.agent-backdrop {
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* Panel */
+.modal-backdrop .motion-surface-dialog {
+  border-color: var(--dialog-border);
+  background: var(--dialog-surface);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme='light'] .modal-backdrop .motion-surface-dialog {
+  box-shadow: 0 20px 60px rgba(31, 50, 75, 0.18);
+}
+
+.modal-backdrop > :is(.settings-modal, .tool-modal, .confirm-modal, .diff-modal) {
+  border-radius: var(--dialog-radius);
+}
+
+.modal-backdrop > :is(.settings-modal, .tool-modal) {
+  width: min(500px, calc(100vw - 32px));
+  max-height: calc(100% - 32px);
+  padding: 22px 26px 24px;
+}
+
+/* Header: title and close share a line; the description sits right below. */
+.modal-backdrop .modal-title {
+  align-items: flex-start;
+  gap: 16px;
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+}
+
+.modal-backdrop .modal-title h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 620;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.modal-backdrop .modal-title .icon-button {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  margin: -3px -6px 0 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+}
+
+.modal-backdrop .modal-title .icon-button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.modal-backdrop .modal-title .icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Body copy */
+.modal-backdrop > :is(.settings-modal, .tool-modal) > p,
+.modal-backdrop > :is(.settings-modal, .tool-modal) > .muted,
+.modal-backdrop > :is(.settings-modal, .tool-modal) form > .muted {
+  margin: 0 0 14px;
+  color: var(--text-soft);
+  font-size: 14.5px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.modal-backdrop > :is(.settings-modal, .tool-modal) > .muted:not(:first-of-type) {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.modal-backdrop .chat-delete-description {
+  text-align: left;
+}
+
+/* Fields: small label above a full-width, slightly recessed input. */
+.modal-backdrop :is(.settings-modal, .tool-modal) .field-label {
+  gap: 6px;
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) .text-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.16);
+  font-size: 13.5px;
+}
+
+:root[data-theme='light'] .modal-backdrop :is(.settings-modal, .tool-modal) .text-input {
+  background: var(--well);
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) .text-input:focus {
+  border-color: var(--edge);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus), transparent 82%);
+  outline: none;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) > .text-input {
+  margin: 4px 0 0;
+}
+
+/* Buttons: shape and size come from buttons.css; dialogs only set a larger font. */
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal)
+  :is(.primary-button, .secondary-button, .danger-button) {
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .primary-button {
+  border: 1px solid transparent;
+  color: var(--on-primary) !important;
+  background: var(--primary);
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .primary-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--primary-hover);
+  box-shadow: none;
+}
+
+/* Every other button is white too, so the only colour in a dialog is the red below. */
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button {
+  border: 1px solid transparent;
+  color: var(--on-primary) !important;
+  background: var(--primary);
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--primary-hover);
+}
+
+/* Closing or deleting: a vivid red fill. */
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .danger-button {
+  border: 1px solid transparent;
+  color: #fff !important;
+  background: #f2453d;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .danger-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: #ff5a52;
+  box-shadow: none;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .danger-button:active:not(:disabled) {
+  background: #d93a33;
+}
+
+/* The ✕ turns the same red on hover. */
+.modal-backdrop :is(.modal-title, .preferences-header) .icon-button:hover {
+  color: #ff6b63;
+  background: rgba(242, 69, 61, 0.14);
+}
+
+:root[data-theme='light'] .modal-backdrop :is(.modal-title, .preferences-header) .icon-button:hover {
+  color: #c4332c;
+  background: rgba(255, 150, 142, 0.18);
+}
+
+.modal-backdrop :is(.primary-button, .secondary-button, .danger-button):disabled {
+  opacity: 0.45;
+}
+
+/* Action rows sit at the bottom with a little breathing room. A lone primary
+   button at the end of a dialog (Done, Save) is pushed to the right. */
+.modal-backdrop :is(.settings-modal, .tool-modal) :is(.chat-approval-actions, .tool-actions) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) .tool-actions {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) > .primary-button:last-child {
+  display: flex;
+  margin: 18px 0 0 auto;
+}
+
+.modal-backdrop :is(.settings-modal, .tool-modal) > .secondary-button {
+  margin: 2px 0 4px;
+}
+
+/* Inline notices */
+.modal-backdrop :is(.settings-modal, .tool-modal) .tool-error {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.modal-backdrop .tool-modal .delete-confirm {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  color: var(--text-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.modal-backdrop .tool-modal .delete-confirm p {
+  justify-self: stretch;
+  margin: 0;
+}
+
+/* Code blocks inside dialogs */
+.modal-backdrop :is(.chat-approval-detail, .git-diff-content) {
+  margin: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme='light'] .modal-backdrop :is(.chat-approval-detail, .git-diff-content) {
+  background: var(--well);
+}
+
+/* Larger dialogs (diffs) keep their size but share the header and panel. */
+.modal-backdrop > .tool-modal:has(.git-diff-content) {
+  width: min(760px, calc(100vw - 48px));
+}
+
+.modal-backdrop > .tool-modal:has(.git-diff-content) .modal-title,
+.modal-backdrop > .diff-modal .modal-title {
+  margin-bottom: 12px;
+}
+
+/* Confirmation: the same panel as every other dialog, just a question and answers. */
+.modal-backdrop > .confirm-modal {
+  width: min(500px, calc(100vw - 32px));
+  padding: 22px 26px 24px;
+}
+
+.modal-backdrop > .confirm-modal .confirm-copy h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+}
+
+.modal-backdrop > .confirm-modal .confirm-copy p {
+  color: var(--text-soft);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.modal-backdrop > .confirm-modal .confirm-actions {
+  margin-top: 20px;
+}
+
+/* Agent launcher: a larger dialog with the same header, copy and actions. */
+.modal-backdrop > .agent-launcher {
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100% - 32px);
+  padding: 22px 26px 24px;
+  border-radius: var(--dialog-radius);
+}
+
+.modal-backdrop > .agent-launcher .agent-intro {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.modal-backdrop > .agent-launcher .agent-list-heading {
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modal-backdrop > .agent-launcher .agent-option {
+  border-color: var(--hairline-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modal-backdrop > .agent-launcher .agent-option.chosen {
+  border-color: var(--edge);
+  background: var(--pressed);
+}
+
+.modal-backdrop > .agent-launcher .agent-launch-footer {
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.modal-backdrop > .agent-launcher .agent-launch-footer small {
+  color: var(--muted);
+}
+
+/* Settings keeps its sidebar layout; the header and footer match the dialogs. */
+.modal-backdrop > .preferences {
+  border-radius: var(--dialog-radius);
+}
+
+.modal-backdrop > .preferences .preferences-header {
+  align-items: flex-start;
+  padding: 22px 26px 18px;
+  border-bottom-color: var(--hairline);
+}
+
+.modal-backdrop > .preferences .preferences-header h2 {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 620;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.modal-backdrop > .preferences .preferences-header p {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 14.5px;
+}
+
+.modal-backdrop > .preferences :is(.preferences-header, .preferences-footer) {
+  border-color: var(--hairline);
+}
+
+/* Command palette and Quick Open share the panel's corners. */
+.modal-backdrop > .command-modal {
+  border-radius: var(--dialog-radius);
+}
+
+@media (max-width: 520px) {
+  .modal-backdrop > .agent-launcher {
+    padding: 16px;
+  }
+
+  .modal-backdrop > :is(.settings-modal, .tool-modal, .confirm-modal) {
+    padding: 16px;
+  }
+}

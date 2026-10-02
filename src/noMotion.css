@@ -1,0 +1,30 @@
+/* Settings → Appearance → Reduce motion: state changes become immediate. */
+:root.reduce-motion {
+  scroll-behavior: auto !important;
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  button:hover,
+  button:active,
+  a:hover,
+  a:active,
+  input:hover,
+  input:active,
+  textarea:hover,
+  textarea:active,
+  select:hover,
+  select:active,
+  [role='button']:hover,
+  [role='button']:active,
+  [role='menuitem']:hover,
+  [role='menuitem']:active,
+  .agent-picker-option:hover,
+  .chat-composer:focus-within {
+    transform: none !important;
+  }
+}

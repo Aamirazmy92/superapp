@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, Radio, X } from 'lucide-react';
+import { ArrowRight, Radio, X } from './icons';
 import AgentLogo from './AgentLogo';
-import { AGENT_RESPONSE_SETTLE_MS, terminalStatus, type AgentStatus } from './agentTurn';
+import { terminalStatus, type AgentStatus } from './agentTurn';
 import { displayTerminalLabel, displayTerminalTitle } from './sessionTitle';
 import type { Project, TerminalInfo } from './types';
 import UsagePanel from './UsagePanel';
@@ -227,9 +227,6 @@ export default function AgentDashboard({
             ))}
           </div>
         )}
-        <p className="agent-dashboard-note">
-          An agent counts as complete after {AGENT_RESPONSE_SETTLE_MS / 1000} seconds without output. Prompting it again moves it back to active.
-        </p>
         </>)}
       </div>
     </aside>

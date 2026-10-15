@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { FileText, X } from 'lucide-react';
+import { FileText, X } from './icons';
 import type { ChatAttachment, ChatAttachmentInput } from './types';
 
 const images: Record<string, string> = {

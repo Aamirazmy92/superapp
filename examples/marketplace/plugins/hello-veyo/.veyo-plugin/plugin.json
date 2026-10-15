@@ -1,0 +1,31 @@
+{
+  "name": "hello-veyo",
+  "version": "1.0.0",
+  "description": "The Veyo example plugin: a command, an agent preset, a prompt, a skill, an MCP server and a theme.",
+  "author": { "name": "Veyo" },
+  "license": "MIT",
+  "minAppVersion": "0.1.0",
+  "contributes": {
+    "commands": [
+      {
+        "id": "hello",
+        "title": "Say hello",
+        "description": "Prints a greeting and the project folder.",
+        "run": { "program": "node", "args": ["${pluginRoot}/scripts/hello.mjs", "${projectRoot}"] }
+      },
+      {
+        "id": "git-summary",
+        "title": "Git summary",
+        "description": "Shows the branch and changed files.",
+        "run": { "program": "git", "args": ["status", "--short", "--branch"] }
+      }
+    ],
+    "agents": [
+      { "id": "claude-sonnet", "label": "Claude · Sonnet", "program": "claude", "args": ["--model", "sonnet"], "mark": "S" }
+    ],
+    "prompts": "./prompts",
+    "skills": "./skills",
+    "mcpServers": "./.mcp.json",
+    "themes": [{ "id": "dusk", "label": "Dusk", "path": "./themes/dusk.json" }]
+  }
+}

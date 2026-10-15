@@ -4,12 +4,12 @@ const os = require('node:os');
 const path = require('node:path');
 const { _electron } = require('playwright');
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-presets-'));
-  const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-project-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-presets-'));
+  const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-project-'));
   const app = await _electron.launch({
     executablePath: require('electron'),
     args: [path.resolve('.'), `--project=${projectDir}`],
-    env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+    env: { ...process.env, VEYO_DATA_DIR: dataDir },
   });
   try {
     const page = await app.firstWindow();

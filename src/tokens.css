@@ -1,0 +1,101 @@
+/* Design tokens ----------------------------------------------------------------
+   The one place sizes, type, radii, spacing and the Dark theme's colours are
+   defined. density.css (loaded after this) applies them to the screens; change a
+   value here and the app follows.
+
+   Dark ("graphite") colours live on :root, so the Light
+   themes, which are more specific, keep their own palettes and share everything
+   else (type, spacing, radii, sizes). */
+:root {
+  /* Typography. Weights stay at 600 or below. */
+  --font-ui: 'Figtree Variable', Figtree, 'Segoe UI Variable Text', system-ui, sans-serif;
+  --font-sans: var(--font-ui);
+  --type-display: 22px; /* page heading */
+  --type-title: 15px; /* dialog and section titles */
+  --type-body: 14px; /* nav, chips, buttons, menu items, inputs */
+  --type-small: 13px; /* meta: labels, hints, footers */
+  --type-micro: 12px; /* tiny badges */
+  --type-caption: 10px; /* uppercase captions */
+  --type-lead: 16px; /* large inline text, 15-16px before */
+  --line-ui: 1.4;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Spacing, a 4px scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* Radii. */
+  --r-control: 7px; /* chips, nav rows, menu items, icon buttons */
+  --r-card: 12px; /* cards, inputs, composer */
+  --r-menu: 10px; /* popup menus */
+  --r-cell: 3px; /* heatmap cells, tiny squares */
+
+  /* Sizes. */
+  --sidebar-w: 236px;
+  --row-h: 30px; /* sidebar nav rows */
+  --row-h-sm: 30px; /* list items, menu items, sidebar search */
+  --section-h: 24px; /* section label rows */
+  --icon: 18px;
+  --icon-sm: 16px;
+  --icon-btn: 28px; /* top-bar icon button hit area */
+  --btn-h: 32px;
+  --chip-h: 28px;
+  --bar-h: 28px; /* usage bar */
+  --r-bar: 4px; /* usage bar corners */
+  --seg-h: 30px; /* segmented control */
+  --tile-h: 32px; /* agent tiles */
+  --composer-h: 42px;
+  --content-max: 770px;
+
+  /* Interaction. Colour changes only; no scaling. */
+  --t-hover: 120ms ease;
+  --focus-ring: 1px solid var(--focus);
+
+  /* Dark theme colours. */
+  --chrome: #161615;
+  --stage: #1b1b1a;
+  --well: #171716;
+  --raised: #262625;
+  --overlay: #262625;
+  --surface-hover: #2f2f2e;
+  --surface-active: #353534;
+  --hover: rgba(255, 255, 255, 0.04);
+  --pressed: rgba(255, 255, 255, 0.07);
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-strong: rgba(255, 255, 255, 0.1);
+  --edge: rgba(255, 255, 255, 0.14);
+  --text: #ececea;
+  --text-soft: #c9c9c6;
+  --muted: #8d8d8a;
+  --faint: #6f6f6c;
+  --primary: #f2f2f0;
+  --primary-hover: #ffffff;
+  --on-primary: #1b1b1a;
+  --focus: #5b9bf0;
+  --link: #5b9bf0;
+}
+
+/* Dark's tiles and selected rows: the inner tile surface. */
+:root:root:not([data-theme='light']) {
+  --tile: #2f2f2e;
+  --selected: #2f2f2e;
+}
+
+/* Switch colours. Dark: light track when on, dark thumb; each theme can override. */
+:root {
+  --switch-on: var(--text);
+  --switch-off: #3b3a38;
+  --switch-thumb: #ffffff;
+  --switch-thumb-on: var(--stage);
+}
+:root:root[data-theme='light'] {
+  --switch-on: #1c1c1c;
+  --switch-off: #d9d6d0;
+  --switch-thumb: #ffffff;
+  --switch-thumb-on: #ffffff;
+}

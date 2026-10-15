@@ -310,7 +310,7 @@ function retryDelay(response, at) {
 }
 async function request(fetch, url, headers, now) {
   const response = await fetch(url, {
-    headers: { Accept: 'application/json', 'User-Agent': 'Superapp', ...headers },
+    headers: { Accept: 'application/json', 'User-Agent': 'Veyo', ...headers },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (response.status === 401) return { expired: true };
@@ -353,7 +353,7 @@ async function readClaudeUsage({
   configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'),
   fetch = globalThis.fetch,
   now = Date.now,
-  testOrigin = process.env.SUPERAPP_USAGE_TEST_ORIGIN,
+  testOrigin = process.env.VEYO_USAGE_TEST_ORIGIN,
 } = {}) {
   const base = { provider: 'claude', plan: null, fiveHour: null, weekly: null };
   const oauth = (await readJSON(path.join(configDir, '.credentials.json')))?.claudeAiOauth;
@@ -399,7 +399,7 @@ async function readCodexUsage({
   codexHome = process.env.CODEX_HOME || path.join(os.homedir(), '.codex'),
   fetch = globalThis.fetch,
   now = Date.now,
-  testOrigin = process.env.SUPERAPP_USAGE_TEST_ORIGIN,
+  testOrigin = process.env.VEYO_USAGE_TEST_ORIGIN,
 } = {}) {
   const base = { provider: 'codex', plan: null, fiveHour: null, weekly: null };
   const auth = await readJSON(path.join(codexHome, 'auth.json'));

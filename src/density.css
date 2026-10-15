@@ -1,0 +1,1112 @@
+/* Density ----------------------------------------------------------------------
+   Loads last. Applies the tokens in tokens.css so the UI reads as a compact
+   desktop tool: 14px text, 28-32px rows, small radii, quiet surfaces. Only
+   sizing and spacing live here; colours come from the active theme's tokens. */
+:root:root {
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: var(--line-ui);
+  font-weight: var(--weight-regular);
+}
+
+:root:root :is(button, input, select, textarea, h1, h2, h3) {
+  font-family: inherit;
+}
+
+/* Hover and focus: colour only, 120ms. ------------------------------------------ */
+:root:root :is(button, [role='button'], [role='menuitem'], a) {
+  transition:
+    background-color var(--t-hover),
+    color var(--t-hover),
+    border-color var(--t-hover);
+}
+:root:root :is(button, [role='button'], [role='menuitem'], a, input, textarea, select):focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+/* Title bar ------------------------------------------------------------------------ */
+:root:root .titlebar :is(.titlebar-workspace-action, .window-controls button) {
+  min-width: var(--icon-btn);
+  min-height: var(--icon-btn);
+}
+:root:root .titlebar .titlebar-workspace-action {
+  width: var(--icon-btn);
+  height: var(--icon-btn);
+  border-radius: var(--r-control);
+  background: transparent;
+}
+:root:root .titlebar .titlebar-workspace-action:hover:not(:disabled) {
+  background: var(--hover);
+}
+:root:root .titlebar .titlebar-workspace-action.active {
+  background: var(--pressed);
+}
+:root:root .titlebar .titlebar-workspace-action svg {
+  width: var(--icon);
+  height: var(--icon);
+}
+
+/* Code / Chat: a small segmented control. */
+:root:root .mode-switch {
+  gap: 0;
+  padding: 2px;
+  border-radius: var(--r-control);
+}
+:root:root .mode-switch button {
+  min-width: 52px;
+  min-height: calc(var(--seg-h) - 4px);
+  height: calc(var(--seg-h) - 4px);
+  padding: 0 var(--space-3);
+  border-radius: calc(var(--r-control) - 2px);
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+
+/* Sidebar ------------------------------------------------------------------------- */
+:root:root .projects-sidebar {
+  width: var(--sidebar-w);
+  min-width: 160px;
+}
+:root:root .app-body > .projects-sidebar {
+  padding: var(--space-2) var(--space-2);
+}
+:root:root .app-body > .projects-sidebar .sidebar-actions {
+  gap: 0;
+  padding-bottom: var(--space-2);
+}
+:root:root .app-body > .projects-sidebar .sidebar-actions button,
+:root:root .app-body > .projects-sidebar .sidebar-settings {
+  height: var(--row-h);
+  min-height: var(--row-h);
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .app-body > .projects-sidebar :is(.sidebar-actions button, .sidebar-settings) svg {
+  width: var(--icon);
+  height: var(--icon);
+}
+:root:root .app-body > .projects-sidebar .sidebar-actions button.active {
+  background: var(--surface-hover);
+}
+
+/* Project section: a small label row with tiny icon buttons. */
+:root:root .app-body > .projects-sidebar .project-section-heading {
+  min-height: var(--section-h);
+  height: var(--section-h);
+  padding: 0 var(--space-2);
+  font-size: var(--type-small);
+  font-weight: var(--weight-regular);
+}
+:root:root .app-body > .projects-sidebar .project-section-heading button {
+  width: var(--section-h);
+  height: var(--section-h);
+  min-width: var(--section-h);
+  border-radius: var(--r-control);
+}
+:root:root .app-body > .projects-sidebar .project-section-heading svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* Project, workspace and session rows. */
+:root:root .app-body > .projects-sidebar :is(.project-row, .workspace-row, .terminal-link) {
+  min-height: var(--row-h-sm);
+  height: var(--row-h-sm);
+  padding-block: 0;
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .app-body > .projects-sidebar .project-row svg,
+:root:root .app-body > .projects-sidebar .workspace-row svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+:root:root .app-body > .projects-sidebar :is(.workspace-row, .terminal-link).active {
+  background: var(--surface-hover);
+}
+
+/* Workspace home ------------------------------------------------------------------- */
+:root:root .home-shell {
+  gap: var(--space-4);
+  width: min(var(--content-max), calc(100% - 56px));
+  padding: clamp(24px, 9vh, 96px) 0 var(--space-5);
+}
+
+:root:root .home-greeting h1 {
+  gap: var(--space-2);
+  font-size: var(--type-display);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+:root:root .home-greeting h1 > span {
+  font-size: var(--type-display);
+}
+:root:root .home-spark {
+  width: 20px;
+  height: 20px;
+}
+:root:root .home-greeting p {
+  margin: var(--space-1) 0 0 28px;
+  font-size: var(--type-small);
+  line-height: var(--line-ui);
+}
+
+/* Agents card. */
+:root:root .home-card {
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+}
+:root:root .home-card-head {
+  min-height: var(--btn-h);
+  gap: var(--space-2);
+}
+:root:root .home-card-title {
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+:root:root .home-refresh {
+  height: var(--chip-h);
+  padding: 0 var(--space-2);
+  gap: var(--space-1);
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-control);
+  font-size: var(--type-small);
+}
+:root:root .home-refresh svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* Agent tiles: one 32px row each; the session stepper sits inline on the right. */
+:root:root .home-tiles {
+  gap: var(--space-2);
+}
+:root:root .home-agent-tiles {
+  grid-auto-rows: var(--tile-h);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-height: 176px;
+}
+:root:root .home-tile,
+:root:root .home-agent-tiles .home-tile {
+  min-height: var(--tile-h);
+  height: var(--tile-h);
+  border-radius: var(--r-control);
+}
+:root:root .home-agent-tiles .home-tile-select {
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+:root:root .home-tile-name {
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .home-tile-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  margin-top: 0;
+}
+:root:root .home-agent-tiles .home-tile-hint {
+  left: auto;
+  right: var(--space-2);
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--type-small);
+}
+:root:root .home-agent-tiles .home-stepper {
+  left: auto;
+  right: var(--space-1);
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+:root:root .home-stepper button {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-control);
+}
+:root:root .home-stepper span {
+  min-width: 14px;
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+}
+:root:root .home-meter-cells {
+  gap: var(--space-1);
+}
+:root:root .home-meter-cells i {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-cell);
+}
+:root:root .home-meter p {
+  font-size: var(--type-small);
+}
+
+/* Context chips: folder, checkout, worktree. */
+:root:root .home-launch {
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+}
+:root:root :is(.home-chips, .home-access) {
+  gap: var(--space-2);
+}
+:root:root .home-chip {
+  height: var(--chip-h);
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .home-chip svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* Composer / launch bar. */
+:root:root .home-composer {
+  min-height: var(--composer-h);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-radius: var(--r-card);
+}
+:root:root .home-composer-text {
+  font-size: var(--type-body);
+}
+:root:root .home-composer-marks svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+:root:root .home-composer kbd {
+  font-size: var(--type-small);
+}
+
+/* Buttons in the bar: 32px tall, 14px text, 8px radius. */
+:root:root :is(.home-launch-button, .home-save-open) {
+  min-height: var(--btn-h);
+  height: var(--btn-h);
+  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  border-radius: 8px;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+:root:root .home-launch-button svg,
+:root:root .home-save-open svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+/* Save as preset is the subtle secondary; Launch keeps the light primary. */
+:root:root:root .home-save-open {
+  border: 0;
+  color: var(--text-soft) !important;
+  background: var(--surface-hover);
+  box-shadow: none;
+}
+:root:root:root .home-save-open:hover:not(:disabled) {
+  color: var(--text) !important;
+  background: var(--surface-active);
+  box-shadow: none;
+}
+:root:root:root .home-save-open > svg {
+  color: currentColor;
+  stroke: currentColor;
+}
+:root:root :is(.home-launch-button, .primary-button) {
+  box-shadow: none;
+}
+:root:root :is(.home-launch-button, .primary-button):hover:not(:disabled) {
+  box-shadow: none;
+}
+
+/* Menus ----------------------------------------------------------------------------- */
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content, .chat-select-menu, .notification-popover) {
+  padding: var(--space-1) var(--space-1);
+  border-radius: var(--r-menu);
+}
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu) :is(button, [role='menuitem']) {
+  min-height: var(--row-h-sm);
+  height: var(--row-h-sm);
+  padding: 0 var(--space-2);
+  gap: var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu) :is(button, [role='menuitem']) svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+:root:root .chat-select-option {
+  min-height: var(--row-h-sm);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+}
+
+/* Buttons elsewhere (dialogs, forms): compact by default. */
+:root:root :is(.primary-button, .secondary-button, .danger-button) {
+  min-height: var(--btn-h);
+  padding: 0 var(--space-3);
+  border-radius: 8px;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+
+/* Chat ----------------------------------------------------------------------------- */
+:root:root .chat-layout .chat-new-button {
+  height: var(--row-h);
+  min-height: var(--row-h);
+  padding: 0 var(--space-2);
+  gap: var(--space-2);
+  border-radius: var(--r-control);
+  font-weight: var(--weight-medium);
+}
+:root:root .chat-layout .chat-search {
+  height: var(--row-h-sm);
+  min-height: var(--row-h-sm);
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+}
+:root:root .chat-layout .chat-thread-open {
+  min-height: var(--row-h-sm);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .chat-layout .chat-header {
+  height: 44px;
+  min-height: 44px;
+  font-weight: var(--weight-medium);
+}
+:root:root .chat-layout .chat-header-model {
+  height: var(--chip-h);
+  border-radius: var(--r-control);
+  font-size: var(--type-small);
+  font-weight: var(--weight-medium);
+}
+:root:root .chat-layout .chat-composer {
+  min-height: var(--composer-h);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
+}
+:root:root .chat-layout .chat-context-chip,
+:root:root .chat-layout .chat-project-chip {
+  height: var(--chip-h);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+}
+:root:root .chat-layout .chat-starter {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
+  font-size: var(--type-body);
+}
+:root:root .chat-layout .chat-starter span {
+  font-size: var(--type-small);
+}
+
+/* Settings and dialogs ------------------------------------------------------------- */
+:root:root .preferences {
+  width: min(1000px, calc(100vw - 48px));
+}
+:root:root .preferences .preferences-header {
+  padding: var(--space-3) var(--space-4);
+}
+:root:root .preferences .preferences-header h2 {
+  font-size: var(--type-title);
+  font-weight: var(--weight-medium);
+}
+:root:root .preferences-sidebar {
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+}
+:root:root .preferences-search {
+  height: var(--row-h-sm);
+  min-height: var(--row-h-sm);
+  border-radius: 8px;
+}
+:root:root .preferences-search input {
+  font-size: var(--type-body);
+}
+:root:root .preferences-sidebar nav button {
+  height: var(--row-h);
+  min-height: var(--row-h);
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root .preferences-sidebar nav button svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+:root:root .preferences-content {
+  padding: var(--space-4) var(--space-5);
+}
+:root:root .preferences .preferences-content h3 {
+  font-size: var(--type-title);
+  font-weight: var(--weight-medium);
+}
+:root:root .preferences .preferences-row {
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
+}
+:root:root .preferences .preferences-row strong {
+  font-size: var(--type-title);
+  font-weight: var(--weight-medium);
+}
+:root:root .preferences .preferences-row small,
+:root:root .preferences .preferences-description {
+  font-size: var(--type-small);
+}
+:root:root .preferences-themes {
+  gap: var(--space-2);
+}
+:root:root .preferences-theme {
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--r-card);
+}
+:root:root .preferences-footer {
+  padding: var(--space-2) var(--space-3);
+}
+:root:root .preferences-footer button {
+  height: var(--btn-h);
+  border-radius: 8px;
+  font-size: var(--type-body);
+}
+
+/* Dialog corners and titles. */
+:root:root .modal-backdrop .motion-surface-dialog,
+:root:root .modal-backdrop > :is(.preferences, .command-modal, .modal) {
+  border-radius: var(--r-card);
+}
+
+/* Search bars never show a focus ring, on the input or on the wrapper. */
+:root:root
+  :is(
+    .command-input,
+    .preferences-search,
+    .browser-history-search,
+    .chat-search,
+    .plugins-search,
+    .search-field
+  )
+  input:is(:focus, :focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+:root:root :is(.preferences-search, .browser-history-search, .chat-search, .plugins-search):focus-within,
+:root:root .plugins-modal .plugins-search:focus-within {
+  border-color: var(--hairline-strong);
+  box-shadow: none;
+}
+:root:root input[type='search']:is(:focus, :focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Dropdowns ---------------------------------------------------------------------------
+   One look for every ChatSelect: a bordered field trigger (variant "field") and a
+   floating menu with a checkmark gutter on the left. Theme tokens only. */
+:root:root:root .chat-select-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  height: var(--btn-h);
+  min-width: 160px;
+  max-width: 260px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-control);
+  background: var(--stage);
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+  text-align: left;
+  cursor: pointer;
+}
+:root:root:root .chat-select-field:hover:not(:disabled) {
+  border-color: var(--edge);
+  background: var(--stage);
+  color: var(--text);
+}
+:root:root:root .chat-select-field.open {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+:root:root:root .chat-select-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+:root:root .chat-select-field .chat-select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+:root:root .chat-select-field .chat-select-chevron {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--muted);
+  transition: transform var(--dur) var(--ease);
+}
+:root:root .chat-select-field.open .chat-select-chevron {
+  transform: rotate(180deg);
+}
+
+:root:root:root .chat-select-menu {
+  padding: var(--space-1);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-menu);
+  background: var(--overlay);
+  box-shadow: var(--shadow-float);
+}
+:root:root:root .chat-select-menu .chat-select-option {
+  gap: var(--space-2);
+  min-height: var(--row-h-sm);
+  padding: 0 var(--space-2) 0 var(--space-1);
+  border-radius: var(--r-control);
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root .chat-select-menu .chat-select-option:has(small) {
+  padding-block: var(--space-1);
+}
+:root:root:root .chat-select-menu .chat-select-option.highlight {
+  background: var(--hover);
+}
+:root:root:root .chat-select-menu .chat-select-option[aria-selected='true'] {
+  font-weight: var(--weight-semibold);
+}
+:root:root:root .chat-select-menu .chat-select-option[aria-disabled='true'] {
+  opacity: 0.5;
+}
+.chat-select-gutter {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+:root:root .chat-select-menu .chat-select-check {
+  color: var(--text);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:root .chat-select-field .chat-select-chevron { transition: none; }
+}
+:root.reduce-motion .chat-select-field .chat-select-chevron { transition: none; }
+
+/* The menu box only positions and fades; its panel is the .motion-surface behind the list
+   (see ChatSelect), so the text inside never scales. */
+:root:root:root .chat-select-menu {
+  isolation: isolate;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root:root .chat-select-menu .chat-select-list {
+  box-sizing: border-box;
+  padding: var(--space-1);
+  overflow-y: auto;
+  border-radius: inherit;
+  outline: 0;
+  scrollbar-width: thin;
+}
+
+/* Menu palette, sampled from Claude's menus. Every popup menu reads these, so they stay in step. */
+:root {
+  --menu-bg: #20201f;
+  --menu-border: #373736;
+  --menu-hover: #313130;
+  --menu-text: #eeedea;
+  --menu-muted: #8a8882;
+  --menu-key: #817f79;
+  --menu-pill: #2b2b2a;
+  --menu-pill-text: #c3c2b7;
+  --menu-check: #2a74cd;
+  --menu-row: 24px;
+}
+:root[data-theme='light'] {
+  --menu-bg: #ffffff;
+  --menu-border: #dcdbd6;
+  --menu-hover: #f0efea;
+  --menu-text: #1f1e1d;
+  --menu-muted: #6b6a66;
+  --menu-key: #85837d;
+  --menu-pill: #efeeea;
+  --menu-pill-text: #55544f;
+  --menu-check: #2c84db;
+}
+
+/* Compact model picker ------------------------------------------------------------------
+   Sampled from Claude's model menu: a flat var(--menu-bg) panel with a 1px var(--menu-border) border, 24px
+   rows, a shortcut number (or a check for the current one) pinned right, small pills after
+   the label, and a "More models" row that opens a second panel beside the first. */
+:root:root:root .chat-select-menu.compact {
+  min-width: 241px;
+}
+:root:root:root .chat-select-menu.compact .chat-select-list,
+:root:root:root .chat-select-sub {
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--menu-border);
+  border-radius: 10px;
+  background: var(--menu-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+:root:root:root .chat-select-menu.compact .chat-select-list {
+  position: relative;
+}
+:root:root:root .chat-select-menu.compact .motion-surface {
+  display: none;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option,
+:root:root:root .chat-select-sub .chat-select-option {
+  gap: 8px;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--menu-text);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option.highlight,
+:root:root:root .chat-select-sub .chat-select-option.highlight {
+  background: var(--menu-hover);
+}
+:root:root:root .chat-select-menu.compact .chat-select-option[aria-selected='true'],
+:root:root:root .chat-select-sub .chat-select-option[aria-selected='true'] {
+  font-weight: 400;
+}
+:root:root:root .chat-select-menu.compact .chat-select-text,
+:root:root:root .chat-select-sub .chat-select-text {
+  display: block;
+  flex: 0 1 auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option .chat-select-badge,
+:root:root:root .chat-select-sub .chat-select-option .chat-select-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 5px;
+  color: var(--menu-pill-text);
+  background: var(--menu-pill);
+  font-size: 11px;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option:has(.chat-select-badge) .chat-select-text,
+:root:root:root .chat-select-sub .chat-select-option:has(.chat-select-badge) .chat-select-text {
+  flex: 0 0 auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-key,
+:root:root:root .chat-select-sub .chat-select-key {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  color: var(--menu-key);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+:root:root:root .chat-select-menu.compact .chat-select-text + .chat-select-check,
+:root:root:root .chat-select-menu.compact .chat-select-badge + .chat-select-check,
+:root:root:root .chat-select-sub .chat-select-text + .chat-select-check,
+:root:root:root .chat-select-sub .chat-select-badge + .chat-select-check {
+  margin-left: auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-check,
+:root:root:root .chat-select-sub .chat-select-check {
+  color: var(--menu-check);
+}
+:root:root:root .chat-select-menu.compact .chat-select-badge ~ .chat-select-key,
+:root:root:root .chat-select-menu.compact .chat-select-badge ~ .chat-select-check {
+  margin-left: auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-badge:has(+ .chat-select-key, + .chat-select-check),
+:root:root:root .chat-select-sub .chat-select-badge:has(+ .chat-select-check) {
+  margin-right: 0;
+}
+:root:root:root .chat-select-separator {
+  height: 1px;
+  margin: 4px 8px 3px;
+  background: var(--menu-border);
+}
+:root:root:root .chat-select-sub {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  gap: 0;
+  width: 233px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+:root:root:root .chat-select-sub.down { top: 0; }
+:root:root:root .chat-select-sub.up { bottom: 0; }
+:root:root:root .chat-select-sub { left: calc(100% + 3px); }
+:root:root:root .chat-select-sub.flip { left: auto; right: calc(100% + 3px); }
+
+/* Permission-style rows: a title with a muted description under it, a heading above, and a
+   footer action (title left, "Enable" right) with no number. */
+:root:root:root .chat-select-menu.compact .chat-select-heading {
+  padding: 5px 8px 4px;
+  color: var(--menu-muted);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option:has(small) {
+  height: auto;
+  min-height: 38px;
+  padding-block: 4px;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option:has(small) .chat-select-text {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option:has(small):has(.chat-select-badge) .chat-select-text {
+  flex: 1 1 auto;
+}
+:root:root:root .chat-select-menu.compact .chat-select-text:has(small) > .chat-select-title {
+  font-weight: 500;
+}
+:root:root:root .chat-select-menu.compact .chat-select-text small {
+  color: var(--menu-muted);
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+:root:root:root .chat-select-menu.compact .chat-select-option .chat-select-trailing {
+  margin-left: auto;
+  color: var(--menu-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+:root:root:root .chat-select-menu.compact .chat-select-footer {
+  margin-top: 2px;
+}
+
+/* Pill sits on the title line; the check and number stay pinned right. */
+:root:root:root :is(.chat-select-menu.compact, .chat-select-sub) .chat-select-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:root:root:root :is(.chat-select-menu.compact, .chat-select-sub) .chat-select-text {
+  flex: 1 1 auto;
+}
+:root:root:root :is(.chat-select-menu.compact, .chat-select-sub) .chat-select-check {
+  margin-left: auto;
+}
+
+/* The message box sits inside the composer, which already shows focus. */
+:root:root:root :is(.chat-composer, .chat-compose-line, .home-composer) :is(textarea, input):is(:focus, :focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Dialog buttons, sampled from Claude's delete dialog: dark grey Cancel, red Delete. */
+:root:root:root .chat-approval-actions :is(.secondary-button, .danger-button) {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: var(--type-body);
+  font-weight: 450;
+}
+:root:root:root .chat-approval-actions .secondary-button:not(:disabled) {
+  border: 1px solid #2d2d2c;
+  color: #f0efec !important;
+  background: #373736;
+}
+:root:root:root .chat-approval-actions .secondary-button:hover:not(:disabled) {
+  color: #ffffff !important;
+  background: #414140;
+}
+:root:root:root .chat-approval-actions .danger-button:not(:disabled) {
+  border-color: transparent;
+  color: #ffffff !important;
+  background: #d03b3b;
+}
+:root:root:root .chat-approval-actions .danger-button:hover:not(:disabled) {
+  background: #dc4646;
+}
+:root:root:root[data-theme='light'] .chat-approval-actions .secondary-button:not(:disabled) {
+  border-color: transparent;
+  color: #1f1e1d !important;
+  background: #e8e7e2;
+}
+:root:root:root[data-theme='light'] .chat-approval-actions .secondary-button:hover:not(:disabled) {
+  background: #dddcd6;
+}
+
+/* The minimise arrow sits right after the project name, in both side panels. */
+:root:root:root .chat-layout .chat-group-toggle {
+  justify-content: flex-start;
+}
+:root:root:root .chat-layout .chat-group-toggle .chat-group-name {
+  flex: 0 1 auto;
+}
+:root:root:root .app-body > .projects-sidebar .project-row-wrap .project-row {
+  flex: 0 1 auto;
+}
+:root:root:root .app-body > .projects-sidebar .project-row-wrap .project-add {
+  margin-left: auto;
+}
+
+/* Chat's Settings button wears the same round icon tile as the Code panel's. */
+:root:root:root .chat-sidebar-footer .sidebar-settings {
+  justify-content: flex-start;
+  gap: 8px;
+}
+:root:root:root .chat-sidebar-footer .sidebar-settings > .sidebar-settings-icon {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  overflow: visible;
+}
+
+/* Chat's Settings row: same type, height and spacing as the Code panel's, no divider above. */
+:root:root:root .chat-layout .chat-sidebar-footer {
+  padding-top: 0;
+  border-top: 0;
+}
+:root:root:root .chat-layout .chat-sidebar-footer .sidebar-settings {
+  height: var(--row-h);
+  min-height: var(--row-h);
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  color: var(--text-soft);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root .chat-layout .chat-sidebar-footer .sidebar-settings:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+/* One menu look everywhere ---------------------------------------------------------------
+   Right-click menus, the workspace views menu and the New pane menu share the model picker's
+   panel and rows: same fill, border, corners, 24px rows, hover and text colour. */
+:root:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu) {
+  padding: 3px;
+  border: 1px solid var(--menu-border);
+  border-radius: 10px;
+  background: var(--menu-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+:root:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button:not(.danger-menu-item) {
+  min-height: var(--menu-row);
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--menu-text);
+  font-size: var(--type-body);
+  font-weight: 400;
+}
+:root:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button:not(:has(small)):not(.menu-back) {
+  height: var(--menu-row);
+}
+:root:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) button:is(:hover, :focus-visible):not(:disabled) {
+  background: var(--menu-hover);
+}
+:root:root:root :is(.context-menu, .workspace-views-menu, .new-pane-menu-content) :is(kbd, .menu-check, .menu-chevron, .views-check) {
+  color: var(--menu-key);
+}
+:root:root:root :is(.context-menu, .workspace-views-menu) button.danger-menu-item {
+  height: var(--menu-row);
+  min-height: var(--menu-row);
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: var(--type-body);
+  font-weight: 400;
+}
+
+/* Dropdown focus ring is white rather than blue. */
+:root:root:root .chat-select-field.open {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+:root:root:root .chat-select:focus-visible {
+  outline: 1px solid var(--text);
+  outline-offset: 1px;
+}
+:root:root:root .chat-select-field:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+/* Chat rows: options button, unread dot and inline rename. */
+:root:root:root .chat-layout .chat-thread-more:hover {
+  color: var(--text);
+}
+:root:root:root .chat-layout .chat-thread-unread {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--menu-check);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--menu-check) 20%, transparent);
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+/* The options button takes the dot's place while the row is hovered or focused. */
+:root:root:root .chat-layout .chat-thread:is(:hover, :focus-within) .chat-thread-unread {
+  opacity: 0;
+}
+:root:root:root .chat-layout .chat-thread.unread .chat-thread-open {
+  padding-right: 30px;
+  color: var(--text);
+  font-weight: 560;
+}
+.chat-rename-form {
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+.chat-rename-form .text-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Chat sidebar icons use the same size as the Code panel's. */
+:root:root:root .chat-layout .chat-sidebar-footer .sidebar-settings svg {
+  flex: none;
+  width: var(--icon);
+  height: var(--icon);
+}
+
+/* Editing a sent message ------------------------------------------------------------------ */
+:root:root:root .chat-layout .chat-message.user.editing {
+  display: grid;
+  gap: 10px;
+  justify-content: stretch;
+}
+:root:root:root .chat-layout .chat-edit-box {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 76px;
+  max-height: 320px;
+  padding: 14px 16px;
+  border: 1px solid var(--menu-border);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--chat-bubble, var(--raised));
+  font: inherit;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  field-sizing: content;
+}
+:root:root:root .chat-layout .chat-edit-box:focus {
+  border-color: var(--text-soft);
+  box-shadow: none;
+}
+:root:root:root .chat-layout .chat-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+:root:root:root .chat-layout .chat-edit-info {
+  display: inline-grid;
+  place-items: center;
+  margin-right: 4px;
+  color: var(--menu-muted);
+}
+:root:root:root .chat-layout :is(.chat-edit-cancel, .chat-edit-save) {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  font-size: var(--type-body);
+  cursor: pointer;
+}
+:root:root:root .chat-layout .chat-edit-cancel {
+  color: var(--text-soft);
+  background: transparent;
+}
+:root:root:root .chat-layout .chat-edit-cancel:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+:root:root:root .chat-layout .chat-edit-save {
+  color: var(--chrome);
+  background: var(--text);
+}
+:root:root:root .chat-layout .chat-edit-save:disabled {
+  color: var(--menu-muted);
+  background: var(--menu-border);
+  cursor: default;
+}
+
+/* "Response was interrupted" banner ------------------------------------------------------- */
+:root:root:root .chat-layout .chat-error.interrupted {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-left: 0;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--menu-border);
+  border-radius: 12px;
+  color: var(--text);
+  background: transparent;
+}
+:root:root:root .chat-layout .chat-error.interrupted > svg {
+  color: var(--menu-muted);
+}
+:root:root:root .chat-layout .chat-error-actions {
+  display: flex;
+  gap: 8px;
+}
+:root:root:root .chat-layout .chat-error-actions button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--menu-text);
+  background: var(--menu-pill);
+  font-size: var(--type-body);
+  cursor: pointer;
+}
+:root:root:root .chat-layout .chat-error-actions button:hover:not(:disabled) {
+  background: var(--menu-hover);
+}
+:root:root:root .chat-layout .chat-error-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+:root:root:root .chat-layout .chat-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

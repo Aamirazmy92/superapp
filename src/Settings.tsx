@@ -14,7 +14,8 @@ import {
   SlidersHorizontal,
   MessageSquare,
   Bell,
-} from 'lucide-react';
+  Zap,
+} from './icons';
 import {
   defaults,
   fontFamilies,
@@ -29,6 +30,9 @@ import { version } from '../package.json';
 import './settings.css';
 import { motion, useIsPresent } from 'motion/react';
 import { Backdrop, MotionDialog } from './motion';
+import { Switch } from './Switch';
+import ChatSelect from './ChatSelect';
+import type { PluginContributions } from './types';
 
 export type SettingsCommand = {
   label: string;
@@ -44,6 +48,7 @@ const sections = [
   { id: 'terminal', label: 'Terminal', icon: SquareTerminal },
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'plugins', label: 'Plugins', icon: Zap },
   { id: 'commands', label: 'Commands', icon: Command },
   { id: 'shortcuts', label: 'Keyboard shortcuts', icon: Keyboard },
   { id: 'about', label: 'About & data', icon: Info },
@@ -60,6 +65,8 @@ export default function Settings({
   error,
   onClose,
   commands = [],
+  onOpenPlugins,
+  pluginThemes = [],
   shells = [],
 }: {
   shells?: { id: string; label: string }[];
@@ -68,6 +75,9 @@ export default function Settings({
   error: string;
   onClose(): void;
   commands?: SettingsCommand[];
+  onOpenPlugins?(): void;
+  /** Themes from enabled plugins. */
+  pluginThemes?: PluginContributions['themes'];
 }) {
   const [section, setSection] = useState<string>('appearance');
   const [query, setQuery] = useState('');
@@ -100,44 +110,49 @@ export default function Settings({
   const matches = (text: string) =>
     !query.trim() || text.toLowerCase().includes(query.trim().toLowerCase());
   const show = (id: string) => query.trim() || section === id;
-  const row = (title: string, description: string, control: ReactNode) =>
-    matches(title + ' ' + description) && (
+  // A control given as a function is a dropdown: it is named by the row title, and the row is a
+  // plain div so clicking the text does not reach into the control.
+  const row = (title: string, description: string, control: ReactNode | ((title: string) => ReactNode)) => {
+    if (!matches(title + ' ' + description)) return false;
+    const text = (
+      <span>
+        <strong>{title}</strong>
+        <small>{description}</small>
+      </span>
+    );
+    return typeof control === 'function' ? (
+      <div className="preferences-row">
+        {text}
+        {control(title)}
+      </div>
+    ) : (
       <label className="preferences-row">
-        <span>
-          <strong>{title}</strong>
-          <small>{description}</small>
-        </span>
+        {text}
         {control}
       </label>
     );
+  };
   const choose = <K extends keyof Preferences>(
     key: K,
     options: readonly Choice<Preferences[K]>[],
     disabled = false,
-  ) => (
-    <select
-      value={String(value[key])}
-      disabled={disabled}
-      onChange={(event) => {
-        const found = options.find(([option]) => String(option) === event.target.value);
-        if (found) change(key, found[0]);
-      }}
-    >
-      {options.map(([option, label]) => (
-        <option key={String(option)} value={String(option)}>
-          {label}
-        </option>
-      ))}
-    </select>
-  );
+  ) =>
+    (title: string) => (
+      <ChatSelect
+        variant="field"
+        compact
+        label={title}
+        value={String(value[key])}
+        disabled={disabled}
+        options={options.map(([option, label]) => ({ value: String(option), label }))}
+        onChange={(next) => {
+          const found = options.find(([option]) => String(option) === next);
+          if (found) change(key, found[0]);
+        }}
+      />
+    );
   const toggle = (key: SwitchKey) => (
-    <input
-      className="preferences-switch"
-      type="checkbox"
-      role="switch"
-      checked={value[key]}
-      onChange={(event) => change(key, event.target.checked)}
-    />
+    <Switch checked={value[key]} onChange={(next) => change(key, next)} />
   );
   return (
     <Backdrop
@@ -213,10 +228,6 @@ export default function Settings({
                 </Fragment>
               ))}
             </nav>
-            <div className="preferences-local">
-              <span className="preferences-dot" />
-              Saved on this device<small>Applies to all projects</small>
-            </div>
           </aside>
           <main
             ref={content}
@@ -301,17 +312,19 @@ export default function Settings({
                     row(
                       'Default shell',
                       'Used for new terminals, and selected first when choosing a shell.',
-                      <select
-                        value={shells.some((shell) => shell.id === value.defaultShell) ? value.defaultShell : ''}
-                        onChange={(event) => change('defaultShell', event.target.value)}
-                      >
-                        <option value="">System default ({shells[0].label})</option>
-                        {shells.map((shell) => (
-                          <option key={shell.id} value={shell.id}>
-                            {shell.label}
-                          </option>
-                        ))}
-                      </select>,
+                      (title) => (
+                        <ChatSelect
+                          variant="field"
+                          compact
+                          label={title}
+                          value={shells.some((shell) => shell.id === value.defaultShell) ? value.defaultShell : ''}
+                          options={[
+                            { value: '', label: `System default (${shells[0].label})` },
+                            ...shells.map((shell) => ({ value: shell.id, label: shell.label })),
+                          ]}
+                          onChange={(next) => change('defaultShell', next)}
+                        />
+                      ),
                     )}
                   {row(
                     'Blinking cursor',
@@ -342,20 +355,24 @@ export default function Settings({
               <section>
                 <h3>Appearance</h3>
                 <p className="preferences-description">How the workspace looks and moves.</p>
-                {matches('color theme graphite midnight plum light appearance') && (
+                {matches('color theme graphite light appearance') && (
                   <div className="preferences-theme-setting">
                     <strong>Color theme</strong>
                     <small>Applies to the workspace, editor, and terminal.</small>
                     <div className="preferences-themes" role="group" aria-label="Color theme">
                       {(Object.keys(themes) as ThemeName[]).map((name) => {
                         const theme = themes[name];
+                        const pressed = value.theme === name && !pluginThemes.some((item) => item.key === value.pluginTheme);
                         return (
                           <button
                             key={name}
                             type="button"
                             className="preferences-theme"
-                            aria-pressed={value.theme === name}
-                            onClick={() => change('theme', name)}
+                            aria-pressed={pressed}
+                            onClick={() => {
+                              setReset(false);
+                              onChange({ ...value, theme: name, pluginTheme: '' });
+                            }}
                           >
                             <span className="preferences-theme-swatch" style={{ background: theme.chrome }} aria-hidden="true">
                               <span style={{ background: theme.stage }}>
@@ -365,10 +382,29 @@ export default function Settings({
                               </span>
                             </span>
                             <span className="preferences-theme-label"><strong>{theme.label}</strong><small>{theme.description}</small></span>
-                            {value.theme === name && <Check size={15} aria-hidden="true" />}
+                            {pressed && <Check size={15} aria-hidden="true" />}
                           </button>
                         );
                       })}
+                      {pluginThemes.map((theme) => (
+                        <button
+                          key={theme.key}
+                          type="button"
+                          className="preferences-theme"
+                          aria-pressed={value.pluginTheme === theme.key}
+                          onClick={() => change('pluginTheme', theme.key)}
+                        >
+                          <span className="preferences-theme-swatch" style={{ background: theme.colors.chrome }} aria-hidden="true">
+                            <span style={{ background: theme.colors.stage }}>
+                              <i style={{ background: theme.colors.accent }} />
+                              <i style={{ background: theme.colors.muted }} />
+                              <i style={{ background: theme.colors.raised }} />
+                            </span>
+                          </span>
+                          <span className="preferences-theme-label"><strong>{theme.label}</strong><small>from {theme.plugin}</small></span>
+                          {value.pluginTheme === theme.key && <Check size={15} aria-hidden="true" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -377,6 +413,23 @@ export default function Settings({
                     'Reduce motion',
                     'Open and close panels, menus and dialogs instantly instead of animating them.',
                     toggle('reduceMotion'),
+                  )}
+                </div>
+              </section>
+            )}
+            {show('plugins') && onOpenPlugins && (
+              <section>
+                <h3>Plugins</h3>
+                <p className="preferences-description">
+                  Commands, agent presets, prompts, MCP servers and themes from plugins you install.
+                </p>
+                <div className="preferences-group">
+                  {row(
+                    'Manage plugins',
+                    'Add marketplaces, then install, enable, update or remove plugins.',
+                    <button type="button" className="secondary-button" onClick={onOpenPlugins}>
+                      Open Plugins
+                    </button>,
                   )}
                 </div>
               </section>
@@ -433,6 +486,7 @@ export default function Settings({
                   Plan usage alerts for Claude Code and Codex.
                 </p>
                 <div className="preferences-group">
+                  {row('Agent done sound', 'Play a chime when an agent finishes working.', toggle('doneSound'))}
                   {row(
                     'Usage alerts',
                     'Notify when plan usage passes a threshold, reaches its limit, or resets.',
@@ -476,7 +530,7 @@ export default function Settings({
                       >
                         <Icon size={16} />
                         <span>{label}</span>
-                        {hint && <kbd>{hint}</kbd>}
+                        {hint && <kbd>{hint.replace(/ (?=\S)/g, ' + ')}</kbd>}
                         <CornerDownLeft
                           size={14}
                           className="preferences-command-run"
@@ -517,9 +571,9 @@ export default function Settings({
             {show('about') && (
               <section>
                 <h3>About & data</h3>
-                <p className="preferences-description">Superapp · Local desktop coding workspace</p>
+                <p className="preferences-description">Veyo · Local desktop coding workspace</p>
                 <div className="preferences-group">
-                  {matches('version Superapp') && (
+                  {matches('version Veyo') && (
                     <div className="preferences-row">
                       <strong>Version</strong>
                       <span>{version}</span>
@@ -558,12 +612,7 @@ export default function Settings({
         </div>
         <footer className="preferences-footer">
           <span role={error ? 'alert' : 'status'} className={error ? 'preferences-error' : ''}>
-            {error || (
-              <>
-                <Check size={14} />
-                Changes save automatically
-              </>
-            )}
+            {error}
           </span>
           <div>
             {reset ? (

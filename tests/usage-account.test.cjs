@@ -24,7 +24,7 @@ const good = (percent = 20) => ({
   updatedAt: NOW,
 });
 async function temp(t) {
-  const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-account-'));
+  const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-account-'));
   t.after(async () => {
     assert.ok(path.resolve(folder).startsWith(path.resolve(os.tmpdir()) + path.sep));
     await fs.rm(folder, { recursive: true, force: true });
@@ -552,7 +552,7 @@ test('Windows npm Codex shims launch their JS entry point without using a shell'
       ...process.env,
       CLAUDE_CONFIG_DIR: folder,
       CODEX_HOME: folder,
-      SUPERAPP_USAGE_TEST_ORIGIN: '',
+      VEYO_USAGE_TEST_ORIGIN: '',
     },
     findAgents: async () => [{ id: 'codex', executable: path.join(bin, 'codex.cmd') }],
   });

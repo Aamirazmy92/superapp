@@ -15,8 +15,6 @@ import {
   Mic,
   Volume2,
   VolumeX,
-  ShieldCheck,
-  ShieldAlert,
   RefreshCw,
   RotateCcw,
   Sparkles,
@@ -26,7 +24,19 @@ import {
   FileDiff,
   Plus,
   CornerDownLeft,
-} from 'lucide-react';
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal,
+  Info,
+  SettingsGear,
+  Pin,
+  PinOff,
+  Pencil,
+  CircleDot,
+  FolderInput,
+  Archive,
+  ArchiveRestore,
+} from './icons';
 import Modal from './Modal';
 import MarkdownMessage from './MarkdownMessage';
 import AgentLogo from './AgentLogo';
@@ -37,11 +47,12 @@ import ChatActivity from './ChatActivity';
 import { ChangesDialog, ChangesSummary, collectChanges, type ChangedFile } from './ChatChanges';
 import { AnimatePresence, motion } from 'motion/react';
 import { motionReduced } from './motion';
+import { AnchoredPopover } from './AnchoredPopover';
 import type { ChatMessage, ChatModel, Project, OpenFile, SavedChatState, ChatAttachment, ChatActivity as Activity } from './types';
 import './chat.css';
 
 type Provider = 'ollama' | 'codex' | 'claude';
-type Permission = 'ask' | 'auto' | 'full';
+type Permission = 'ask' | 'auto' | 'edits' | 'plan' | 'full';
 type Thread = {
   id: string;
   title: string;
@@ -56,6 +67,11 @@ type Thread = {
   sessionId?: string;
   error?: string;
   updatedAt?: number;
+  pinned?: boolean;
+  unread?: boolean;
+  archived?: boolean;
+  /** A group the user made ("Move to group"); chats without one sit under their project. */
+  group?: string;
 };
 type Approval = { id: string; requestId: string; title: string; detail: string };
 const providerNames: Record<Provider, string> = {
@@ -80,7 +96,7 @@ const cleanError = (value: unknown) =>
 const modelEffortKey = (provider: string, model: string) => `${provider}:${model}`;
 const defaultEndpoint = 'http://localhost:11434';
 const providers: Provider[] = ['ollama', 'codex', 'claude'];
-const permissions: Permission[] = ['ask', 'auto', 'full'];
+const permissions: Permission[] = ['ask', 'auto', 'edits', 'plan', 'full'];
 function parseThreads(value: unknown, fallbackModel: string): Thread[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -97,6 +113,7 @@ function parseThreads(value: unknown, fallbackModel: string): Thread[] {
       sessionId: typeof t.sessionId === 'string' ? t.sessionId : undefined,
       projectId: typeof t.projectId === 'string' ? t.projectId : '',
       updatedAt: typeof t.updatedAt === 'number' ? t.updatedAt : undefined,
+      group: typeof t.group === 'string' && t.group.trim() ? t.group.trim().slice(0, 60) : undefined,
       draftAttachments: Array.isArray(t.draftAttachments) ? t.draftAttachments : [],
       messages: Array.isArray(t.messages)
         ? t.messages.filter(
@@ -157,17 +174,12 @@ const titleFrom = (text: string) => {
   const line = text.replace(/\s+/g, ' ').trim();
   return line.length > 60 ? `${line.slice(0, 57).trimEnd()}…` : line || 'New chat';
 };
-const groupOrder = ['Today', 'Yesterday', 'Previous 7 days', 'Earlier'] as const;
-const groupLabel = (time?: number) => {
-  if (!time) return 'Earlier';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const day = 24 * 60 * 60 * 1000;
-  if (time >= today.getTime()) return 'Today';
-  if (time >= today.getTime() - day) return 'Yesterday';
-  if (time >= today.getTime() - 6 * day) return 'Previous 7 days';
-  return 'Earlier';
-};
+// Chats without a project, or whose project was removed, are listed here.
+const GENERAL_GROUP = 'General';
+const COLLAPSED_GROUPS_KEY = 'chat-collapsed-groups';
+const PINNED_GROUP = '__pinned';
+const ARCHIVED_GROUP = '__archived';
+const customGroupKey = (name: string) => `group:${name}`;
 const starters = [
   { title: 'Explain code', detail: 'Walk through what a snippet does', prompt: 'Explain what this code does, step by step:\n\n' },
   { title: 'Debug an error', detail: 'Find the cause and a fix', prompt: 'Help me debug this error. Here is the message and the relevant code:\n\n' },
@@ -257,7 +269,12 @@ export default function ChatWorkspace({
     : '';
   const reasoningLevels = defaultEffort ? supportedEfforts : ['', ...supportedEfforts];
   const shownEffort = effectiveEffort || defaultEffort;
-  const chosenPermission = thread?.permission || permission;
+  const storedPermission = thread?.permission || permission;
+  // Accept edits and Plan are Claude Code modes; other providers fall back to asking.
+  const chosenPermission: Permission =
+    chosenProvider !== 'claude' && (storedPermission === 'edits' || storedPermission === 'plan')
+      ? 'ask'
+      : storedPermission;
   const chosenProjectId = thread?.projectId ?? activeProject ?? '';
   const chosenProject = projects.find((p) => p.id === chosenProjectId);
   const pendingHere = !!pending && pending.threadId === thread?.id;
@@ -277,7 +294,6 @@ export default function ChatWorkspace({
       }
     : undefined;
   const draftAttachments = thread?.draftAttachments || [];
-  const modelName = selectedModel?.name || chosenModel || 'Choose model';
   const logo = (size: number) => providerLogo(chosenProvider, size);
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -290,10 +306,68 @@ export default function ChatWorkspace({
             .includes(needle),
       )
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    return groupOrder
-      .map((label) => ({ label, items: matches.filter((t) => groupLabel(t.updatedAt) === label) }))
-      .filter((group) => group.items.length);
-  }, [threads, query]);
+    // Pinned first, then General and each project in sidebar order, newest chats first;
+    // archived chats wait in their own section at the bottom.
+    const projectOf = (t: Thread) => projects.find((p) => p.id === t.projectId);
+    const live = matches.filter((t) => !t.archived);
+    const pinned = live.filter((t) => t.pinned);
+    const unpinned = live.filter((t) => !t.pinned);
+    const named = [...new Set(unpinned.map((t) => t.group).filter((g): g is string => !!g))].sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const rest = unpinned.filter((t) => !t.group);
+    return [
+      { key: PINNED_GROUP, label: 'Pinned', items: pinned },
+      ...named.map((name) => ({
+        key: customGroupKey(name),
+        label: name,
+        items: unpinned.filter((t) => t.group === name),
+      })),
+      { key: '', label: GENERAL_GROUP, items: rest.filter((t) => !projectOf(t)) },
+      ...projects.map((p) => ({
+        key: p.id,
+        label: p.name,
+        items: rest.filter((t) => t.projectId === p.id),
+      })),
+      { key: ARCHIVED_GROUP, label: 'Archived', items: matches.filter((t) => t.archived) },
+    ].filter((group) => group.items.length);
+  }, [threads, query, projects]);
+  // Minimised groups, by project id ('' for General), kept between sessions.
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLLAPSED_GROUPS_KEY) || '{}');
+      return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify(collapsedGroups));
+    } catch {
+      // Not remembering which groups are minimised is harmless.
+    }
+  }, [collapsedGroups]);
+  const groupKeyOf = (t: Thread) => (projects.some((p) => p.id === t.projectId) ? t.projectId : '');
+  const setGroupCollapsed = (key: string, collapsed: boolean) =>
+    setCollapsedGroups((current) => {
+      if (!!current[key] === collapsed) return current;
+      const next = { ...current };
+      if (collapsed) next[key] = true;
+      else delete next[key];
+      return next;
+    });
+  // Opening or starting a chat shows the group it is in.
+  const activeGroupKey = thread ? groupKeyOf(thread) : null;
+  useEffect(() => {
+    if (activeGroupKey !== null) setGroupCollapsed(activeGroupKey, false);
+  }, [active, activeGroupKey]);
+  // Search results are never hidden in a minimised group.
+  const searching = !!query.trim();
+  const collapsed = (key: string) =>
+    !searching && (key === ARCHIVED_GROUP ? !showArchived : !!collapsedGroups[key]);
+  const toggleGroup = (key: string) =>
+    key === ARCHIVED_GROUP ? setShowArchived((open) => !open) : setGroupCollapsed(key, !collapsedGroups[key]);
   const focusComposer = () => requestAnimationFrame(() => composer.current?.focus());
   useEffect(() => {
     if (!handoff) return;
@@ -517,7 +591,7 @@ export default function ChatWorkspace({
   useEffect(() => api.onChatApproval((value) => setApprovals((queue) => [...queue, value])), []);
   // New chats started explicitly use the Settings defaults; a chat created by typing
   // into the empty composer keeps whatever was just chosen there.
-  function create(useDefaults = false) {
+  function create(useDefaults = false, projectId = activeProject || '') {
     const nextProvider =
       useDefaults && chatDefaults.provider !== 'last' ? chatDefaults.provider : provider;
     const keepModel = nextProvider === provider;
@@ -534,7 +608,7 @@ export default function ChatWorkspace({
       id: crypto.randomUUID(),
       title: 'New chat',
       draft: '',
-      projectId: activeProject || '',
+      projectId,
       messages: [],
       provider: nextProvider,
       model: keepModel ? model : '',
@@ -546,14 +620,19 @@ export default function ChatWorkspace({
     setActive(next.id);
     return next;
   }
-  function startNewChat() {
+  // A chat in the given project ('' for none); the current chat is reused
+  // while it is still empty.
+  function startNewChat(projectId = activeProject || '') {
     if (!thread || thread.messages.length || thread.draft.trim() || thread.draftAttachments?.length || thread.error) {
-      create(true);
+      create(true, projectId);
       setIncludeFile(false);
+    } else if (thread.projectId !== projectId) {
+      changeProject(projectId);
     }
     focusComposer();
   }
   function openThread(t: Thread) {
+    if (t.unread) patchThread(t.id, { unread: false });
     setActive(t.id);
     setProvider(t.provider || 'ollama');
     setModel(t.model || '');
@@ -565,6 +644,61 @@ export default function ChatWorkspace({
   function edit(patch: Partial<Thread>) {
     const target = thread || create();
     setThreads((previous) => previous.map((t) => (t.id === target.id ? { ...t, ...patch } : t)));
+  }
+  // Right-click / "..." menu on a chat in the sidebar.
+  const [threadMenu, setThreadMenu] = useState<{ id: string; anchor: HTMLElement; view: 'main' | 'groups' } | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [groupPrompt, setGroupPrompt] = useState<{ id: string; value: string } | null>(null);
+  const groupNames = useMemo(
+    () => [...new Set(threads.map((t) => t.group).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b)),
+    [threads],
+  );
+  const patchThread = (id: string, patch: Partial<Thread>) =>
+    setThreads((previous) => previous.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  const menuThread = threadMenu ? threads.find((t) => t.id === threadMenu.id) : undefined;
+  useEffect(() => {
+    if (!threadMenu) return;
+    const close = () => setThreadMenu(null);
+    const onDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('.workspace-context-menu, .chat-thread-more')) return;
+      close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('blur', close);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('blur', close);
+    };
+  }, [threadMenu]);
+  function openThreadMenu(id: string, anchor: HTMLElement) {
+    setThreadMenu((current) => (current?.id === id ? null : { id, anchor, view: 'main' }));
+  }
+  function moveThread(id: string, group: string | undefined) {
+    patchThread(id, { group });
+    setThreadMenu(null);
+  }
+  function saveGroupPrompt() {
+    if (!groupPrompt) return;
+    const name = groupPrompt.value.trim().slice(0, 60);
+    if (!name) return;
+    // Reuse the existing spelling when the name matches a group that is already there.
+    const existing = groupNames.find((g) => g.toLowerCase() === name.toLowerCase());
+    patchThread(groupPrompt.id, { group: existing || name });
+    setGroupPrompt(null);
+  }
+  function commitRename() {
+    if (!renaming) return;
+    const title = renaming.value.trim();
+    if (!title) return;
+    patchThread(renaming.id, { title });
+    setRenaming(null);
   }
   async function attachFiles(files: File[]) {
     if (!files.length || uploadingRef.current || sending.current) return;
@@ -645,8 +779,10 @@ export default function ChatWorkspace({
       if (version === modelRequest.current) setChecking(false);
     }
   }
-  async function send(retry = false, voicePrompt?: string) {
-    if (sending.current || uploadingRef.current || (!retry && !(voicePrompt || thread?.draft || '').trim() && !draftAttachments.length)) return;
+  /** Resend from an earlier user message: everything after it is dropped, `content` replaces its text. */
+  type Rewrite = { index: number; content: string; attachments?: ChatAttachment[] };
+  async function send(retry = false, voicePrompt?: string, rewrite?: Rewrite) {
+    if (sending.current || uploadingRef.current || (!retry && !rewrite && !(voicePrompt || thread?.draft || '').trim() && !draftAttachments.length)) return;
     const target = thread || create();
     if (!chosenModel.trim()) {
       if (voicePrompt)
@@ -656,8 +792,8 @@ export default function ChatWorkspace({
       setSettings(true);
       return;
     }
-    const attached = !retry && includeFile && target.projectId === activeProject ? activeFile : undefined;
-    let messageAttachments = target.draftAttachments || [];
+    const attached = !retry && !rewrite && includeFile && target.projectId === activeProject ? activeFile : undefined;
+    let messageAttachments = rewrite ? rewrite.attachments || [] : target.draftAttachments || [];
     if (attached) {
       sending.current = true;
       setUploading(true);
@@ -671,7 +807,12 @@ export default function ChatWorkspace({
         return;
       } finally { setUploading(false); }
     }
-    const messages: ChatMessage[] = retry
+    const messages: ChatMessage[] = rewrite
+      ? [
+          ...target.messages.slice(0, rewrite.index),
+          { role: 'user', content: rewrite.content.trim() || 'Please review the attached files.', attachments: messageAttachments },
+        ]
+      : retry
       ? target.error && target.messages.at(-1)?.role === 'assistant'
         ? target.messages.slice(0, -1)
         : [...target.messages]
@@ -679,6 +820,9 @@ export default function ChatWorkspace({
     const requestMessages = [...messages];
     const requestId = crypto.randomUUID(),
       threadId = target.id;
+    // The provider's saved session still holds the replaced turns, so it starts over from the
+    // visible history.
+    const sessionId = rewrite ? undefined : target.sessionId;
     if (!retry)
       sentMessage.current = `${threadId}:${messages.filter((m) => m.role !== 'system').length - 1}`;
     sending.current = true;
@@ -694,8 +838,9 @@ export default function ChatWorkspace({
           ? {
               ...t,
               messages,
-              draft: retry ? t.draft : '',
-              draftAttachments: retry ? t.draftAttachments : [],
+              draft: retry || rewrite ? t.draft : '',
+              draftAttachments: retry || rewrite ? t.draftAttachments : [],
+              sessionId: rewrite ? undefined : t.sessionId,
               error: undefined,
               updatedAt: Date.now(),
               title:
@@ -715,7 +860,7 @@ export default function ChatWorkspace({
         permission: chosenPermission,
         projectId: target.projectId,
         prompt: requestMessages.at(-1)?.content || '',
-        sessionId: target.sessionId,
+        sessionId,
         attachments: messages.at(-1)?.attachments,
         endpoint,
         model: chosenModel,
@@ -781,6 +926,19 @@ export default function ChatWorkspace({
       setPending(null);
       setApprovals((queue) => queue.filter((item) => item.requestId !== requestId));
     }
+  }
+  // Editing a sent message: Save replaces it, drops everything after it and asks again.
+  const [editing, setEditing] = useState<{ index: number; value: string } | null>(null);
+  useEffect(() => setEditing(null), [active]);
+  function resendFrom(index: number, content: string, attachments?: ChatAttachment[]) {
+    setEditing(null);
+    void send(false, undefined, { index, content, attachments });
+  }
+  const isStopped = (error?: string) => !!error && /^Response stopped/i.test(error);
+  function editLastPrompt() {
+    if (!thread) return;
+    const index = thread.messages.map((m) => m.role).lastIndexOf('user');
+    if (index >= 0) setEditing({ index, value: thread.messages[index].content });
   }
   function answerApproval(allowed: boolean) {
     const current = approvals[0];
@@ -882,7 +1040,7 @@ export default function ChatWorkspace({
       }}>
       <aside className="projects-sidebar chat-sidebar">
         <div className="chat-sidebar-top">
-          <button className="chat-new-button" aria-label="New chat" onClick={startNewChat}>
+          <button className="chat-new-button" aria-label="New chat" onClick={() => startNewChat()}>
             <SquarePen size={15} aria-hidden="true" />
             <span>New chat</span>
           </button>
@@ -910,16 +1068,50 @@ export default function ChatWorkspace({
           </label>
         </div>
         <nav className="chat-thread-list" aria-label="Conversations">
+          {groups.length > 1 && !searching && (
+            <div className="chat-thread-list-head">
+              <span>Chats</span>
+            </div>
+          )}
           {groups.map((group) => (
-            <section key={group.label} className="chat-thread-group">
-              <h3>{group.label}</h3>
-              {group.items.map((t) => {
+            <section key={group.key} className="chat-thread-group" aria-label={group.label}>
+              <div className="chat-group-header">
+                <h3>
+                  <button
+                    className={`chat-group-toggle ${collapsed(group.key) ? 'collapsed' : ''}`}
+                    aria-expanded={!collapsed(group.key)}
+                    title={`${collapsed(group.key) ? 'Expand' : 'Minimise'} ${group.label}`}
+                    onClick={() => toggleGroup(group.key)}
+                  >
+                    <span className="chat-group-name">{group.label}</span>
+                    <ChevronDown size={12} aria-hidden="true" />
+                    {collapsed(group.key) && group.items.some((t) => pending?.threadId === t.id) && (
+                      <span className="chat-thread-live" role="status" aria-label="Responding" />
+                    )}
+                  </button>
+                </h3>
+                {!group.key.startsWith('__') && !group.key.startsWith('group:') && (
+                  <button
+                    className="chat-group-new"
+                    aria-label={`Start chat in ${group.label}`}
+                    title={`Start chat in ${group.label}`}
+                    onClick={() => startNewChat(group.key)}
+                  >
+                    <Plus size={13} />
+                  </button>
+                )}
+              </div>
+              {!collapsed(group.key) && group.items.map((t) => {
                 const responding = pending?.threadId === t.id;
                 const name = t.title === 'New chat' ? 'Untitled chat' : t.title;
                 return (
                   <div
                     key={t.id}
-                    className={`chat-thread ${active === t.id ? 'active' : ''} ${responding ? 'responding' : ''}`}
+                    className={`chat-thread ${active === t.id ? 'active' : ''} ${responding ? 'responding' : ''} ${t.unread ? 'unread' : ''}`}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setThreadMenu({ id: t.id, anchor: event.currentTarget, view: 'main' });
+                    }}
                   >
                     <button
                       className="chat-thread-open"
@@ -932,14 +1124,19 @@ export default function ChatWorkspace({
                     {responding ? (
                       <span className="chat-thread-live" role="status" aria-label="Responding" />
                     ) : (
-                      <button
-                        className="chat-thread-delete"
-                        aria-label={`Delete ${name}`}
-                        title="Delete chat"
-                        onClick={() => setDeleteId(t.id)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <>
+                        {t.unread && <span className="chat-thread-unread" role="status" aria-label="Unread" />}
+                        <button
+                          className="chat-thread-delete chat-thread-more"
+                          aria-label={`Options for ${name}`}
+                          aria-haspopup="menu"
+                          aria-expanded={threadMenu?.id === t.id}
+                          title="Chat options"
+                          onClick={(event) => openThreadMenu(t.id, event.currentTarget.closest('.chat-thread') as HTMLElement)}
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </>
                     )}
                   </div>
                 );
@@ -955,11 +1152,106 @@ export default function ChatWorkspace({
         </nav>
         <div className="chat-sidebar-footer">
           <button className="sidebar-settings" onClick={() => setSettings(true)}>
-            <Settings2 size={15} aria-hidden="true" />
-            Chat settings
+            <SettingsGear size={15} aria-hidden="true" />
+            Settings
           </button>
-          <div className="chat-local-note">Saved on this device</div>
         </div>
+        <AnimatePresence>
+          {threadMenu && menuThread && (
+            <AnchoredPopover anchor={threadMenu.anchor} className="context-menu workspace-context-menu" role="menu">
+              <button role="menuitem" onClick={() => { patchThread(menuThread.id, { pinned: !menuThread.pinned }); setThreadMenu(null); }}>
+                {menuThread.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                <span>{menuThread.pinned ? 'Unpin' : 'Pin'}</span>
+              </button>
+              <button role="menuitem" onClick={() => { patchThread(menuThread.id, { unread: !menuThread.unread }); setThreadMenu(null); }}>
+                <CircleDot size={14} />
+                <span>{menuThread.unread ? 'Mark as read' : 'Mark as unread'}</span>
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setRenaming({ id: menuThread.id, value: menuThread.title === 'New chat' ? '' : menuThread.title });
+                  setThreadMenu(null);
+                }}
+              >
+                <Pencil size={14} />
+                <span>Rename</span>
+              </button>
+              <div className="menu-separator" role="separator" />
+              <div
+                className="menu-submenu-wrap"
+                onMouseEnter={() => setThreadMenu((m) => (m ? { ...m, view: 'groups' } : m))}
+                onMouseLeave={() => setThreadMenu((m) => (m ? { ...m, view: 'main' } : m))}
+              >
+                <button
+                  role="menuitem"
+                  aria-haspopup="menu"
+                  aria-expanded={threadMenu.view === 'groups'}
+                  onClick={() => setThreadMenu((m) => (m ? { ...m, view: 'groups' } : m))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowRight') setThreadMenu((m) => (m ? { ...m, view: 'groups' } : m));
+                  }}
+                >
+                  <FolderInput size={14} />
+                  <span>Move to group</span>
+                  <ChevronRight size={14} className="menu-chevron" />
+                </button>
+                {threadMenu.view === 'groups' && (
+                  <div className="menu-submenu" role="menu" aria-label="Move to group">
+                    {groupNames.map((name) => (
+                      <button
+                        key={name}
+                        role="menuitemradio"
+                        aria-checked={menuThread.group === name}
+                        onClick={() => moveThread(menuThread.id, menuThread.group === name ? undefined : name)}
+                      >
+                        <FolderInput size={14} />
+                        <span>{name}</span>
+                        {menuThread.group === name && <Check size={14} className="menu-check" />}
+                      </button>
+                    ))}
+                    {menuThread.group && (
+                      <button role="menuitem" onClick={() => moveThread(menuThread.id, undefined)}>
+                        <X size={14} />
+                        <span>Remove from group</span>
+                      </button>
+                    )}
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setGroupPrompt({ id: menuThread.id, value: '' });
+                        setThreadMenu(null);
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>New group…</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="menu-separator" role="separator" />
+              <button
+                role="menuitem"
+                onClick={() => {
+                  patchThread(menuThread.id, { archived: !menuThread.archived, pinned: menuThread.archived ? menuThread.pinned : false });
+                  setThreadMenu(null);
+                }}
+              >
+                {menuThread.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                <span>{menuThread.archived ? 'Unarchive' : 'Archive'}</span>
+              </button>
+              <button
+                role="menuitem"
+                className="danger-menu-item"
+                disabled={pending?.threadId === menuThread.id}
+                onClick={() => { setDeleteId(menuThread.id); setThreadMenu(null); }}
+              >
+                <Trash2 size={14} />
+                <span>Delete</span>
+              </button>
+            </AnchoredPopover>
+          )}
+        </AnimatePresence>
       </aside>
       <main className="chat-main">
         <header className="chat-header">
@@ -967,17 +1259,6 @@ export default function ChatWorkspace({
             {thread?.title || 'New chat'}
           </h2>
           <div className="chat-header-actions">
-            <button
-              type="button"
-              className={`chat-header-model ${connectionError ? 'warning' : ''}`}
-              title={connectionError || 'Chat settings'}
-              onClick={() => setSettings(true)}
-            >
-              {logo(14)}
-              <span>
-                {providerNames[chosenProvider]} · {modelName}
-              </span>
-            </button>
             {threadChanges.length > 0 && (
               <button
                 type="button"
@@ -1064,13 +1345,69 @@ export default function ChatWorkspace({
               <div className="chat-messages">
                 {visibleMessages.map((message, index) => {
                   const key = `${thread!.id}:${index}`;
+                  const realIndex = thread!.messages.indexOf(message);
                   return message.role === 'user' ? (
+                    editing?.index === realIndex ? (
+                      <article className="chat-message user editing" key={index}>
+                        <textarea
+                          className="chat-edit-box"
+                          aria-label="Edit message"
+                          autoFocus
+                          value={editing.value}
+                          maxLength={100000}
+                          onChange={(event) => setEditing({ ...editing, value: event.target.value })}
+                          onFocus={(event) => event.target.setSelectionRange(event.target.value.length, event.target.value.length)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') setEditing(null);
+                            else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && editing.value.trim() && editing.value !== message.content)
+                              resendFrom(realIndex, editing.value, message.attachments);
+                          }}
+                        />
+                        <div className="chat-edit-actions">
+                          <span
+                            className="chat-edit-info"
+                            title="Saving restarts the conversation from this message. Later messages are removed."
+                          >
+                            <Info size={14} aria-hidden="true" />
+                          </span>
+                          <button type="button" className="chat-edit-cancel" onClick={() => setEditing(null)}>
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="chat-edit-save"
+                            disabled={!editing.value.trim() || editing.value === message.content}
+                            onClick={() => resendFrom(realIndex, editing.value, message.attachments)}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </article>
+                    ) : (
                     <article className="chat-message user" key={index} ref={riseInIfSent(key)}>
                       <div className="message-content">
                         <p>{message.content}</p>
                         {!!message.attachments?.length && <ChatAttachments files={message.attachments} />}
                       </div>
                       <div className="chat-message-actions">
+                        <button
+                          className="chat-action"
+                          aria-label={`Retry message ${index + 1}`}
+                          title="Retry"
+                          disabled={!!pending}
+                          onClick={() => resendFrom(realIndex, message.content, message.attachments)}
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                        <button
+                          className="chat-action"
+                          aria-label={`Edit message ${index + 1}`}
+                          title="Edit"
+                          disabled={!!pending}
+                          onClick={() => setEditing({ index: realIndex, value: message.content })}
+                        >
+                          <Pencil size={13} />
+                        </button>
                         <button
                           className="chat-action"
                           aria-label={`Copy message ${index + 1}`}
@@ -1081,6 +1418,7 @@ export default function ChatWorkspace({
                         </button>
                       </div>
                     </article>
+                    )
                   ) : (
                     <article className="chat-message assistant" key={index}>
                       <div className="chat-avatar">{logo(15)}</div>
@@ -1133,7 +1471,21 @@ export default function ChatWorkspace({
                     </div>
                   </article>
                 )}
-                {thread?.error && (
+                {thread?.error && isStopped(thread.error) && (
+                  <div className="chat-error interrupted" role="status">
+                    <Info size={16} aria-hidden="true" />
+                    <p>{providerNames[chosenProvider]}’s response was interrupted.</p>
+                    <div className="chat-error-actions">
+                      <button type="button" disabled={!!pending} onClick={editLastPrompt}>
+                        Edit prompt
+                      </button>
+                      <button type="button" disabled={!!pending} onClick={() => send(true)}>
+                        Try again
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {thread?.error && !isStopped(thread.error) && (
                   <div className="chat-error" role="alert">
                     <AlertCircle size={16} aria-hidden="true" />
                     <p>{thread.error}</p>
@@ -1185,6 +1537,7 @@ export default function ChatWorkspace({
             <ChatSelect
               label="Chat project"
               heading="Project"
+              compact
               title="Project"
               className="chat-context-chip"
               icon={<FolderOpen size={14} aria-hidden="true" />}
@@ -1261,7 +1614,7 @@ export default function ChatWorkspace({
                     .catch((error) => setStorageError(cleanError(error)))
                 }
               >
-                <Square size={11} fill="currentColor" />
+                <Square size={11} weight="fill" />
               </button>
             ) : (
               <button
@@ -1280,7 +1633,7 @@ export default function ChatWorkspace({
               <div className="chat-compose-tools">
                 <button type="button" className="chat-voice-button" aria-label="Attach files" title="Attach images or code files · paste images or drop files here"
                   disabled={!loaded || uploading || !!pending} onClick={() => uploadInput.current?.click()}>
-                  <Plus size={17} />
+                  <Paperclip size={15} />
                 </button>
                 <button
                   className={`chat-voice-button ${listening ? 'active listening' : ''}`}
@@ -1304,7 +1657,8 @@ export default function ChatWorkspace({
                 {chosenProvider !== 'ollama' && (
                   <ChatSelect
                     label="Chat permissions"
-                    heading="Permissions"
+                    heading={chosenProvider === 'claude' ? 'Mode' : 'Permissions'}
+                    compact
                     title={chosenProjectId ? 'Permissions' : 'Select a project to enable agent actions'}
                     value={chosenPermission}
                     disabled={!!pending || !chosenProjectId}
@@ -1312,27 +1666,26 @@ export default function ChatWorkspace({
                       edit({ permission: value as Permission });
                       setPermission(value as Permission);
                     }}
-                    options={[
-                      {
-                        value: 'ask',
-                        label: 'Ask for approval',
-                        description: chosenProvider === 'codex' ? 'Project edits allowed; ask for extra access' : 'Ask before restricted commands and edits',
-                        icon: <ShieldCheck size={14} />,
-                      },
-                      {
-                        value: 'auto',
-                        label: 'Approve safe actions',
-                        description: 'Only ask for risky actions',
-                        icon: <ShieldCheck size={14} />,
-                      },
-                      {
-                        value: 'full',
-                        label: 'Full access',
-                        description: 'Never ask. Use with care',
-                        icon: <ShieldAlert size={14} />,
-                        tone: 'danger',
-                      },
-                    ]}
+                    options={
+                      chosenProvider === 'claude'
+                        ? [
+                            { value: 'auto', label: 'Auto', description: 'Claude handles permission decisions' },
+                            { value: 'ask', label: 'Manual', description: 'Always ask before making changes', badge: 'Default' },
+                            { value: 'edits', label: 'Accept edits', description: 'Automatically accept all file edits' },
+                            { value: 'plan', label: 'Plan', description: 'Create a plan before making changes' },
+                            { value: 'full', label: 'Bypass permissions', footer: true, trailing: 'Enable' },
+                          ]
+                        : [
+                            {
+                              value: 'ask',
+                              label: 'Ask for approval',
+                              description: chosenProvider === 'codex' ? 'Project edits allowed; ask for extra access' : 'Ask before restricted commands and edits',
+                              badge: 'Default',
+                            },
+                            { value: 'auto', label: 'Approve safe actions', description: 'Only ask for risky actions' },
+                            { value: 'full', label: 'Full access', footer: true, trailing: 'Enable' },
+                          ]
+                    }
                   />
                 )}
                 {uploading && <span role="status" className="chat-uploading">Attaching…</span>}
@@ -1361,6 +1714,7 @@ export default function ChatWorkspace({
                 <ChatSelect
                   label="Chat provider"
                   heading="Provider"
+                  compact
                   title="Provider"
                   value={chosenProvider}
                   disabled={!!pending}
@@ -1375,6 +1729,8 @@ export default function ChatWorkspace({
                   heading={`${providerNames[chosenProvider]} models`}
                   title="Model"
                   className="chat-select-model"
+                  featured={4}
+                  moreLabel="More models"
                   placeholder="Choose model"
                   value={chosenModel}
                   disabled={!!pending || checking}
@@ -1388,7 +1744,7 @@ export default function ChatWorkspace({
                     ...models.map((item) => ({
                       value: item.id,
                       label: item.name,
-                      description: item.name !== item.id ? item.id : undefined,
+                      badge: item.isDefault ? 'Default' : undefined,
                     })),
                     ...(chosenModel && !models.some((item) => item.id === chosenModel)
                       ? [{ value: chosenModel, label: chosenModel, description: 'Custom model' }]
@@ -1503,6 +1859,71 @@ export default function ChatWorkspace({
                 Allow once
               </button>
             </div>
+          </Modal>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {groupPrompt && (
+          <Modal title="New group" onClose={() => setGroupPrompt(null)}>
+            <form
+              className="chat-rename-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                saveGroupPrompt();
+              }}
+            >
+              <p className="chat-delete-description">Name a group and this chat will move into it.</p>
+              <input
+                className="text-input"
+                aria-label="Group name"
+                placeholder="Group name"
+                autoFocus
+                maxLength={60}
+                value={groupPrompt.value}
+                onChange={(event) => setGroupPrompt({ ...groupPrompt, value: event.target.value })}
+              />
+              <div className="chat-approval-actions">
+                <button type="button" className="secondary-button" onClick={() => setGroupPrompt(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button" disabled={!groupPrompt.value.trim()}>
+                  Create group
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {renaming && (
+          <Modal title="Rename chat" onClose={() => setRenaming(null)}>
+            <form
+              className="chat-rename-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                commitRename();
+              }}
+            >
+              <p className="chat-delete-description">Give this chat a name you can recognise at a glance.</p>
+              <input
+                className="text-input"
+                aria-label="Chat name"
+                placeholder="Chat name"
+                autoFocus
+                maxLength={120}
+                value={renaming.value}
+                onChange={(event) => setRenaming({ ...renaming, value: event.target.value })}
+                onFocus={(event) => event.target.select()}
+              />
+              <div className="chat-approval-actions">
+                <button type="button" className="secondary-button" onClick={() => setRenaming(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button" disabled={!renaming.value.trim()}>
+                  Save name
+                </button>
+              </div>
+            </form>
           </Modal>
         )}
       </AnimatePresence>

@@ -84,7 +84,11 @@ export function usePanelWidths({
     if (!workspace) return;
     const measure = () => {
       if (document.body.classList.contains('dashboard-layout-transitioning')) return;
-      setWorkspaceWidth(workspace.getBoundingClientRect().width);
+      const width = workspace.getBoundingClientRect().width;
+      // Zero means the code view is hidden (chat mode), not that it shrank. Keeping
+      // the last width stops the terminal grid collapsing to one column meanwhile,
+      // which on return flashed that layout and refit every CLI to it for a frame.
+      if (width) setWorkspaceWidth(width);
     };
     measure();
     const observer = new ResizeObserver(measure);

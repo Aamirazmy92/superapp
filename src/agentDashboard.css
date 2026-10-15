@@ -477,30 +477,25 @@
 .usage-meter {
   --tone: var(--running);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  --usage-caption-w: 118px; /* fixed so every bar in a card is the same length */
+  grid-template-columns: minmax(0, 1fr) var(--usage-caption-w);
   grid-template-areas:
-    'label value'
-    'track track'
+    'track label'
     'reset reset';
-  align-items: baseline;
-  row-gap: 7px;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
 }
 
-.usage-meter.high .usage-meter-value,
-.usage-meter.critical .usage-meter-value { color: var(--tone); }
-
-.usage-meter-label {
-  grid-area: label;
-  color: var(--muted);
-  font-size: var(--font-xs);
-}
-
+/* The bar: the fill grows from the left and carries the percentage. */
 .usage-meter-track {
   position: relative;
+  display: flex;
   grid-area: track;
-  align-self: center;
-  height: 4px;
-  border-radius: 999px;
+  align-items: center;
+  height: var(--bar-h);
+  overflow: hidden;
+  border-radius: var(--r-bar);
   background: var(--hairline-strong);
 }
 
@@ -512,21 +507,53 @@
   transition: width 240ms var(--ease);
 }
 
+/* Centred in the filled part: the label box is as wide as the fill. */
 .usage-meter-value {
-  grid-area: value;
-  color: var(--text);
-  font-size: var(--font-lg);
-  font-weight: 560;
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: var(--fill, 0%);
+  color: var(--on-primary);
+  font-size: var(--type-small);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  white-space: nowrap;
+  transition: width 240ms var(--ease);
+}
+/* Too little fill to hold it: the percentage sits just past the end of the fill. */
+.usage-meter-track.label-outside .usage-meter-value {
+  left: var(--fill, 0%);
+  width: auto;
+  padding-left: var(--space-2);
+  color: var(--text);
+  transition: left 240ms var(--ease);
+}
+.usage-meter.pending .usage-meter-value {
+  left: 0;
+  width: auto;
+  padding-left: var(--space-3);
+  color: var(--faint);
 }
 
-.usage-meter.critical .usage-meter-value { color: var(--danger); }
+.usage-meter-label {
+  grid-area: label;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 .usage-meter-reset {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 8px;
+  column-gap: var(--space-2);
   grid-area: reset;
   color: var(--faint);
   font-size: var(--font-xs);
@@ -540,8 +567,8 @@
 }
 
 .usage-meter.critical .usage-meter-warning { color: var(--danger); }
-.usage-card.status-stale .usage-meter-fill { opacity: 0.6; }
-.usage-meter.pending .usage-meter-value { color: var(--faint); }
+.usage-card.status-stale .usage-meter-fill { opacity: 0.7; }
+:root[data-theme='light'] .usage-card.status-stale .usage-meter-value { color: var(--text); }
 
 .usage-card-message {
   margin: 0;
@@ -553,7 +580,7 @@
 .usage-card.status-error .usage-card-message,
 .usage-card.status-expired .usage-card-message { color: var(--warning); }
 
-:root.reduce-motion .usage-meter-fill { transition: none; }
+:root.reduce-motion :is(.usage-meter-fill, .usage-meter-value) { transition: none; }
 
 /* Empty state -------------------------------------------------------------- */
 .agent-dashboard-empty {
@@ -598,13 +625,6 @@
   color: var(--text);
   font-size: var(--font-sm);
   font-weight: 560;
-}
-
-.agent-dashboard-note {
-  margin: 28px 2px 0;
-  color: var(--faint);
-  font-size: var(--font-xs);
-  line-height: 1.5;
 }
 
 @media (max-width: 640px) {

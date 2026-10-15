@@ -1,3 +1,13 @@
+/* Settings dims the page lightly and has large corners. No blur. */
+:root:root .modal-backdrop.preferences-backdrop {
+  --dialog-scrim: rgba(0, 0, 0, 0.27);
+  --dialog-radius: 16px;
+}
+
+:root:root .modal-backdrop > .preferences {
+  border-radius: 16px;
+}
+
 .modal-backdrop.preferences-backdrop {
   align-items: center;
   padding: 16px 24px;
@@ -24,7 +34,7 @@
   border-radius: 14px;
   box-shadow: 0 24px 100px #0008;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--type-body);
 }
 .preferences-header {
   display: flex;
@@ -71,7 +81,7 @@
   width: 100%;
   background: transparent;
   border: 0;
-  font-size: 12px;
+  font-size: var(--type-small);
   outline-offset: 4px;
 }
 .preferences-sidebar nav {
@@ -98,7 +108,7 @@
 .preferences-local {
   margin-top: auto;
   padding: 24px 9px 0;
-  font-size: 11px;
+  font-size: var(--type-micro);
   color: #b4b9be;
 }
 .preferences-local small {
@@ -143,13 +153,13 @@
   border-bottom: 1px solid #2b2e32;
 }
 .preferences-row strong {
-  font-size: 13px;
+  font-size: var(--type-body);
   font-weight: 500;
 }
 .preferences-row small {
   display: block;
   color: #9b9fa6;
-  font-size: 12px;
+  font-size: var(--type-small);
   line-height: 1.5;
   margin-top: 5px;
   max-width: 310px;
@@ -160,35 +170,6 @@
   border-radius: 6px;
   background: #202327;
   min-width: 96px;
-}
-.preferences-switch {
-  appearance: none;
-  width: 34px;
-  height: 20px;
-  flex-shrink: 0;
-  border: 1px solid #575d65;
-  border-radius: 12px;
-  background: #34383d;
-  cursor: pointer;
-  position: relative;
-}
-.preferences-switch:before {
-  content: '';
-  width: 12px;
-  height: 12px;
-  position: absolute;
-  left: 3px;
-  top: 3px;
-  border-radius: 50%;
-  background: #c7cbd1;
-}
-.preferences-switch:checked {
-  background: #d7d0bf;
-  border-color: #d7d0bf;
-}
-.preferences-switch:checked:before {
-  left: 17px;
-  background: #18382b;
 }
 .preferences-preview {
   margin-top: 25px;
@@ -234,14 +215,14 @@
 }
 .preferences-info small {
   display: block;
-  font-size: 12px;
+  font-size: var(--type-small);
   line-height: 1.7;
   color: #9b9fa6;
   margin-top: 7px;
 }
 .preferences-copy h4 {
   margin: 25px 0 8px;
-  font-size: 13px;
+  font-size: var(--type-body);
   font-weight: 500;
 }
 .preferences-copy p {
@@ -256,7 +237,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  font-size: 11px;
+  font-size: var(--type-micro);
   color: #a8aeb5;
 }
 .preferences-footer > span,
@@ -325,7 +306,7 @@
   }
   .preferences-sidebar nav button {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--type-micro);
     padding: 8px;
     gap: 5px;
   }
@@ -381,7 +362,7 @@
   display: block;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-small);
 }
 .preferences-themes {
   display: grid;
@@ -430,7 +411,7 @@
 .preferences-theme-swatch i:last-child { width: 43%; }
 .preferences-theme-label { display: block; padding: 10px 5px 5px; }
 .preferences-theme-label strong { display: block; font-weight: 550; }
-.preferences-theme-label small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.preferences-theme-label small { display: block; margin-top: 3px; color: var(--muted); font-size: var(--type-micro); }
 @media (max-width: 700px) {
   .preferences-themes { grid-template-columns: 1fr; }
   .preferences-theme { flex-direction: row; align-items: center; gap: 10px; }
@@ -440,7 +421,7 @@
 
 /* ── Redesign: title in the sidebar, settings grouped into raised cards ── */
 :root .modal-backdrop > .preferences {
-  width: min(980px, calc(100vw - 48px));
+  width: min(1000px, calc(100vw - 48px));
   height: min(700px, calc(100dvh - 64px));
   background: var(--stage);
   border: 1px solid var(--hairline-strong);
@@ -487,7 +468,7 @@
 :root .preferences .preferences-sidebar nav button {
   padding: 9px 11px;
   border-radius: 10px;
-  font-size: 13.5px;
+  font-size: var(--type-body);
   color: var(--text-soft);
 }
 :root .preferences .preferences-sidebar nav button:hover { background: var(--hover); color: var(--text); }
@@ -511,7 +492,7 @@
   letter-spacing: -0.015em;
   margin: 0 0 6px;
 }
-:root .preferences .preferences-description { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+:root .preferences .preferences-description { margin: 0 0 24px; color: var(--muted); font-size: var(--type-title); }
 
 :root .preferences .preferences-group {
   background: var(--raised);
@@ -522,12 +503,12 @@
 }
 .preferences-group:empty { display: none; }
 :root .preferences .preferences-group .preferences-row {
-  padding: 16px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--hairline);
 }
 :root .preferences .preferences-group .preferences-row:last-child { border-bottom: 0; }
-:root .preferences .preferences-row strong { font-size: 14px; font-weight: 540; }
-:root .preferences .preferences-row small { max-width: 340px; font-size: 12.5px; }
+:root .preferences .preferences-row strong { font-size: var(--type-title); font-weight: 500; }
+:root .preferences .preferences-row small { max-width: 340px; font-size: var(--type-small); }
 :root .preferences .preferences-row select {
   appearance: none;
   padding: 8px 32px 8px 12px;
@@ -540,22 +521,23 @@
 }
 :root .preferences .preferences-row select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 :root .preferences .preferences-row select:disabled { opacity: 0.45; cursor: not-allowed; }
-:root .preferences .preferences-row kbd {
+:root .preferences :is(.preferences-row, .preferences-command) kbd {
+  min-width: 0;
+  margin: 0;
   padding: 4px 9px;
   border: 1px solid var(--hairline-strong);
   border-bottom-width: 2px;
   border-radius: 7px;
   background: var(--stage);
-  font: 12px var(--font-sans);
+  box-shadow: none;
+  font: 500 var(--type-small) / normal var(--font-sans);
+  letter-spacing: 0;
+  white-space: nowrap;
   color: var(--text-soft);
 }
-:root .preferences .preferences-switch { width: 40px; height: 24px; border-radius: 14px; transition: background .15s; }
-:root .preferences .preferences-switch:before { width: 16px; height: 16px; top: 3px; left: 3px; transition: left .15s; }
-:root .preferences .preferences-switch:checked:before { left: 19px; }
-:root .preferences .preferences-switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 :root .preferences .preferences-theme-setting { padding: 4px 0 0; border-bottom: 0; }
-:root .preferences .preferences-theme-setting > strong { font-size: 14px; }
+:root .preferences .preferences-theme-setting > strong { font-size: var(--type-title); }
 :root .preferences .preferences-themes { gap: 12px; margin-top: 14px; }
 :root .preferences .preferences-theme {
   padding: 8px;
@@ -571,14 +553,19 @@
 }
 :root .preferences .preferences-theme-swatch { height: 84px; border-radius: 9px; }
 :root .preferences .preferences-theme > svg {
-  right: 14px;
-  bottom: 16px;
+  /* Sits in the swatch's bottom-right corner, inset evenly (card padding 8 + 8). */
+  top: 64px;
+  right: 16px;
+  bottom: auto;
+  box-sizing: border-box;
   width: 20px;
   height: 20px;
-  padding: 3px;
+  padding: 4px;
   border-radius: 50%;
   background: var(--focus);
   color: var(--stage);
+  stroke-width: 3;
+  box-shadow: 0 0 0 2px var(--raised);
 }
 
 :root .preferences .preferences-footer {
@@ -593,6 +580,8 @@
 @media (max-width: 700px) {
   :root .preferences .preferences-sidebar { width: 190px; }
   :root .preferences .preferences-content { padding: 24px 18px; }
+  /* Themes stack as rows here: centre the tick vertically at the row's right edge. */
+  :root .preferences .preferences-theme > svg { top: 50%; right: 16px; transform: translateY(-50%); }
 }
 @media (max-width: 480px) {
   :root .preferences .preferences-sidebar { width: 100%; padding: 14px 10px 8px; }

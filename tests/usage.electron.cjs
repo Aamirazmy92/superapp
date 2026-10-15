@@ -8,7 +8,7 @@ const { _electron } = require('playwright');
 // Run after npm run build: node tests/usage.electron.cjs
 // A local server stands in for both usage endpoints, so nothing leaves the machine.
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-usage-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-usage-'));
   const claudeDir = path.join(dataDir, 'claude-config');
   const codexHome = path.join(dataDir, 'codex-home');
   const sessionDay = path.join(codexHome, 'sessions', '2026', '09', '30');
@@ -84,12 +84,12 @@ const { _electron } = require('playwright');
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const env = {
     ...process.env,
-    SUPERAPP_DATA_DIR: dataDir,
+    VEYO_DATA_DIR: dataDir,
     CLAUDE_CONFIG_DIR: claudeDir,
     CODEX_HOME: codexHome,
-    SUPERAPP_USAGE_TEST_ORIGIN: `http://127.0.0.1:${server.address().port}`,
+    VEYO_USAGE_TEST_ORIGIN: `http://127.0.0.1:${server.address().port}`,
   };
-  delete env.SUPERAPP_DEV_URL;
+  delete env.VEYO_DEV_URL;
   const launch = () =>
     _electron.launch({ executablePath: require('electron'), args: [path.resolve('.')], env });
 
@@ -110,7 +110,7 @@ const { _electron } = require('playwright');
       () =>
         document
           .querySelector('.usage-card[data-provider="claude"] [role="meter"]')
-          ?.getAttribute('aria-valuenow') === '92',
+          ?.getAttribute('aria-valuenow') === '8',
     );
     assert.equal(
       requests.find((request) => request.url === '/api/oauth/usage').authorization,
@@ -132,11 +132,11 @@ const { _electron } = require('playwright');
     const claude = dashboard.locator('.usage-card[data-provider="claude"]');
     assert.match(await claude.textContent(), /Updated just now/);
     assert.equal(
-      await claude.getByRole('meter', { name: '5-hour usage' }).getAttribute('aria-valuenow'),
-      '92',
+      await claude.getByRole('meter', { name: '5-hour usage remaining' }).getAttribute('aria-valuenow'),
+      '8',
     );
     assert.equal(
-      await claude.getByRole('meter', { name: 'Opus weekly usage' }).getAttribute('aria-valuenow'),
+      await claude.getByRole('meter', { name: 'Opus weekly usage remaining' }).getAttribute('aria-valuenow'),
       '50',
     );
     // The current dashboard warns at high usage and shows the elapsed marker.
@@ -149,15 +149,15 @@ const { _electron } = require('playwright');
     assert.match(await codex.textContent(), /From last Codex reply/);
     assert.match(await codex.textContent(), /Sign-in expired\. Start Codex to refresh it\./);
     assert.equal(
-      await codex.getByRole('meter', { name: 'Weekly usage' }).getAttribute('aria-valuenow'),
-      '93',
+      await codex.getByRole('meter', { name: 'Weekly usage remaining' }).getAttribute('aria-valuenow'),
+      '7',
     );
     assert.equal(
       await codex.locator('.usage-meter-warning').count(),
       0,
       'old readings must not project current use',
     );
-    assert.match(await claude.textContent(), /5-hour92%/);
+    assert.match(await claude.textContent(), /8%.*5-hour/);
     assert.match(await claude.locator('.usage-card-status').textContent(), /Live/);
     assert.match(await codex.locator('.usage-card-status').textContent(), /Last known/);
     assert.equal(
@@ -181,10 +181,10 @@ const { _electron } = require('playwright');
     await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
     await page.getByRole('tab', { name: 'Usage' }).click();
     const restored = page.locator('.usage-card[data-provider="claude"]');
-    await restored.getByRole('meter', { name: '5-hour usage' }).waitFor({ timeout: 20000 });
+    await restored.getByRole('meter', { name: '5-hour usage remaining' }).waitFor({ timeout: 20000 });
     assert.equal(
-      await restored.getByRole('meter', { name: '5-hour usage' }).getAttribute('aria-valuenow'),
-      '92',
+      await restored.getByRole('meter', { name: '5-hour usage remaining' }).getAttribute('aria-valuenow'),
+      '8',
     );
     await page.waitForFunction(() =>
       document
@@ -285,7 +285,7 @@ const { _electron } = require('playwright');
         .locator('.usage-card[data-provider="claude"]')
         .getByRole('meter')
         .getAttribute('aria-valuenow'),
-      '25',
+      '75',
     );
     assert.match(
       await page.locator('.usage-card[data-provider="claude"]').getAttribute('class'),
@@ -367,7 +367,7 @@ const { _electron } = require('playwright');
       () =>
         document
           .querySelector('.usage-card[data-provider="claude"] [role="meter"]')
-          ?.getAttribute('aria-valuenow') === '2',
+          ?.getAttribute('aria-valuenow') === '98',
     );
     assert.equal(
       await app.evaluate(() => globalThis.__usageTestChecks),
@@ -439,14 +439,14 @@ const { _electron } = require('playwright');
       0,
     );
     assert.equal(
-      await page.getByRole('meter', { name: '1-day usage' }).getAttribute('aria-valuenow'),
-      '40',
+      await page.getByRole('meter', { name: '1-day usage remaining' }).getAttribute('aria-valuenow'),
+      '60',
     );
     assert.equal(
       await page
-        .getByRole('meter', { name: 'Luna Reserve Weekly usage' })
+        .getByRole('meter', { name: 'Luna Reserve Weekly usage remaining' })
         .getAttribute('aria-valuenow'),
-      '12',
+      '88',
     );
     assert.equal(
       await app.evaluate(() => globalThis.__usageTestChecks),
@@ -460,7 +460,7 @@ const { _electron } = require('playwright');
   } finally {
     await app.close().catch(() => {});
     server.close();
-    assert.ok(path.basename(dataDir).startsWith('superapp-usage-'));
+    assert.ok(path.basename(dataDir).startsWith('veyo-usage-'));
     await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
   }
 })().catch((error) => {

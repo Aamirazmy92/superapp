@@ -6,7 +6,7 @@ const { _electron } = require('playwright');
 
 // Run after npm run build: node tests/quickopen.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-quickopen-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-quickopen-'));
   const root = path.join(dataDir, 'project');
   await fs.mkdir(path.join(root, 'src'), { recursive: true });
   await fs.writeFile(path.join(root, 'src', 'alpha.ts'), 'export const alpha = 1;\n');
@@ -22,7 +22,7 @@ const { _electron } = require('playwright');
   const app = await _electron.launch({
     executablePath: require('electron'),
     args: [path.resolve('.')],
-    env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+    env: { ...process.env, VEYO_DATA_DIR: dataDir },
   });
   try {
     const page = await app.firstWindow();
@@ -65,12 +65,41 @@ const { _electron } = require('playwright');
     await dialog.waitFor();
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+
+    // A dialog that is fading out is already closed: shortcuts work at once.
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await page.keyboard.press('Control+p');
+    await dialog.waitFor();
+    await page.waitForTimeout(400);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Control+k');
+    await palette.waitFor();
+    await dialog.waitFor({ state: 'hidden' });
+    await page.keyboard.press('Escape');
+    await palette.waitFor({ state: 'hidden' });
+
+    // Reopened mid-fade-out, the palette is focused and takes clicks again.
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(30);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(30);
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(500);
+    assert.equal(await palette.count(), 1);
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute('placeholder')),
+      'What would you like to do?',
+    );
+    await palette.getByRole('button', { name: /Quick open file/ }).click({ timeout: 3000 });
+    await dialog.waitFor();
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'hidden' });
     console.log('Quick open navigation and editor-to-chat handoff passed.');
   } finally {
     await app.close();
     if (
       !path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) ||
-      !path.basename(dataDir).startsWith('superapp-quickopen-')
+      !path.basename(dataDir).startsWith('veyo-quickopen-')
     )
       throw new Error('Refusing to remove a directory outside the test profile.');
     await fs.rm(dataDir, { recursive: true, force: true });

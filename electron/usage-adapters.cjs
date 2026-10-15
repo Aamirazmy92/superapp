@@ -117,7 +117,7 @@ function createUsageAdapters({
 } = {}) {
   const claudeHome = () => env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
   const codexHome = () => env.CODEX_HOME || path.join(os.homedir(), '.codex');
-  const testOrigin = env.SUPERAPP_USAGE_TEST_ORIGIN;
+  const testOrigin = env.VEYO_USAGE_TEST_ORIGIN;
   // Only the existing loopback fixture mode bypasses the actual installed CLI.
   let fixtures = false;
   try {

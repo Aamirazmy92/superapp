@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "veyo-marketplace.schema.json",
+  "title": "Veyo marketplace index (.veyo-plugin/marketplace.json)",
+  "description": "A catalog of plugins. The same shape as Claude Code's .claude-plugin/marketplace.json, which Veyo also reads. Entries that fail validation are listed with their error instead of failing the catalog (electron/plugins/marketplace.cjs).",
+  "type": "object",
+  "required": [
+    "name",
+    "plugins"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "not": {
+        "enum": [
+          "local",
+          "git"
+        ]
+      }
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "owner": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "pluginRoot": {
+          "type": "string",
+          "description": "Prefix for bare relative sources."
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "source"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "The name Veyo installs the plugin under, even if its manifest says otherwise."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "version": {
+            "type": "string",
+            "description": "Semver. Used for update detection when present."
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "author": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "homepage": {
+            "type": "string",
+            "pattern": "^https?://"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "tagline": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "One line for the storefront row; defaults to the first sentence of description."
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Who makes the service, such as GitHub or Google."
+          },
+          "icon": {
+            "$ref": "#/$defs/iconPath"
+          },
+          "iconDark": {
+            "$ref": "#/$defs/iconPath",
+            "description": "Used on dark themes."
+          },
+          "setup": {
+            "enum": [
+              "none",
+              "sign-in",
+              "token",
+              "oauth-client"
+            ],
+            "description": "What the person must do before the plugin works."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A folder inside this marketplace, such as ./plugins/name."
+              },
+              {
+                "type": "object",
+                "required": [
+                  "source",
+                  "repo"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "github"
+                  },
+                  "repo": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+                  },
+                  "ref": {
+                    "type": "string"
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "source",
+                  "url"
+                ],
+                "properties": {
+                  "source": {
+                    "enum": [
+                      "url",
+                      "git"
+                    ]
+                  },
+                  "url": {
+                    "$ref": "#/$defs/gitUrl"
+                  },
+                  "ref": {
+                    "type": "string"
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "source",
+                  "url",
+                  "path"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "git-subdir"
+                  },
+                  "url": {
+                    "$ref": "#/$defs/gitUrl"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "ref": {
+                    "type": "string"
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "Curated storefront rows, in order. Every valid plugin also appears under \"All plugins\".",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "plugins"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "plugins": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "gitUrl": {
+      "type": "string",
+      "pattern": "^(https://|ssh://|git@[A-Za-z0-9.-]+:)",
+      "description": "https or ssh only, without credentials."
+    },
+    "iconPath": {
+      "type": "string",
+      "pattern": "\\.(svg|png|webp)$",
+      "maxLength": 512,
+      "description": "A file inside the marketplace, at most 256 KB."
+    }
+  }
+}

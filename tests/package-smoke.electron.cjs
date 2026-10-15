@@ -33,7 +33,7 @@ async function connect(port, child) {
 
 // Run after npm run package: node tests/package-smoke.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-package-smoke-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-package-smoke-'));
   const root = path.join(dataDir, 'project');
   await fs.mkdir(root);
   await fs.writeFile(
@@ -44,7 +44,7 @@ async function connect(port, child) {
       sessions: {},
     }),
   );
-  const executable = path.resolve(process.argv[2] || 'release/win-unpacked/Superapp.exe');
+  const executable = path.resolve(process.argv[2] || 'release/win-unpacked/Veyo.exe');
   const port = await freePort();
   const previewServer = http.createServer((_request, response) => {
     response.setHeader('Content-Type', 'text/html');
@@ -55,10 +55,10 @@ async function connect(port, child) {
   const child = spawn(executable, [`--remote-debugging-port=${port}`], {
     env: {
       ...process.env,
-      SUPERAPP_DATA_DIR: dataDir,
+      VEYO_DATA_DIR: dataDir,
       // A release must never turn an environment-supplied URL into its
       // privileged main frame, even when another process sets this variable.
-      SUPERAPP_DEV_URL: 'https://example.com/',
+      VEYO_DEV_URL: 'https://example.com/',
     },
     windowsHide: true,
   });
@@ -129,7 +129,7 @@ async function connect(port, child) {
     }
     if (
       !path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) ||
-      !path.basename(dataDir).startsWith('superapp-package-smoke-')
+      !path.basename(dataDir).startsWith('veyo-package-smoke-')
     )
       throw new Error('Refusing to remove a directory outside the test profile.');
     await fs.rm(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });

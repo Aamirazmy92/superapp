@@ -1,0 +1,963 @@
+/* Plugins ----------------------------------------------------------------------
+   The Plugins dialog: a storefront (Public / Personal), the install sheet, the
+   full review, details and marketplaces. Colours, type and spacing come from
+   tokens.css, so every theme (including plugin themes) applies. */
+.modal-backdrop > .tool-modal.plugins-modal {
+  width: min(860px, calc(100vw - 32px));
+  height: min(720px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.modal-backdrop > .tool-modal.plugins-modal .modal-title h2 {
+  font-size: var(--type-display);
+  letter-spacing: -0.02em;
+}
+
+/* Quiet secondary buttons. The shared dialog rule pairs a dark label with the
+   dark-theme fill from claude.css, which leaves the label unreadable. */
+.modal-backdrop .tool-modal:is(.plugins-modal, .plugins-prompt-modal) .secondary-button {
+  border: 1px solid var(--hairline-strong);
+  color: var(--text) !important;
+  background: var(--raised);
+}
+
+.modal-backdrop .tool-modal:is(.plugins-modal, .plugins-prompt-modal) .secondary-button:hover:not(:disabled) {
+  border-color: var(--edge);
+  background: var(--surface-hover);
+}
+
+.plugins-modal .plugins-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Header: subtitle on the left, search and actions on the right. */
+.plugins-modal .plugins-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+}
+
+.plugins-modal .plugins-subtitle {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-body);
+}
+
+.plugins-modal .plugins-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.plugins-modal .plugins-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 17px;
+  color: var(--muted);
+  background: var(--well);
+}
+
+.plugins-modal .plugins-search:focus-within {
+  border-color: var(--focus);
+}
+
+/* The shared dialog input style must not draw a second box inside the pill. */
+.modal-backdrop .tool-modal.plugins-modal .plugins-search input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--type-body);
+}
+
+.plugins-modal .plugins-header-actions .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-header-actions .icon-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.plugins-modal .plugins-add {
+  position: relative;
+}
+
+.modal-backdrop .tool-modal.plugins-modal .plugins-add-button {
+  min-height: 32px;
+  padding: 0 12px 0 14px;
+  border-radius: 16px;
+  font-size: var(--type-body);
+}
+
+.plugins-modal .plugins-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-menu);
+  background: var(--overlay);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.plugins-modal .plugins-menu [role='menuitem'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--row-h-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  color: var(--text-soft);
+  background: transparent;
+  font-size: var(--type-body);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.plugins-modal .plugins-menu [role='menuitem']:is(:hover, :focus-visible) {
+  outline: 0;
+  color: var(--text);
+  background: var(--hover);
+}
+
+.plugins-modal .plugins-menu .plugins-menu-danger {
+  color: var(--danger, #e5484d);
+}
+
+/* Public / Personal pills */
+.plugins-modal .plugins-pills {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 var(--space-4);
+}
+
+.plugins-modal .plugins-pills [role='tab'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--muted);
+  background: transparent;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.plugins-modal .plugins-pills [role='tab']:hover {
+  color: var(--text);
+}
+
+.plugins-modal .plugins-pills [role='tab'][aria-selected='true'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.plugins-modal .plugins-pills [role='tab']:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.plugins-modal .plugins-tab-count,
+.plugins-modal .plugins-section-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: var(--text-soft);
+  background: var(--hover);
+  font-size: var(--type-micro);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
+  text-align: center;
+}
+
+.plugins-modal .plugins-panel,
+.plugins-modal .plugins-consent,
+.plugins-modal .plugins-details {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -6px;
+  padding: 0 6px;
+}
+
+/* Sections and the two-column storefront grid */
+.plugins-modal .plugins-section {
+  margin: 0 0 var(--space-5);
+}
+
+.plugins-modal .plugins-section > h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--space-2);
+  color: var(--text);
+  font-size: var(--type-lead);
+  font-weight: var(--weight-semibold);
+}
+
+.plugins-modal .plugins-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 720px) {
+  .plugins-modal .plugins-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.plugins-modal .plugins-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.plugins-modal .plugins-card-off .plugins-card-main {
+  opacity: 0.6;
+}
+
+.plugins-modal .plugins-card-main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: var(--r-card);
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plugins-modal .plugins-card-main:hover {
+  background: var(--hover);
+}
+
+.plugins-modal .plugins-card-main:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.plugins-modal .plugins-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.plugins-modal .plugins-card-text strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--type-title);
+  font-weight: var(--weight-semibold);
+}
+
+.plugins-modal .plugins-card-text > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--type-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plugins-modal .plugins-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  background: var(--well);
+}
+
+.plugins-modal .plugins-icon img {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+}
+
+.plugins-modal .plugins-icon-monogram {
+  border-color: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.plugins-modal .plugins-card-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+}
+
+.plugins-modal .plugins-row-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-soft);
+  background: transparent;
+  cursor: pointer;
+}
+
+.plugins-modal button.plugins-row-icon-action:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.plugins-modal .plugins-row-icon-action:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.plugins-modal .plugins-row-icon-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.plugins-modal .plugins-row-invalid {
+  color: var(--danger, #e5484d);
+  cursor: help;
+}
+
+.plugins-modal .plugins-row-busy {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-row-menu {
+  position: relative;
+}
+
+.plugins-modal .plugins-installed-mark {
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Personal: installed list */
+.plugins-modal .plugins-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plugins-modal .plugins-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.plugins-modal .plugins-row:last-child {
+  border-bottom: 0;
+}
+
+.plugins-modal .plugins-row .plugins-card-main {
+  padding: 8px;
+}
+
+.plugins-modal .plugins-row .plugins-card-text > span {
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-row .plugins-card-text strong {
+  font-size: var(--type-body);
+}
+
+.plugins-modal .plugins-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2);
+}
+
+.plugins-modal .plugins-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.plugins-modal .plugins-row-title strong {
+  font-weight: var(--weight-medium);
+}
+
+.plugins-modal .plugins-row-description {
+  color: var(--text-soft);
+  font-size: var(--type-small);
+  overflow-wrap: anywhere;
+}
+
+.plugins-modal .plugins-row-meta {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--type-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plugins-modal .plugins-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.plugins-modal .plugins-row-actions .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-btn);
+  height: var(--icon-btn);
+  border-radius: var(--r-control);
+}
+
+.plugins-modal .plugins-version {
+  color: var(--muted);
+  font-size: var(--type-small);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.plugins-modal .plugins-badge {
+  padding: 1px 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-cell);
+  color: var(--text-soft);
+  font-size: var(--type-micro);
+  font-weight: var(--weight-regular);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.plugins-modal .plugins-badge-accent {
+  border-color: color-mix(in srgb, var(--accent), transparent 50%);
+  color: var(--accent);
+}
+
+.plugins-modal .plugins-badge-error {
+  border-color: color-mix(in srgb, var(--danger, #e5484d), transparent 50%);
+  color: var(--danger, #e5484d);
+}
+
+.plugins-modal .plugins-small-button {
+  min-height: 0 !important;
+  padding: 4px 12px !important;
+  font-size: var(--type-small) !important;
+}
+
+/* Empty, loading and notes */
+.plugins-modal .plugins-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-5) 0;
+  color: var(--muted);
+  font-size: var(--type-small);
+  text-align: center;
+}
+
+.plugins-modal p.plugins-empty {
+  flex-direction: row;
+  justify-content: center;
+}
+
+.plugins-modal .plugins-empty strong {
+  color: var(--text-soft);
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+
+.plugins-modal .plugins-empty span {
+  max-width: 420px;
+}
+
+.plugins-modal .plugins-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: var(--type-small);
+  line-height: 1.5;
+}
+
+.plugins-modal .plugins-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.plugins-modal .plugins-note-ok svg {
+  color: var(--success, #3fb950);
+}
+
+.plugins-modal .plugins-note a,
+.plugins-modal .plugins-mcp-setup a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--link);
+}
+
+.plugins-modal .plugins-inline-link {
+  display: inline;
+  padding: 0;
+  color: var(--link);
+  font-size: inherit;
+}
+
+.plugins-modal .tool-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Review, sheet and details */
+.plugins-modal .plugins-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--space-2) -6px;
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 var(--space-3);
+}
+
+.plugins-modal .plugins-heading-meta {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-consent-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: var(--type-lead);
+  font-weight: var(--weight-semibold);
+}
+
+.plugins-modal :is(.plugins-consent, .plugins-details) > .muted {
+  margin: 0 0 var(--space-3);
+  color: var(--text-soft);
+  font-size: var(--type-small);
+  line-height: 1.5;
+}
+
+.plugins-modal .plugins-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px var(--space-3);
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-facts dt {
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-soft);
+}
+
+.plugins-modal .plugins-inline-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugins-modal .plugins-mono,
+.plugins-modal :is(.plugins-contributions, .plugins-sheet-section, .plugins-mcp, .plugins-mcp-setup) code {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+}
+
+.plugins-modal .plugins-contributions section,
+.plugins-modal .plugins-update,
+.plugins-modal .plugins-readme,
+.plugins-modal .plugins-sheet-section {
+  margin: 0 0 var(--space-3);
+}
+
+.plugins-modal :is(.plugins-contributions, .plugins-update, .plugins-readme, .plugins-sheet-section) h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plugins-modal :is(.plugins-contributions, .plugins-update, .plugins-sheet-section) ul,
+.plugins-modal .plugins-update-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plugins-modal .plugins-update-lines {
+  margin: 0 0 var(--space-3);
+  color: var(--text-soft);
+  font-size: var(--type-small);
+}
+
+.plugins-modal :is(.plugins-contributions, .plugins-sheet-section) li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px var(--space-2);
+  border-radius: var(--r-control);
+  background: var(--well);
+  font-size: var(--type-small);
+}
+
+.plugins-modal :is(.plugins-contributions, .plugins-sheet-section) li strong {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+.plugins-modal :is(.plugins-contributions, .plugins-sheet-section) li :is(code, small) {
+  overflow-wrap: anywhere;
+  color: var(--text-soft);
+}
+
+.plugins-modal .plugins-contributions li small {
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-theme-item {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--space-2) !important;
+}
+
+.plugins-modal .plugins-swatch {
+  width: 16px;
+  height: 16px;
+  border: 2px solid;
+  border-radius: 50%;
+}
+
+.plugins-modal .plugins-update li {
+  color: var(--text-soft);
+  font-size: var(--type-small);
+}
+
+/* MCP: per-server CLI choices and setup */
+.plugins-modal .plugins-mcp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.plugins-modal .plugins-mcp-server {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--well);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-mcp-server > strong {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+.plugins-modal .plugins-mcp-url {
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.plugins-modal .plugins-mcp-cli {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.plugins-modal .plugins-mcp-cli label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.plugins-modal .plugins-mcp-cli :is(code, small) {
+  padding-left: 24px;
+  overflow-wrap: anywhere;
+  color: var(--text-soft);
+}
+
+.plugins-modal .plugins-mcp-cli small {
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-mcp-server .plugins-note {
+  margin: 4px 0 0;
+}
+
+.plugins-modal .plugins-mcp-setup {
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--accent), transparent 60%);
+  border-radius: var(--r-card);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-mcp-setup p {
+  margin: 0 0 var(--space-2);
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+.modal-backdrop .tool-modal.plugins-modal .plugins-mcp-setup .field-label {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--space-2);
+}
+
+.plugins-modal .plugins-mcp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.plugins-modal .plugins-mcp-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plugins-modal .plugins-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-scope legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-scope label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+}
+
+.plugins-modal .plugins-readme-body {
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--well);
+  color: var(--text-soft);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-readme-body :is(h1, h2, h3) {
+  margin: var(--space-2) 0;
+  font-size: var(--type-body);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.plugins-modal .plugins-confirm-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-right: auto;
+  color: var(--text-soft);
+  font-size: var(--type-small);
+}
+
+.plugins-modal .plugins-confirm-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.plugins-modal .plugins-details .tool-actions,
+.plugins-modal .plugins-consent .tool-actions {
+  position: sticky;
+  bottom: 0;
+  align-items: center;
+  padding: var(--space-2) 0 2px;
+  background: var(--dialog-surface);
+}
+
+.plugins-modal :is(.plugins-details, .plugins-consent) .tool-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Inline forms (Git address, add marketplace) */
+.plugins-modal .plugins-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.modal-backdrop .tool-modal.plugins-modal .plugins-inline-form .field-label {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+}
+
+.plugins-modal .plugins-inline-form .plugins-ref {
+  flex: 0 1 180px;
+}
+
+.plugins-modal .plugins-inline-form button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plugins-modal .spinning {
+  animation: plugins-spin 0.9s linear infinite;
+}
+
+@keyframes plugins-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:root.reduce-motion .plugins-modal .spinning {
+  animation: none;
+}
+
+/* Provenance label on contributions shown elsewhere: palette, pickers, Run command. */
+.plugin-source {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: var(--type-micro);
+  white-space: nowrap;
+}
+
+.command-list button .plugin-source {
+  margin-left: auto;
+}
+
+.command-list button .plugin-source + kbd {
+  margin-left: var(--space-2);
+}
+
+/* Prompt preview */
+.modal-backdrop > .tool-modal.plugins-prompt-modal {
+  width: min(620px, calc(100vw - 32px));
+  text-align: left;
+}
+
+.plugins-prompt-modal .tool-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plugins-prompt-body {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--well);
+  color: var(--text-soft);
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

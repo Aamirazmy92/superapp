@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search } from './icons';
 import { Backdrop, MotionDialog } from './motion';
 import { FileIcon } from './FileTree';
 import type { Entry, OpenFile } from './types';

@@ -3,10 +3,23 @@ const assert = require('node:assert/strict');
 const { browserTarget, searchURL } = require('../src/browserAddress.ts');
 
 test('words and phrases search Google', () => {
-  assert.deepEqual(browserTarget('react hooks tutorial'), { url: 'https://www.google.com/search?q=react%20hooks%20tutorial' });
+  assert.deepEqual(browserTarget('react hooks tutorial'), {
+    url: 'https://www.google.com/search?q=react+hooks+tutorial&sourceid=chrome&ie=UTF-8',
+  });
   assert.deepEqual(browserTarget('weather'), { url: searchURL('weather') });
   assert.deepEqual(browserTarget('what is 5 + 5?'), { url: searchURL('what is 5 + 5?') });
   assert.deepEqual(browserTarget('?github.com'), { url: searchURL('github.com') });
+});
+
+test('searches are sent as Chrome sends them, with no forced region', () => {
+  assert.equal(searchURL('weather'), 'https://www.google.com/search?q=weather&sourceid=chrome&ie=UTF-8');
+  assert.equal(new URL(searchURL('c++ & c# vs. 100%')).searchParams.get('q'), 'c++ & c# vs. 100%');
+  assert.equal(new URL(searchURL('weather')).searchParams.has('gl'), false);
+});
+
+test('numbers are searched rather than opened as addresses', () => {
+  assert.deepEqual(browserTarget('3.14'), { url: searchURL('3.14') });
+  assert.deepEqual(browserTarget('1.5.2'), { url: searchURL('1.5.2') });
 });
 
 test('host names open directly, falling back to a search', () => {

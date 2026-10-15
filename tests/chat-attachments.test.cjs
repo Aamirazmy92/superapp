@@ -7,10 +7,10 @@ const { createAttachmentStore } = require('../electron/chat-attachments.cjs');
 const png =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzL0AAAAASUVORK5CYII=';
 async function store(t) {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-attachments-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-attachments-'));
   t.after(async () => {
     assert.ok(path.resolve(directory).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`));
-    assert.ok(path.basename(directory).startsWith('superapp-attachments-'));
+    assert.ok(path.basename(directory).startsWith('veyo-attachments-'));
     await fs.rm(directory, { recursive: true, force: true });
   });
   return createAttachmentStore(directory);

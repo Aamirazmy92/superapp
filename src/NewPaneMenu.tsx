@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Files, Globe, LoaderCircle, PanelBottom, Plus, SquareTerminal, Zap } from 'lucide-react';
+import { Files, Globe, LoaderCircle, PanelBottom, Plus, SquareTerminal, Zap } from './icons';
 import type { AgentOption } from './types';
 import AgentLogo from './AgentLogo';
 import { motion, useIsPresent } from 'motion/react';
-import { PopoverSurface, surfaceMotion } from './motion';
+import { PopoverSurface, surfaceMotion, useClosingProps } from './motion';
 
 type AgentList = { agents: AgentOption[]; remaining: number };
 const agentCache = new Map<string, AgentList>();
@@ -54,6 +54,7 @@ export default function NewPaneMenu({
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const isPresent = useIsPresent();
+  const closingProps = useClosingProps();
   const [placement, setPlacement] = useState<{ left: number; top: number; origin: string } | null>(
     null,
   );
@@ -171,6 +172,7 @@ export default function NewPaneMenu({
   return (
     <motion.div
       {...surfaceMotion()}
+      {...closingProps}
       ref={menuRef}
       className="new-pane-menu"
       role="menu"
@@ -222,11 +224,12 @@ export default function NewPaneMenu({
                 key={agent.id}
                 role="menuitem"
                 disabled={remaining < 1}
-                title={`Open ${agent.label}`}
+                title={`Open ${agent.label}${agent.source ? ` (from ${agent.source})` : ''}`}
                 onClick={() => choose(() => onAgent(agent))}
               >
-                <AgentLogo agentId={agent.id} size={15} className="new-pane-agent-mark" />
+                <AgentLogo agentId={agent.id} mark={agent.source ? agent.mark : undefined} size={15} className="new-pane-agent-mark" />
                 <span>{agent.label}</span>
+                {agent.source && <small className="plugin-source">from {agent.source}</small>}
               </button>
             ))
           ) : (

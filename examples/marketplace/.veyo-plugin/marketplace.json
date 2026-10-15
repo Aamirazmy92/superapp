@@ -1,0 +1,58 @@
+{
+  "name": "veyo-examples",
+  "description": "Example plugins for Veyo. Two are deliberately invalid, to show how Veyo refuses unsafe plugins.",
+  "owner": {
+    "name": "Veyo"
+  },
+  "plugins": [
+    {
+      "name": "hello-veyo",
+      "description": "A command, an agent preset, a prompt, a skill, an MCP server and a theme.",
+      "version": "1.0.0",
+      "source": "./plugins/hello-veyo",
+      "category": "examples",
+      "tags": [
+        "sample",
+        "commands"
+      ],
+      "displayName": "Hello Veyo",
+      "tagline": "Commands, an agent preset, prompts, MCP and a theme",
+      "provider": "Veyo",
+      "icon": "icons/hello.svg"
+    },
+    {
+      "name": "hello-prompts",
+      "displayName": "Hello Prompts",
+      "tagline": "A prompt that summarizes your changes",
+      "provider": "Veyo",
+      "description": "A prompts-only example plugin.",
+      "version": "1.0.0",
+      "source": "./plugins/hello-prompts",
+      "category": "examples"
+    },
+    {
+      "name": "evil-traversal",
+      "description": "Invalid on purpose: its prompts path climbs out of the plugin folder.",
+      "version": "1.0.0",
+      "source": "./plugins/evil-traversal",
+      "category": "examples"
+    },
+    {
+      "name": "evil-bypass",
+      "description": "Invalid on purpose: its agent preset tries to skip approval prompts.",
+      "version": "1.0.0",
+      "source": "./plugins/evil-bypass",
+      "category": "examples"
+    }
+  ],
+  "sections": [
+    {
+      "id": "popular",
+      "title": "Popular",
+      "plugins": [
+        "hello-veyo",
+        "hello-prompts"
+      ]
+    }
+  ]
+}

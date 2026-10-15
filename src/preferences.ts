@@ -23,7 +23,14 @@ export const usageCriticalLevels = [85, 90, 95];
 
 // One entry per setting: its default and what a saved value may be.
 const schema = {
-  theme: oneOf<'graphite' | 'midnight' | 'plum' | 'light'>('graphite', ['graphite', 'midnight', 'plum', 'light']),
+  theme: oneOf<'graphite' | 'light'>('graphite', ['graphite', 'light']),
+  // A plugin theme ("plugin:theme"), or '' for none. When the plugin is disabled or
+  // removed, the built-in theme above applies again.
+  pluginTheme: {
+    fallback: '' as string,
+    valid: (value: unknown): value is string =>
+      typeof value === 'string' && (value === '' || /^[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(-[a-z0-9]+)*$/.test(value)),
+  },
   fontSize: oneOf<number>(12, fontSizes),
   fontFamily: oneOf<string>('Cascadia Code', fontFamilies),
   wordWrap: oneOf<boolean>(false, [true, false]),
@@ -45,6 +52,7 @@ const schema = {
   // 'last' keeps whatever the previous chat used. Full access is never a default.
   chatProvider: oneOf<'last' | 'codex' | 'claude' | 'ollama'>('last', ['last', 'codex', 'claude', 'ollama']),
   chatPermission: oneOf<'last' | 'ask' | 'auto'>('last', ['last', 'ask', 'auto']),
+  doneSound: oneOf<boolean>(true, [true, false]),
   usageAlerts: oneOf<boolean>(true, [true, false]),
   usageWarningAt: oneOf<number>(75, usageWarningLevels),
   usageCriticalAt: oneOf<number>(90, usageCriticalLevels),
@@ -59,7 +67,7 @@ export function fontStack(family: string) {
   return `"${family}", "Cascadia Code", Consolas, monospace`;
 }
 
-const key = 'superapp.preferences.v1';
+const key = 'veyo.preferences.v1';
 export function readPreferences(): Preferences {
   try {
     const saved = localStorage.getItem(key);

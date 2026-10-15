@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import { ExternalLink, FileDiff, FileMinus, FilePen, FilePlus } from 'lucide-react';
+import { ExternalLink, FileDiff, FileMinus, FilePen, FilePlus } from './icons';
 import Modal from './Modal';
 import type { ChatActivity, ChatFileChange } from './types';
 

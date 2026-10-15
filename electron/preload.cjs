@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const invoke =
   (channel) =>
   (...args) =>
@@ -65,6 +65,30 @@ contextBridge.exposeInMainWorld('workspace', {
   gitStatus: invoke('git:status'),
   gitDiff: invoke('git:diff'),
   saveSession: invoke('session:save'),
+  pluginsState: invoke('plugins:state'),
+  pluginsContributions: invoke('plugins:contributions'),
+  pluginsDetails: invoke('plugins:details'),
+  pluginsPickFolder: invoke('plugins:pick-folder'),
+  pluginsPreview: invoke('plugins:preview'),
+  pluginsCancelPreview: invoke('plugins:cancel-preview'),
+  pluginsInstall: invoke('plugins:install'),
+  pluginsSetEnabled: invoke('plugins:set-enabled'),
+  pluginsUninstall: invoke('plugins:uninstall'),
+  pluginsRunCommand: invoke('plugins:run-command'),
+  pluginsMcpPlan: invoke('plugins:mcp-plan'),
+  pluginsMcpAdd: invoke('plugins:mcp-add'),
+  pluginsMcpLogin: invoke('plugins:mcp-login'),
+  pluginsMcpRemove: invoke('plugins:mcp-remove'),
+  pluginsRefreshPublic: invoke('plugins:refresh-public'),
+  pluginsCatalog: invoke('plugins:catalog'),
+  pluginsAddMarketplace: invoke('plugins:add-marketplace'),
+  pluginsRefreshMarketplace: invoke('plugins:refresh-marketplace'),
+  pluginsRemoveMarketplace: invoke('plugins:remove-marketplace'),
+  onPluginsChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('plugins:changed', listener);
+    return () => ipcRenderer.removeListener('plugins:changed', listener);
+  },
   getRunPresets: invoke('run-presets:get'),
   saveRunPresets: invoke('run-presets:save'),
   getChatState: invoke('chat-state:get'),
@@ -77,11 +101,32 @@ contextBridge.exposeInMainWorld('workspace', {
   setCodexFullAccess: invoke('terminal:codex-full-access'),
   readTerminalClipboard: invoke('terminal:clipboard-read'),
   writeTerminalClipboard: invoke('terminal:clipboard-write'),
+  // Where a dropped file lives on disk; empty for files that have no path.
+  pathForFile: (file) => webUtils.getPathForFile(file),
+  saveDroppedImage: invoke('terminal:drop-image-save'),
+  downloadDroppedImage: invoke('terminal:drop-image-download'),
   resizeTerminal: invoke('terminal:resize'),
   closeTerminal: invoke('terminal:close'),
   windowAction: invoke('window:action'),
-  clearBrowserHistory: invoke('browser:clear-history'),
+  browserHistory: invoke('browser:history'),
+  removeBrowserHistory: invoke('browser:history-remove'),
+  clearBrowsingData: invoke('browser:clear-data'),
+  onBrowserHistoryChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('browser:history-changed', listener);
+    return () => ipcRenderer.removeListener('browser:history-changed', listener);
+  },
   setBrowserDevice: invoke('browser:set-device'),
+  onBrowserCommand: (callback) => {
+    const listener = (_event, guestId, action, value) => callback(guestId, action, value);
+    ipcRenderer.on('browser:command', listener);
+    return () => ipcRenderer.removeListener('browser:command', listener);
+  },
+  onBrowserOpenTab: (callback) => {
+    const listener = (_event, url) => callback(url);
+    ipcRenderer.on('browser:open-tab', listener);
+    return () => ipcRenderer.removeListener('browser:open-tab', listener);
+  },
   onTerminal: (callback) => {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on('terminal:event', listener);

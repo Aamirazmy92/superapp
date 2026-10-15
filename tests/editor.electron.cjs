@@ -6,7 +6,7 @@ const { _electron } = require('playwright');
 
 // Run after npm run build: node tests/editor.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-editor-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-editor-'));
   const root = path.join(dataDir, 'project');
   await fs.mkdir(path.join(root, 'src', 'nested'), { recursive: true });
   await fs.mkdir(path.join(root, 'node_modules'));
@@ -27,7 +27,7 @@ const { _electron } = require('playwright');
       sessions: {},
     }),
   );
-  const env = { ...process.env, SUPERAPP_DATA_DIR: dataDir };
+  const env = { ...process.env, VEYO_DATA_DIR: dataDir };
   delete env.ELECTRON_RUN_AS_NODE;
   const app = await _electron.launch({
     executablePath: require('electron'),
@@ -238,7 +238,8 @@ const { _electron } = require('playwright');
     await page.getByRole('tab', { name: 'alpha.ts', exact: true }).click();
     await edit('// rename draft');
     await page.getByRole('button', { name: 'Manage src', exact: true }).click();
-    const manage = page.getByRole('dialog', { name: 'Manage file or folder' });
+    await page.getByRole('menuitem', { name: 'Rename / move', exact: true }).click();
+    const manage = page.getByRole('dialog', { name: 'Rename / move', exact: true });
     await manage.getByLabel('File or folder path').fill('source');
     await manage.getByRole('button', { name: 'Rename / move', exact: true }).click();
     await manage.waitFor({ state: 'hidden' });
@@ -288,7 +289,7 @@ const { _electron } = require('playwright');
       return saved.sessions.editor?.activeFile === 'source/alpha.ts';
     });
     await page.evaluate(() => {
-      const key = 'superapp.preferences.v1';
+      const key = 'veyo.preferences.v1';
       const value = JSON.parse(localStorage.getItem(key) || '{}');
       localStorage.setItem(key, JSON.stringify({ ...value, theme: 'light', reduceMotion: true }));
     });
@@ -317,7 +318,7 @@ const { _electron } = require('playwright');
     await app.close();
     if (
       !path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) ||
-      !path.basename(dataDir).startsWith('superapp-editor-')
+      !path.basename(dataDir).startsWith('veyo-editor-')
     )
       throw new Error('Unsafe test cleanup target');
     await fs.rm(dataDir, { recursive: true, force: true });

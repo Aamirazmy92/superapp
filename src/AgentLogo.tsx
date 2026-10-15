@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SquareTerminal } from 'lucide-react';
+import { SquareTerminal } from './icons';
 import claudeLogo from './assets/agents/claude.svg';
 import codexLogo from './assets/agents/codex.svg';
 import copilotLogo from './assets/agents/copilot.svg';
@@ -48,16 +48,19 @@ export function hasAgentLogo(agentId?: string) {
 export default function AgentLogo({
   agentId,
   fallback,
+  mark,
   size = 16,
   className = '',
 }: {
   agentId?: string;
   fallback?: ReactNode;
+  /** A short monogram for agents without a logo, such as plugin presets. */
+  mark?: string;
   size?: number;
   className?: string;
 }) {
   const logo = agentId ? agentLogos[agentId] : undefined;
-  const monogram = agentId ? agentMonograms[agentId] : undefined;
+  const monogram = (agentId ? agentMonograms[agentId] : undefined) ?? mark;
   return (
     <span
       className={`agent-logo ${agentId ? `agent-logo-${agentId}` : ''} ${className}`}

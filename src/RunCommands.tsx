@@ -1,7 +1,9 @@
+import ChatSelect from './ChatSelect';
 import { useEffect, useState } from 'react';
-import { Play, Trash2 } from 'lucide-react';
+import { Play, Trash2 } from './icons';
 import Modal from './Modal';
-import type { RunPreset as Preset } from './types';
+import type { PluginContributions, RunPreset as Preset } from './types';
+import { commandLine, errorMessage } from './pluginModel';
 function readLegacyPresets(key: string): Preset[] {
   try {
     const value = JSON.parse(localStorage.getItem(key) || '[]');
@@ -17,11 +19,15 @@ export default function RunCommands({
   shells,
   onClose,
   onRun,
+  pluginCommands = [],
+  onRunPlugin,
 }: {
   projectId: string;
   shells: { id: string; label: string }[];
   onClose(): void;
   onRun(command: string, name: string, shell: string): Promise<void>;
+  pluginCommands?: PluginContributions['commands'];
+  onRunPlugin?(key: string): Promise<void>;
 }) {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [scripts, setScripts] = useState<Preset[]>([]);
@@ -148,6 +154,38 @@ export default function RunCommands({
             </section>
           ),
       )}
+      {!!pluginCommands.length && onRunPlugin && (
+        <section className="run-group" aria-label="Plugin commands">
+          <h3>Plugin commands</h3>
+          {pluginCommands.map((item) => (
+            <div className="run-preset" key={item.key}>
+              <button
+                className="text-button"
+                disabled={busy}
+                aria-label={`Run ${item.title} from ${item.plugin}`}
+                onClick={async () => {
+                  setBusy(true);
+                  setError('');
+                  try {
+                    await onRunPlugin(item.key);
+                    onClose();
+                  } catch (value) {
+                    setError(errorMessage(value));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <span>
+                  {item.title} <span className="plugin-source">from {item.plugin}</span>
+                  <small>{commandLine(item.program, item.args)}</small>
+                </span>
+              </button>
+              <Play size={14} aria-hidden="true" />
+            </div>
+          ))}
+        </section>
+      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -177,17 +215,14 @@ export default function RunCommands({
         </label>
         <label className="field-label">
           Shell
-          <select
-            aria-label="Command shell"
+          <ChatSelect
+            variant="field"
+            compact
+            label="Command shell"
             value={shell}
-            onChange={(event) => setShell(event.target.value)}
-          >
-            {shells.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            options={shells.map((item) => ({ value: item.id, label: item.label }))}
+            onChange={setShell}
+          />
         </label>
         {error && (
           <p className="tool-error" role="alert">

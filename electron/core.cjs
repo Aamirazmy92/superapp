@@ -11,7 +11,7 @@ const ignored = new Set([
   '.cache',
   'coverage',
   '.npm-cache',
-  '.superapp-dev',
+  '.veyo-dev',
   '.playwright-cli',
 ]);
 const hash = (data) => crypto.createHash('sha256').update(data).digest('hex');
@@ -67,7 +67,7 @@ async function saveFileUnlocked(root, relative, content, revision) {
   const current = await fs.readFile(target);
   if (hash(current) !== revision) return { conflict: true, ...(await readFile(root, relative)) };
   const stat = await fs.stat(target);
-  const temp = `${target}.superapp-${crypto.randomUUID()}.tmp`;
+  const temp = `${target}.veyo-${crypto.randomUUID()}.tmp`;
   try {
     await fs.writeFile(temp, content, { flag: 'wx', mode: stat.mode });
     // Recheck after preparing the write, so known external changes are never overwritten.
@@ -148,7 +148,7 @@ async function renameEntry(root, relative, nextPath) {
   const next = await destination(root, nextPath);
   if (target === next) return;
   if (process.platform === 'win32' && target.toLowerCase() === next.toLowerCase()) {
-    const temporary = `${target}.superapp-${crypto.randomUUID()}.tmp`;
+    const temporary = `${target}.veyo-${crypto.randomUUID()}.tmp`;
     await fs.rename(target, temporary);
     try { await fs.rename(temporary, next); }
     catch (error) { await fs.rename(temporary, target); throw error; }

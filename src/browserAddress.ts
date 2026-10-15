@@ -1,7 +1,13 @@
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
+/**
+ * A Google search for `query`, as Chrome's address bar sends it. Google
+ * localizes the results itself from the user's location and languages, as
+ * it does in Chrome, so no region is forced on it.
+ */
 export function searchURL(query: string) {
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  const params = new URLSearchParams({ q: query, sourceid: 'chrome', ie: 'UTF-8' });
+  return `https://www.google.com/search?${params}`;
 }
 
 /**
@@ -17,7 +23,11 @@ export function browserTarget(value: string): { url: string; fallback?: string }
   const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(input);
   const localInput = /^(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(input);
   const hostLike = /^[^\s/?#:@]+\.[a-z\d-]{2,}\.?(?::\d+)?(?:[/?#]\S*)?$/i.test(input);
-  if (!hasScheme && !localInput && !hostLike) return { url: searchURL(input) };
+  // Numbers such as "3.14" are searched, as in Chrome; only a full IPv4
+  // address opens.
+  const host = input.split(/[/?#:]/)[0];
+  const numeric = /^[\d.]+$/.test(host) && !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
+  if (!hasScheme && !localInput && (!hostLike || numeric)) return { url: searchURL(input) };
   const url = new URL(hasScheme ? input : `${localInput ? 'http' : 'https'}://${input}`);
   const local = LOCAL_HOSTS.includes(url.hostname);
   if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) || url.username || url.password)

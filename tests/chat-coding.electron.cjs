@@ -35,7 +35,7 @@ class Fixture {
   static void FinishApproval(bool accepted) {
     waiting = false;
     if (!accepted) { Complete("Change declined; the project was kept."); return; }
-    string expected = Path.GetFullPath(Environment.GetEnvironmentVariable("SUPERAPP_FIXTURE_PROJECT"));
+    string expected = Path.GetFullPath(Environment.GetEnvironmentVariable("VEYO_FIXTURE_PROJECT"));
     if (!String.Equals(Path.GetFullPath(cwd), expected, StringComparison.OrdinalIgnoreCase)) throw new Exception("Fixture refused unexpected project path.");
     string target = Path.Combine(expected, "example.ts");
     string diff = "-export const answer = 1;\n+export const answer = 42;";
@@ -49,7 +49,7 @@ class Fixture {
   static void Main() {
     string line;
     while ((line = Console.ReadLine()) != null) {
-      File.AppendAllText(Environment.GetEnvironmentVariable("SUPERAPP_FIXTURE_LOG"), line + "\n");
+      File.AppendAllText(Environment.GetEnvironmentVariable("VEYO_FIXTURE_LOG"), line + "\n");
       var message = Obj(json.DeserializeObject(line));
       string method = Text(message, "method");
       if (method == "") {
@@ -86,7 +86,7 @@ class Fixture {
 
 (async () => {
   if (process.platform !== 'win32') throw new Error('This native Codex fixture requires Windows.');
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-chat-coding-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-chat-coding-'));
   const projectRoot = path.join(dataDir, 'project');
   const fixtureDir = path.join(dataDir, 'fixture-bin');
   const logFile = path.join(dataDir, 'protocol.jsonl');
@@ -127,12 +127,12 @@ class Fixture {
     await promisify(execFile)(path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework', 'v4.0.30319', 'csc.exe'),
       ['/nologo', '/target:exe', `/out:${executable}`, '/reference:System.Web.Extensions.dll', sourceFile],
       { windowsHide: true });
-    const env = { ...process.env, SUPERAPP_DATA_DIR: dataDir,
-      SUPERAPP_FIXTURE_PROJECT: projectRoot, SUPERAPP_FIXTURE_LOG: logFile };
+    const env = { ...process.env, VEYO_DATA_DIR: dataDir,
+      VEYO_FIXTURE_PROJECT: projectRoot, VEYO_FIXTURE_LOG: logFile };
     const pathKey = Object.keys(env).find((key) => key.toLowerCase() === 'path') || 'PATH';
     env[pathKey] = `${fixtureDir}${path.delimiter}${env[pathKey] || ''}`;
     delete env.ELECTRON_RUN_AS_NODE;
-    delete env.SUPERAPP_DEV_URL;
+    delete env.VEYO_DEV_URL;
     const launch = async () => {
       const launched = await _electron.launch({ executablePath: require('electron'), args: [path.resolve('.')], env });
       fixtureMainPid = await launched.evaluate(() => process.pid);
@@ -299,7 +299,7 @@ class Fixture {
     throw error;
   } finally {
     await closeFixture();
-    if (!path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) || !path.basename(dataDir).startsWith('superapp-chat-coding-'))
+    if (!path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) || !path.basename(dataDir).startsWith('veyo-chat-coding-'))
       throw new Error('Refusing to remove a directory outside the isolated coding fixture.');
     await fs.rm(dataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }

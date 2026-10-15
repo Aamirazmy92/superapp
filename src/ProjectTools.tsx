@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
+import { AnchoredPopover } from './AnchoredPopover';
 import {
   Copy,
   FilePlus2,
@@ -8,7 +10,9 @@ import {
   Minus,
   GitBranch,
   ChevronsDownUp,
-} from 'lucide-react';
+  Pencil,
+  Trash2,
+} from './icons';
 import FileTree, { FileIcon } from './FileTree';
 import Modal from './Modal';
 import type { ContentMatch, Entry, GitStatus, OpenFile, Project } from './types';
@@ -39,12 +43,12 @@ export default function ProjectTools({
   onError(error: unknown): void;
 }) {
   const api = window.workspace!;
-  const [operation, setOperation] = useState<'file' | 'folder' | 'manage' | null>(null);
+  const [operation, setOperation] = useState<'file' | 'folder' | 'manage' | 'delete' | null>(null);
+  const [menu, setMenu] = useState<{ entry: Entry; anchor: HTMLElement } | null>(null);
   const [target, setTarget] = useState<Entry | null>(null);
   const [path, setPath] = useState('');
   const [failure, setFailure] = useState('');
   const [busy, setBusy] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [query, setQuery] = useState('');
   const [content, setContent] = useState(false);
   const [sensitive, setSensitive] = useState(false);
@@ -57,7 +61,6 @@ export default function ProjectTools({
   const [notice, setNotice] = useState('');
   const [showIgnored, setShowIgnored] = useState(false);
   const [collapse, setCollapse] = useState(0);
-  const [copied, setCopied] = useState(false);
   const dirty =
     target &&
     files.some(
@@ -102,21 +105,43 @@ export default function ProjectTools({
       clearTimeout(timer);
     };
   }, [project.id, query, content, sensitive, refresh, section]);
-  function openOperation(kind: 'file' | 'folder' | 'manage', entry?: Entry) {
+  useEffect(() => {
+    if (!menu) return;
+    const dismiss = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest('.context-menu, .tree-manage')) return;
+      setMenu(null);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenu(null);
+    };
+    document.addEventListener('mousedown', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menu]);
+  async function copyPath(entry: Entry) {
+    setMenu(null);
+    try {
+      await navigator.clipboard.writeText(entry.path);
+    } catch (error) {
+      onError(error);
+    }
+  }
+  function openOperation(kind: 'file' | 'folder' | 'manage' | 'delete', entry?: Entry) {
     setOperation(kind);
     setTarget(entry || null);
     const parent = active?.split('/').slice(0, -1).join('/');
     setPath(entry?.path || (parent ? `${parent}/` : ''));
     setFailure('');
-    setDeleteConfirm(false);
-    setCopied(false);
   }
   async function mutate(remove = false) {
     if (busy) return;
     setBusy(true);
     setFailure('');
     try {
-      if (operation === 'manage' && target) {
+      if ((operation === 'manage' || operation === 'delete') && target) {
         if (remove) {
           await api.trashEntry(project.id, target.path);
           onTrash(target.path);
@@ -167,7 +192,9 @@ export default function ProjectTools({
       ? 'New file'
       : operation === 'folder'
         ? 'New folder'
-        : 'Manage file or folder';
+        : operation === 'delete'
+          ? 'Move to Recycle Bin'
+          : 'Rename / move';
   return (
     <>
       {section === 'files' && (
@@ -211,7 +238,9 @@ export default function ProjectTools({
               .filter((file) => file.saved !== file.content)
               .map((file) => file.path)}
             onError={onError}
-            onManage={(entry) => openOperation('manage', entry)}
+            onManage={(entry, anchor) =>
+              anchor ? setMenu((current) => (current?.entry.path === entry.path ? null : { entry, anchor })) : openOperation('manage', entry)
+            }
           />
         </>
       )}
@@ -386,6 +415,38 @@ export default function ProjectTools({
           )}
         </>
       )}
+      <AnimatePresence>
+        {menu && (
+          <AnchoredPopover anchor={menu.anchor} className="context-menu" role="menu">
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenu(null);
+                openOperation('manage', menu.entry);
+              }}
+            >
+              <Pencil size={14} />
+              Rename / move
+            </button>
+            <button role="menuitem" onClick={() => copyPath(menu.entry)}>
+              <Copy size={14} />
+              Copy path
+            </button>
+            <button
+              role="menuitem"
+              className="danger-menu-item"
+              onClick={() => {
+                setMenu(null);
+                openOperation('delete', menu.entry);
+              }}
+            >
+              <Trash2 size={14} />
+              Move to Recycle Bin
+            </button>
+          </AnchoredPopover>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
       {operation && (
         <Modal
           title={title}
@@ -393,85 +454,71 @@ export default function ProjectTools({
             if (!busy) setOperation(null);
           }}
         >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              mutate();
-            }}
-          >
-            <label className="field-label">
-              Project-relative path
-              <input
-                className="text-input"
-                autoFocus
-                value={path}
-                onChange={(event) => setPath(event.target.value)}
-                aria-label="File or folder path"
-                required
-                disabled={busy}
-              />
-            </label>
-            <p className="muted">
-              {operation === 'manage'
-                ? 'Rename or move within this project. Open editor tabs follow the new path.'
-                : 'The parent folder must already exist.'}
-            </p>
-            {failure && (
-              <p className="tool-error" role="alert">
-                {failure}
-              </p>
-            )}
-            <div className="tool-actions">
-              <button
-                className="primary-button"
-                disabled={
-                  busy || !path.trim() || (operation === 'manage' && path.trim() === target?.path)
-                }
-              >
-                {busy ? 'Working…' : operation === 'manage' ? 'Rename / move' : 'Create'}
-              </button>
-              {operation === 'manage' && (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(target!.path);
-                      setCopied(true);
-                    } catch (error) {
-                      setFailure(`Could not copy path: ${String(error)}`);
-                    }
-                  }}
-                >
-                  <Copy size={14} />
-                  {copied ? 'Path copied' : 'Copy path'}
-                </button>
-              )}
-              {operation === 'manage' && (
-                <button
-                  type="button"
-                  className="danger-button"
-                  disabled={busy}
-                  onClick={() => setDeleteConfirm(true)}
-                >
-                  Move to Recycle Bin
-                </button>
-              )}
-            </div>
-          </form>
-          {deleteConfirm && (
+          {operation === 'delete' ? (
             <div className="delete-confirm">
               <p>
                 Move “{target?.path}”{target?.directory ? ' and everything inside it' : ''} to the
                 Recycle Bin?{dirty ? ' Unsaved edits in its open tabs will be discarded.' : ''}
               </p>
-              <button className="danger-button" disabled={busy} onClick={() => mutate(true)}>
-                Confirm move to Recycle Bin
-              </button>
+              {failure && (
+                <p className="tool-error" role="alert">
+                  {failure}
+                </p>
+              )}
+              <div className="tool-actions">
+                <button className="danger-button" autoFocus disabled={busy} onClick={() => mutate(true)}>
+                  {busy ? 'Working…' : 'Move to Recycle Bin'}
+                </button>
+                <button className="text-button" disabled={busy} onClick={() => setOperation(null)}>
+                  Cancel
+                </button>
+              </div>
             </div>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                mutate();
+              }}
+            >
+              <label className="field-label">
+                Project-relative path
+                <input
+                  className="text-input"
+                  autoFocus
+                  value={path}
+                  onChange={(event) => setPath(event.target.value)}
+                  aria-label="File or folder path"
+                  required
+                  disabled={busy}
+                />
+              </label>
+              <p className="muted">
+                {operation === 'manage'
+                  ? 'Rename or move within this project. Open editor tabs follow the new path.'
+                  : 'The parent folder must already exist.'}
+              </p>
+              {failure && (
+                <p className="tool-error" role="alert">
+                  {failure}
+                </p>
+              )}
+              <div className="tool-actions">
+                <button
+                  className="primary-button"
+                  disabled={
+                    busy || !path.trim() || (operation === 'manage' && path.trim() === target?.path)
+                  }
+                >
+                  {busy ? 'Working…' : operation === 'manage' ? 'Rename / move' : 'Create'}
+                </button>
+              </div>
+            </form>
           )}
         </Modal>
       )}
+      </AnimatePresence>
+      <AnimatePresence>
       {diff && (
         <Modal
           title={`${diff.staged ? 'Staged' : 'Working tree'} · ${diff.path}`}
@@ -480,6 +527,7 @@ export default function ProjectTools({
           <pre className="git-diff-content">{diff.text || 'No textual changes in this view.'}</pre>
         </Modal>
       )}
+      </AnimatePresence>
     </>
   );
 }

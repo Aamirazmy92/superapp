@@ -73,7 +73,10 @@
     .chat-provider-note *,
     .chat-local-note,
     .chat-thread-empty,
-    .chat-thread-group > :first-child:not(button),
+    .chat-group-header,
+    .chat-group-header *,
+    .chat-thread-list-head,
+    .chat-thread-list-head *,
     .chat-starter span,
     .chat-header-model,
     .command-footer,
@@ -114,7 +117,6 @@
     .agent-dashboard-section-heading span,
     .agent-dashboard-agent-time,
     .agent-dashboard-section-empty,
-    .agent-dashboard-note,
     .agent-dashboard-new
   ) {
   font-size: var(--type-small);

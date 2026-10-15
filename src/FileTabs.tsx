@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { SaveAll, X } from 'lucide-react';
+import { SaveAll, X } from './icons';
 import { FileIcon } from './FileTree';
 import { tabLabel } from './editorModel';
 import type { OpenFile } from './types';

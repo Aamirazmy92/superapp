@@ -4,46 +4,51 @@ const os = require('node:os');
 const path = require('node:path');
 const { _electron } = require('playwright');
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-settings-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-settings-'));
   const app = await _electron.launch({
     executablePath: require('electron'),
     args: [path.resolve('.')],
-    env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+    env: { ...process.env, VEYO_DATA_DIR: dataDir },
   });
   try {
     const page = await app.firstWindow();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Settings', exact: true });
     await dialog.waitFor();
-    await page.getByRole('button', { name: /Midnight Cool blue tones/ }).click();
-    assert.equal(await page.locator('html').getAttribute('data-theme'), 'midnight');
-    assert.equal(await page.locator('.app').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(12, 18, 32)');
+    await page.getByRole('button', { name: /Linen Soft paper tones/ }).click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
     await page.screenshot({ path: 'output/playwright/settings-appearance.png' });
     await page.getByRole('button', { name: 'Editor', exact: true }).click();
-    await page.getByLabel('Font size', { exact: false }).selectOption('16');
+    const pick = async (name, option) => {
+      await page.getByRole('combobox', { name, exact: true }).click();
+      await page.getByRole('option', { name: option, exact: true }).click();
+    };
+    await pick('Font size', '16 px');
     await page.getByRole('switch', { name: 'Word wrap' }).check();
     await page.getByRole('button', { name: 'Terminal', exact: true }).click();
-    await page.getByLabel('Terminal font size').selectOption('18');
+    await pick('Terminal font size', '18 px');
     await page.getByRole('switch', { name: 'Blinking cursor' }).uncheck();
-    await page.getByLabel(/Terminal font(?! size)/).selectOption('Consolas');
-    if (process.platform === 'win32') await page.getByLabel('Default shell').selectOption('cmd');
+    await pick('Terminal font', 'Consolas');
+    if (process.platform === 'win32') await pick('Default shell', /Command Prompt|cmd/i);
     await dialog.getByRole('button', { name: 'Editor', exact: true }).click();
-    await page.getByLabel('Font family').selectOption('JetBrains Mono');
+    await pick('Font family', 'JetBrains Mono');
     assert.match(
       await page.locator('.preferences-preview pre').evaluate((el) => getComputedStyle(el).fontFamily),
       /^"JetBrains Mono"/,
     );
     await dialog.getByRole('button', { name: 'General', exact: true }).click();
-    await page.getByLabel('On startup').selectOption('none');
+    await pick('On startup', 'Start with no project open');
     await dialog.getByRole('button', { name: 'Chat', exact: true }).click();
-    await page.getByLabel('Default provider').selectOption('claude');
-    await page.getByLabel('Default permissions').selectOption('auto');
-    assert.equal(await page.getByLabel('Default permissions').locator('option[value="full"]').count(), 0);
+    await pick('Default provider', 'Claude Code');
+    await pick('Default permissions', 'Approve safe actions');
+    await page.getByRole('combobox', { name: 'Default permissions' }).click();
+    assert.equal(await page.getByRole('option', { name: /full/i }).count(), 0);
+    await page.keyboard.press('Escape');
     await dialog.getByRole('button', { name: 'Notifications', exact: true }).click();
-    await page.getByLabel('Warning threshold').selectOption('60');
-    await page.getByLabel('Critical threshold').selectOption('95');
+    await pick('Warning threshold', '60%');
+    await pick('Critical threshold', '95%');
     await page.getByRole('switch', { name: 'Usage alerts' }).uncheck();
-    assert.equal(await page.getByLabel('Warning threshold').isDisabled(), true);
+    assert.equal(await page.getByRole('combobox', { name: 'Warning threshold' }).isDisabled(), true);
     await page.screenshot({ path: 'output/playwright/settings-notifications.png' });
     await page.getByRole('button', { name: 'Close settings', exact: true }).click();
     assert.equal(
@@ -54,15 +59,15 @@ const { _electron } = require('playwright');
     );
     await page.reload();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    assert.equal(await page.locator('html').getAttribute('data-theme'), 'midnight');
-    assert.equal(await page.getByRole('button', { name: /Midnight Cool blue tones/ }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+    assert.equal(await page.getByRole('button', { name: /Linen Soft paper tones/ }).getAttribute('aria-pressed'), 'true');
     await page.getByRole('button', { name: 'Editor', exact: true }).click();
-    assert.equal(await page.getByLabel('Font size', { exact: false }).inputValue(), '16');
+    assert.equal((await page.getByRole('combobox', { name: 'Font size', exact: true }).innerText()).trim(), '16 px');
     assert.equal(await page.getByRole('switch', { name: 'Word wrap' }).isChecked(), true);
-    assert.equal(await page.getByLabel('Font family').inputValue(), 'JetBrains Mono');
+    assert.equal((await page.getByRole('combobox', { name: 'Font family', exact: true }).innerText()).trim(), 'JetBrains Mono');
     await page.screenshot({ path: 'output/playwright/settings-updated.png' });
     const saved = JSON.parse(
-      await page.evaluate(() => localStorage.getItem('superapp.preferences.v1')),
+      await page.evaluate(() => localStorage.getItem('veyo.preferences.v1')),
     );
     assert.deepEqual(
       {
@@ -86,7 +91,7 @@ const { _electron } = require('playwright');
     );
     if (process.platform === 'win32') {
       await dialog.getByRole('button', { name: 'Terminal', exact: true }).click();
-      assert.equal(await page.getByLabel('Default shell').inputValue(), 'cmd');
+      assert.match(await page.getByRole('combobox', { name: 'Default shell', exact: true }).innerText(), /cmd|command prompt/i);
       await dialog.getByRole('button', { name: 'Editor', exact: true }).click();
     }
     await page.getByLabel('Search settings').fill('scrollback');
@@ -95,7 +100,7 @@ const { _electron } = require('playwright');
     await page.getByRole('button', { name: 'Restore defaults' }).click();
     await page.getByRole('button', { name: 'Confirm reset' }).click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'graphite');
-    assert.equal(await page.getByLabel('Font size', { exact: false }).inputValue(), '12');
+    assert.equal((await page.getByRole('combobox', { name: 'Font size', exact: true }).innerText()).trim(), '12 px');
     await page.getByRole('button', { name: 'Close settings', exact: true }).focus();
     await page.keyboard.press('Shift+Tab');
     assert.equal(

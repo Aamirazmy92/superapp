@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Command, Search } from 'lucide-react';
+import { Command, Search } from './icons';
 import { Backdrop, MotionDialog } from './motion';
 
 export type PaletteCommand = {
@@ -7,6 +7,10 @@ export type PaletteCommand = {
   hint: string;
   action: () => unknown;
   icon: React.ComponentType<{ size?: number }>;
+  /** Unique id when labels can repeat, as plugin contributions can. */
+  id?: string;
+  /** The plugin that contributed this command, shown as "from <plugin>". */
+  source?: string;
 };
 
 /** Mounted only while open, so each opening starts with an empty query. */
@@ -19,7 +23,9 @@ export default function CommandPalette({
 }) {
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
-  const commands = allCommands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()));
+  const commands = allCommands.filter((c) =>
+    `${c.label} ${c.source ?? ''}`.toLowerCase().includes(query.toLowerCase()),
+  );
   useEffect(() => setIndex(0), [query]);
   const run = (command: PaletteCommand) => {
     onClose();
@@ -49,7 +55,11 @@ export default function CommandPalette({
                     Math.max(1, commands.length),
                 );
               }
-              if (e.key === 'Enter' && commands[index]) run(commands[index]);
+              if (e.key === 'Enter' && commands[index]) {
+                // Otherwise the same keypress activates whatever the opened dialog focuses.
+                e.preventDefault();
+                run(commands[index]);
+              }
             }}
           />
           <kbd>Esc</kbd>
@@ -57,12 +67,13 @@ export default function CommandPalette({
         <div className="command-list">
           {commands.map((c, i) => (
             <button
-              key={c.label}
+              key={c.id ?? c.label}
               className={index === i ? 'command-selected' : ''}
               onClick={() => run(c)}
             >
               <c.icon size={16} />
               <span>{c.label}</span>
+              {c.source && <small className="plugin-source">from {c.source}</small>}
               <kbd>{c.hint}</kbd>
             </button>
           ))}

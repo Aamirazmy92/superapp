@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "veyo-plugin.schema.json",
+  "title": "Veyo plugin manifest (.veyo-plugin/plugin.json)",
+  "description": "Describes a Veyo plugin. Veyo's validator (electron/plugins/manifest.cjs) is authoritative; it also enforces the file limits and path checks that JSON Schema cannot express.",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "$ref": "#/$defs/id", "description": "Unique, lowercase, hyphenated. With the marketplace it forms the plugin identity name@marketplace." },
+    "version": { "$ref": "#/$defs/semver" },
+    "description": { "type": "string", "maxLength": 1000 },
+    "author": {
+      "oneOf": [
+        { "type": "string", "maxLength": 200 },
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "maxLength": 200 },
+            "email": { "type": "string", "maxLength": 200 },
+            "url": { "$ref": "#/$defs/webUrl" }
+          }
+        }
+      ]
+    },
+    "license": { "type": "string", "maxLength": 100 },
+    "homepage": { "$ref": "#/$defs/webUrl" },
+    "minAppVersion": { "$ref": "#/$defs/semver", "description": "The oldest Veyo version the plugin works with." },
+    "contributes": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "run"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "description": { "type": "string", "maxLength": 500 },
+              "run": { "$ref": "#/$defs/run" }
+            }
+          }
+        },
+        "agents": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "program"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+              "program": { "$ref": "#/$defs/program" },
+              "args": { "$ref": "#/$defs/args", "description": "Flags that change approval or sandbox settings are refused." },
+              "mark": { "type": "string", "maxLength": 2 }
+            }
+          }
+        },
+        "prompts": { "$ref": "#/$defs/paths", "description": "Folder(s) of *.md prompt files (Claude Code command format)." },
+        "skills": { "$ref": "#/$defs/paths", "description": "Folder(s) of <name>/SKILL.md skills." },
+        "mcpServers": {
+          "oneOf": [{ "$ref": "#/$defs/relativePath" }, { "$ref": "#/$defs/mcpServers" }],
+          "description": "A JSON file in Claude Code's .mcp.json format, or the servers inline."
+        },
+        "themes": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "path"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+              "path": { "$ref": "#/$defs/relativePath", "description": "A theme file: { base, colors } (see $defs/themeFile)." }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 },
+    "semver": { "type": "string", "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$" },
+    "webUrl": { "type": "string", "pattern": "^https?://", "maxLength": 2048 },
+    "relativePath": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Relative to the plugin folder; no '..', no drive letters, no links.",
+      "not": { "pattern": "(^[\\\\/])|(^[A-Za-z]:)|(^|[\\\\/])\\.\\.([\\\\/]|$)|:" }
+    },
+    "paths": { "oneOf": [{ "$ref": "#/$defs/relativePath" }, { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/relativePath" } }] },
+    "program": {
+      "type": "string",
+      "description": "A command name found on PATH, or ${pluginRoot}/<file> inside the plugin.",
+      "oneOf": [{ "pattern": "^[A-Za-z0-9._-]{1,128}$" }, { "pattern": "^\\$\\{pluginRoot\\}/" }]
+    },
+    "args": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "maxLength": 2000, "pattern": "^[^\"\\u0000-\\u001f\\u007f]*$" },
+      "description": "${pluginRoot} and ${projectRoot} are substituted. For .cmd/.bat programs, % ! ^ & | < > are also refused."
+    },
+    "run": {
+      "type": "object",
+      "required": ["program"],
+      "properties": { "program": { "$ref": "#/$defs/program" }, "args": { "$ref": "#/$defs/args" } }
+    },
+    "mcpServers": {
+      "type": "object",
+      "maxProperties": 50,
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.-]{1,64}$" },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["command"],
+            "properties": {
+              "type": { "const": "stdio" },
+              "command": { "type": "string", "maxLength": 1024 },
+              "args": { "$ref": "#/$defs/args" },
+              "env": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 2000 } }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["url"],
+            "properties": {
+              "type": { "enum": ["http", "sse"] },
+              "url": { "$ref": "#/$defs/webUrl" },
+              "headers": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 2000 } },
+              "auth": {
+                "description": "How the server signs in. Veyo uses it to offer the next step; see docs/plugins.md.",
+                "oneOf": [
+                  { "type": "object", "required": ["type"], "properties": { "type": { "const": "oauth" } }, "additionalProperties": false },
+                  {
+                    "type": "object",
+                    "required": ["type", "variable"],
+                    "properties": {
+                      "type": { "const": "env" },
+                      "variable": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]{0,63}$" },
+                      "url": { "$ref": "#/$defs/webUrl" },
+                      "label": { "type": "string", "maxLength": 80 }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": ["type", "callbackPort", "setupUrl"],
+                    "properties": {
+                      "type": { "const": "oauth-client" },
+                      "callbackPort": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+                      "setupUrl": { "$ref": "#/$defs/webUrl" },
+                      "clientIdHint": { "type": "string", "maxLength": 120 }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "themeFile": {
+      "type": "object",
+      "required": ["base", "colors"],
+      "properties": {
+        "base": { "enum": ["graphite", "midnight", "plum", "light"] },
+        "colors": {
+          "type": "object",
+          "required": ["chrome", "stage", "well", "raised", "accent", "foreground", "muted", "selection", "keyword", "string"],
+          "additionalProperties": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+        }
+      }
+    }
+  }
+}

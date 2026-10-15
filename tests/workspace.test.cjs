@@ -71,7 +71,7 @@ test('workspace metadata keeps valid flags and groups for known workspaces only'
   assert.deepEqual(normalizeSession({ workspaceMeta: 'bad' }).workspaceMeta, {});
 });
 async function fixture(t) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp audit '));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo audit '));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;
 }

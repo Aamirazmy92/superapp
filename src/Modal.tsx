@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
-import { motion, useIsPresent } from 'motion/react';
-import { Backdrop, MotionDialog } from './motion';
+import { X } from './icons';
+import { useIsPresent } from 'motion/react';
+import { Backdrop, isClosing, MotionDialog } from './motion';
 
 export default function Modal({
   title,
@@ -17,17 +17,22 @@ export default function Modal({
   const host = useRef<HTMLDivElement>(null);
   const previous = useRef<HTMLElement | null>(null);
   const present = useIsPresent();
+  // Hand focus back unless a dialog that opened in the meantime already holds it.
+  const restoreFocus = () => {
+    const active = document.activeElement;
+    if (!active || active === document.body || isClosing(active)) previous.current?.focus();
+  };
   useEffect(() => {
     previous.current = document.activeElement as HTMLElement | null;
     const first =
       host.current?.querySelector<HTMLElement>('input, textarea, select') ||
       host.current?.querySelector<HTMLElement>('button');
     first?.focus();
-    return () => previous.current?.focus();
+    return restoreFocus;
   }, []);
   // The dialog stays mounted while it fades out; return focus as soon as it starts closing.
   useEffect(() => {
-    if (!present) previous.current?.focus();
+    if (!present) restoreFocus();
   }, [present]);
   return (
     <Backdrop

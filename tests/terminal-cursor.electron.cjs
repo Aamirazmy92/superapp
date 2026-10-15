@@ -7,7 +7,7 @@ const { _electron } = require('playwright');
 // Run after npm run build: node tests/terminal-cursor.electron.cjs
 // Uses a temporary app profile and synthetic terminal output; no agent prompts.
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-cursor-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-cursor-'));
   await fs.writeFile(
     path.join(dataDir, 'workspaces.json'),
     JSON.stringify({
@@ -19,7 +19,7 @@ const { _electron } = require('playwright');
   const app = await _electron.launch({
     executablePath: require('electron'),
     args: [path.resolve('.')],
-    env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+    env: { ...process.env, VEYO_DATA_DIR: dataDir },
   });
   try {
     const page = await app.firstWindow();
@@ -96,7 +96,7 @@ const { _electron } = require('playwright');
     await app.close();
     // Leave the isolated temp profile available for debugging if cleanup is locked by Windows.
     assert.equal(path.dirname(path.resolve(dataDir)), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(dataDir).startsWith('superapp-cursor-'));
+    assert.ok(path.basename(dataDir).startsWith('veyo-cursor-'));
     await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
   }
 })().catch((error) => {

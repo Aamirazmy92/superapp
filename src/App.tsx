@@ -14,6 +14,7 @@ let chatModule: typeof import('./ChatWorkspace') | null = null;
 const loadChat = () => import('./ChatWorkspace').then((module) => (chatModule = module));
 let editorModule: typeof import('./EditorSurfaces') | null = null;
 const loadEditor = () => import('./EditorSurfaces').then((module) => (editorModule = module));
+import veyoIcon from './assets/brand/veyo-icon.png';
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -35,6 +36,7 @@ import {
   RefreshCw,
   Search,
   Settings2,
+  SettingsGear,
   Square,
   SquareTerminal,
   X,
@@ -49,7 +51,9 @@ import {
   PinOff,
   Globe,
   Trash2,
-} from 'lucide-react';
+  Play,
+  FileText,
+} from './icons';
 import FileTabs from './FileTabs';
 import Modal from './Modal';
 import { editorPath } from './editorModel';
@@ -57,6 +61,7 @@ import TerminalPane from './TerminalPane';
 import { useTerminalReorder } from './useTerminalReorder';
 import Settings from './Settings';
 import { usePreferences } from './preferences';
+import { playDoneSound } from './doneSound';
 import AgentLauncher from './AgentLauncher';
 import AgentPicker from './AgentPicker';
 import AgentDashboard from './AgentDashboard';
@@ -74,6 +79,7 @@ import {
   Backdrop,
   MotionDialog,
   Surface,
+  isClosing,
   motionReduced,
   surfaceMotion,
   useCollapse,
@@ -86,7 +92,13 @@ import ProjectTools from './ProjectTools';
 import QuickOpen from './QuickOpen';
 import WorkspaceBrowser from './WorkspaceBrowser';
 import RunCommands from './RunCommands';
-import { NotificationsMenu, useNotifications } from './Notifications';
+import Plugins from './Plugins';
+import PluginPrompt from './PluginPrompt';
+import { usePluginContributions } from './usePlugins';
+import { pluginTheme, pluginThemeTokens, setPluginThemes } from './themes';
+import { errorMessage as pluginError, terminalPaste } from './pluginModel';
+import type { PluginContributions } from './types';
+import { useNotifications } from './Notifications';
 import CommandPalette, { type PaletteCommand } from './CommandPalette';
 import { usePanelWidths } from './usePanelWidths';
 import {
@@ -285,14 +297,15 @@ export default function App() {
   } | null>(null);
   const [runCommands, setRunCommands] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [pluginPrompt, setPluginPrompt] = useState<PluginContributions['prompts'][number] | null>(null);
   const { preferences, update: updatePreferences, saveError: preferencesError } = usePreferences();
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
   usePressSprings();
   useLayoutEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', preferences.reduceMotion);
   }, [preferences.reduceMotion]);
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = preferences.theme;
-  }, [preferences.theme]);
   const chatModeRef = useRef<HTMLDivElement>(null);
   const appBodyRef = useRef<HTMLDivElement>(null);
   const shownMode = useViewSwitch(mode, ['code', 'chat'] as const, (view) =>
@@ -320,6 +333,10 @@ export default function App() {
   const [showArchived, setShowArchived] = useState<Record<string, boolean>>({});
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+  // The browser stays mounted once opened, so closing it only hides it and
+  // its tabs and pages survive; a new session starts it afresh.
+  const [browserSession, setBrowserSession] = useState(0);
+  const [browserMounted, setBrowserMounted] = useState(false);
   const [browserFullscreen, setBrowserFullscreen] = useState(false);
   const [diff, setDiff] = useState<{ path: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -337,6 +354,33 @@ export default function App() {
   const terminalsForWorkspace = (name: string) =>
     work?.terminals.filter((t) => (t.workspaceName || 'Main') === name) || [];
   const visibleTerminals = terminalsForWorkspace(workspaceName);
+  const pluginContributions = usePluginContributions(project?.id);
+  // Plugin themes are registered during render so the terminal and editor below
+  // see the same set. A theme whose plugin is gone falls back to the built-in one.
+  useMemo(
+    () =>
+      setPluginThemes(
+        pluginContributions.themes.map((theme) => ({ key: theme.key, label: theme.label, plugin: theme.plugin, base: theme.base, colors: theme.colors })),
+      ),
+    [pluginContributions.themes],
+  );
+  const activePluginTheme = pluginTheme(preferences.pluginTheme);
+  const displayPreferences = useMemo(
+    () => (activePluginTheme || !preferences.pluginTheme ? preferences : { ...preferences, pluginTheme: '' }),
+    [preferences, activePluginTheme],
+  );
+  const appliedThemeTokens = useRef<string[]>([]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = activePluginTheme?.base ?? preferences.theme;
+    for (const name of appliedThemeTokens.current) root.style.removeProperty(name);
+    const tokens = activePluginTheme ? pluginThemeTokens(activePluginTheme) : {};
+    for (const [name, value] of Object.entries(tokens)) root.style.setProperty(name, value);
+    appliedThemeTokens.current = Object.keys(tokens);
+  }, [preferences.theme, activePluginTheme]);
+  // The agent a plugin prompt would be typed into: the focused one, else the newest.
+  const promptAgents = visibleTerminals.filter((t) => !!t.agentId && t.agentId !== 'terminal' && !t.exited);
+  const promptTarget = promptAgents.find((t) => t.id === activeTerminalId) ?? promptAgents.at(-1);
   const runningAgentCount =Object.values(workspaces).reduce(
     (sum, session) => sum + (session?.terminals.filter((t) => !t.exited).length || 0),
     0,
@@ -366,7 +410,7 @@ export default function App() {
     (dashboardLayoutTarget?.workAreaWidth ?? browserContainerWidth) -
       (browserOpen && !browserFullscreen ? browserPanelWidth + 6 : 0),
   );
-  // The browser mounts when opened and unmounts once it has slid away.
+  // The browser is shown when opened and hidden once it has slid away.
   const browserHidden = useCollapse(
     () => workAreaRef.current?.querySelector<HTMLElement>('.workspace-browser') ?? null,
     browserOpen,
@@ -480,14 +524,19 @@ export default function App() {
     if (turn.timer) clearTimeout(turn.timer);
     turn.timer = undefined;
     const remaining = agentTurnSettlesAt(turn) - Date.now();
+    const settle = () => {
+      if (!settleAgentTurn(turn, Date.now())) return;
+      setDashboardNow(Date.now());
+      if (preferencesRef.current.doneSound) playDoneSound();
+    };
     if (remaining <= 0) {
-      if (settleAgentTurn(turn, Date.now())) setDashboardNow(Date.now());
+      settle();
       return;
     }
     turn.timer = setTimeout(() => {
       if (agentTurns.current.get(id) !== turn || turn.completedAt) return;
       turn.timer = undefined;
-      if (settleAgentTurn(turn, Date.now())) setDashboardNow(Date.now());
+      settle();
     }, remaining);
   }
   function recordTerminalExit(id: string, code: number, fallback?: TerminalInfo) {
@@ -678,7 +727,7 @@ export default function App() {
       if (event.key !== 'Tab') return;
       const dialogs = [
         ...document.querySelectorAll<HTMLElement>('[role="dialog"], .modal-backdrop > form'),
-      ].filter(element => !element.closest('.monaco-editor') && element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length);
+      ].filter(element => !element.closest('.monaco-editor') && !isClosing(element) && element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length);
       const dialog = dialogs.at(-1);
       if (!dialog) return;
       const items = [
@@ -778,7 +827,7 @@ export default function App() {
       setActiveTerminalId(null);
       setFullScreenTerminalId(null);
       setActiveProject(next.id);
-      closeBrowser();
+      resetBrowser();
     } catch (value) {
       error(value);
     }
@@ -790,7 +839,7 @@ export default function App() {
       setActiveTerminalId(null);
       setFullScreenTerminalId(null);
       setActiveProject(id);
-      closeBrowser();
+      resetBrowser();
     } catch (value) {
       error(value);
     }
@@ -802,7 +851,7 @@ export default function App() {
         await persistCurrent();
         await api.activateProject(terminal.projectId);
         setActiveProject(terminal.projectId);
-        closeBrowser();
+        resetBrowser();
       }
       setFullScreenTerminalId(null);
       update(terminal.projectId, (current) => ({
@@ -933,6 +982,30 @@ export default function App() {
       return;
     }
     removeFile(activeProject, target.path);
+  }
+  // A plugin command runs in a new terminal pane, where its output stays visible.
+  async function startPluginCommand(key: string) {
+    if (!api || !project) throw new Error('Open a project first.');
+    showPluginTerminal(await api.pluginsRunCommand(project.id, key, workspaceName));
+  }
+  function showPluginTerminal(next: TerminalInfo) {
+    update(next.projectId, (current) => ({
+      ...current,
+      layout: current.layout === 'focus' ? 'terminal' : current.layout,
+      terminals: [...current.terminals, { ...next, workspaceName: next.workspaceName || 'Main' }],
+    }));
+    setMode('code');
+    setActiveTerminalId(next.id);
+  }
+  function runPluginCommand(key: string) {
+    startPluginCommand(key).catch((error) => setToast(`Could not run the plugin command: ${pluginError(error)}`));
+  }
+  // Types a plugin prompt into an agent without submitting it.
+  async function typePluginPrompt(text: string) {
+    if (!api || !promptTarget) throw new Error('Start an agent terminal first.');
+    setMode('code');
+    setActiveTerminalId(promptTarget.id);
+    await api.writeTerminal(promptTarget.id, terminalPaste(text));
   }
   // Sends a change request picked in the browser to the agent the user is
   // working with: the focused one, else the newest running agent here.
@@ -1248,7 +1321,7 @@ export default function App() {
       setActiveProject(nextActive);
       setActiveTerminalId(null);
       setFullScreenTerminalId(null);
-      closeBrowser();
+      resetBrowser();
       setToast(`Removed ${target.name}; its files remain on disk.`);
     } catch (value) {
       error(value);
@@ -1425,12 +1498,20 @@ export default function App() {
   };
   function openBrowser() {
     setBrowserFullscreen(false);
+    setBrowserMounted(true);
     setBrowserOpen(true);
   }
   // Fullscreen is left as is, so a fullscreen browser closes without sliding;
   // openBrowser resets it.
   function closeBrowser() {
     setBrowserOpen(false);
+  }
+  // Another project's pages do not belong here, so switching projects closes
+  // the browser and discards its tabs.
+  function resetBrowser() {
+    closeBrowser();
+    setBrowserMounted(false);
+    setBrowserSession((session) => session + 1);
   }
   function toggleBrowser() {
     if (browserOpen) closeBrowser();
@@ -1549,7 +1630,7 @@ export default function App() {
         setNotificationsOpen(false);
       }
       if (Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], .modal-backdrop')).some(element =>
-        !element.closest('.monaco-editor') && element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length)) return;
+        !element.closest('.monaco-editor') && !isClosing(element) && element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length)) return;
       if (!event.ctrlKey && !event.metaKey) return;
       if (event.key.toLowerCase() === 's') {
         event.preventDefault();
@@ -1619,10 +1700,31 @@ export default function App() {
     { label: 'Focus editor', hint: '', action: () => setLayout('focus'), icon: Code2 },
     { label: 'Terminal layout', hint: '', action: () => setLayout('terminal'), icon: PanelBottom },
     { label: 'Workspace settings', hint: '', action: () => setSettings(true), icon: Settings2 },
+    { label: 'Plugins', hint: '', action: () => setPluginsOpen(true), icon: Zap },
   ].filter(
     (c) =>
-      project || ['Agent dashboard', 'Open project folder', 'Workspace settings'].includes(c.label),
+      project || ['Agent dashboard', 'Open project folder', 'Workspace settings', 'Plugins'].includes(c.label),
   );
+  if (project) {
+    for (const command of pluginContributions.commands)
+      allCommands.push({
+        id: `plugin-command:${command.key}`,
+        label: command.title,
+        hint: '',
+        source: command.plugin,
+        action: () => runPluginCommand(command.key),
+        icon: Play,
+      });
+    for (const prompt of pluginContributions.prompts)
+      allCommands.push({
+        id: `plugin-prompt:${prompt.key}`,
+        label: `${prompt.kind === 'skill' ? 'Skill' : 'Prompt'}: ${prompt.title}`,
+        hint: '',
+        source: prompt.plugin,
+        action: () => setPluginPrompt(prompt),
+        icon: FileText,
+      });
+  }
   function resizeTerminals(event: React.PointerEvent<HTMLDivElement>) {
     const id = activeProject;
     if (!id || !work) return;
@@ -1666,10 +1768,8 @@ export default function App() {
   if (!api)
     return (
       <div className="browser-notice">
-        <div className="brand-symbol">
-          <Zap />
-        </div>
-        <h1>Superapp</h1>
+        <img className="brand-logo" src={veyoIcon} alt="" />
+        <h1>Veyo</h1>
         <p>This workspace runs as a desktop app to access your files and terminals.</p>
         <code>npm run dev</code>
       </div>
@@ -1907,10 +2007,8 @@ export default function App() {
     <div className={`app mode-${mode}`}>
       <header className={`titlebar ${notificationsOpen ? 'notifications-open' : ''}`}>
         <div className="brand">
-          <span className="brand-symbol">
-            <Zap size={16} fill="currentColor" />
-          </span>
-          superapp<span className="alpha">ALPHA</span>
+          <img className="brand-logo" src={veyoIcon} alt="" />
+          Veyo
         </div>
         <nav className="mode-switch" aria-label="App mode" data-mode={mode}>
           <span className="mode-switch-pill" aria-hidden="true" />
@@ -1980,12 +2078,6 @@ export default function App() {
               </button>
             </div>
           )}
-          <NotificationsMenu
-            items={notifications}
-            setItems={setNotifications}
-            open={notificationsOpen}
-            onOpenChange={setNotificationsOpen}
-          />
           <div className="window-controls">
             <button aria-label="Minimize" onClick={() => api.windowAction('minimize')}>
               <Minus size={14} />
@@ -2108,6 +2200,14 @@ export default function App() {
                   <div key={p.id} className="project-group">
                     <div className="project-row-wrap">
                       <button
+                        className={`project-row ${activeProject === p.id ? 'active' : ''}`}
+                        aria-label={p.pinned ? `${p.name}, pinned project` : p.name}
+                        title={p.root}
+                        onClick={() => switchProject(p.id)}
+                      >
+                        <span>{p.name}</span>
+                      </button>
+                      <button
                         className={`project-collapse ${activeProject !== p.id || collapsedProjects[p.id] ? 'collapsed' : ''}`}
                         aria-label={`${activeProject === p.id && !collapsedProjects[p.id] ? 'Hide' : 'Show'} workspaces in ${p.name}`}
                         aria-expanded={activeProject === p.id && !collapsedProjects[p.id]}
@@ -2122,14 +2222,6 @@ export default function App() {
                         }}
                       >
                         <ChevronDown size={15} />
-                      </button>
-                      <button
-                        className={`project-row ${activeProject === p.id ? 'active' : ''}`}
-                        aria-label={p.pinned ? `${p.name}, pinned project` : p.name}
-                        title={p.root}
-                        onClick={() => switchProject(p.id)}
-                      >
-                        <span>{p.name}</span>
                       </button>
                       <button
                         className="project-add"
@@ -2271,9 +2363,7 @@ export default function App() {
             )}
           </div>
           <button className="sidebar-settings" onClick={() => setSettings(true)}>
-            <span className="sidebar-settings-icon" aria-hidden="true">
-              <Settings2 size={14} />
-            </span>
+            <SettingsGear size={15} aria-hidden="true" />
             Settings
           </button>
         </aside>
@@ -2419,7 +2509,7 @@ export default function App() {
                     )}
                     {file ? (
                       !editorModule ? <span className="muted inset editor-loading">Loading editor…</span> :
-                      <editorModule.FileEditor projectId={project!.id} file={file} preferences={preferences}
+                      <editorModule.FileEditor projectId={project!.id} file={file} preferences={displayPreferences}
                         busy={busy} editorRef={editorRef} reveal={revealTarget}
                         onChange={(content) => updateFile(project!.id, file.path, (current) => ({ ...current, content }))}
                         onSave={(keepMine) => void saveFile(keepMine)} onAsk={askAboutFile}
@@ -2543,7 +2633,7 @@ export default function App() {
                               : undefined;
                           return (
                             <TerminalPane
-                              preferences={preferences}
+                              preferences={displayPreferences}
                               key={t.id}
                               gridColumnSpan={gridColumnSpan}
                               info={t}
@@ -2597,17 +2687,20 @@ export default function App() {
             {!browserHidden &&
               !browserFullscreen &&
               panelSeparator('browser', 'Resize browser panel')}
-            {!browserHidden && (
+            {browserMounted && (
               <WorkspaceBrowser
+                key={browserSession}
                 isFullscreen={browserFullscreen}
                 style={
-                  browserFullscreen
-                    ? undefined
-                    : {
-                        width: browserPanelWidth,
-                        flexBasis: browserPanelWidth,
-                        minWidth: browserPanelMinWidth,
-                      }
+                  browserHidden
+                    ? { display: 'none' }
+                    : browserFullscreen
+                      ? undefined
+                      : {
+                          width: browserPanelWidth,
+                          flexBasis: browserPanelWidth,
+                          minWidth: browserPanelMinWidth,
+                        }
                 }
                 onClose={closeBrowser}
                 onSendToAgent={sendBrowserPrompt}
@@ -2672,7 +2765,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {toast && (
           <motion.div
-            {...surfaceMotion()}
+            {...surfaceMotion('toast')}
             key={toast}
             className={`toast ${toastIsError(toast) ? 'toast-error' : 'toast-success'}`}
             role={toastIsError(toast) ? 'alert' : 'status'}
@@ -2738,6 +2831,8 @@ export default function App() {
             projectId={project.id}
             shells={shells}
             onClose={() => setRunCommands(false)}
+            pluginCommands={pluginContributions.commands}
+            onRunPlugin={startPluginCommand}
             onRun={async (command, name, shell) => {
               const next = await api.createTerminal(project.id, shell, workspaceName);
               update(project.id, (current) => ({
@@ -2857,6 +2952,45 @@ export default function App() {
             error={preferencesError}
             onClose={() => setSettings(false)}
             commands={allCommands.filter((c) => c.label !== 'Workspace settings')}
+            pluginThemes={pluginContributions.themes}
+            onOpenPlugins={() => {
+              setSettings(false);
+              setPluginsOpen(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {pluginsOpen && (
+          <Plugins
+            projectId={project?.id ?? null}
+            projectName={project?.name}
+            workspaceName={workspaceName}
+            onClose={() => setPluginsOpen(false)}
+            onToast={(text, action) => {
+              setToastAction(action ? { text, ...action } : null);
+              setToast(text);
+            }}
+            onTerminal={(list) => {
+              setPluginsOpen(false);
+              for (const info of list) showPluginTerminal(info);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {pluginPrompt && (
+          <PluginPrompt
+            prompt={pluginPrompt}
+            canChat={!!project}
+            terminalTarget={promptTarget ? displayTerminalTitle(promptTarget.sessionTitle, promptTarget.label, promptTarget.agentId) : undefined}
+            onClose={() => setPluginPrompt(null)}
+            onInsertChat={(draft) => {
+              if (!project) return;
+              setChatHandoff({ id: crypto.randomUUID(), projectId: project.id, draft, attachActiveFile: false });
+              openChat();
+            }}
+            onTypeTerminal={typePluginPrompt}
           />
         )}
       </AnimatePresence>

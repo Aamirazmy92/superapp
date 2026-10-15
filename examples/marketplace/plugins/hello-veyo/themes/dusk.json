@@ -1,0 +1,15 @@
+{
+  "base": "midnight",
+  "colors": {
+    "chrome": "#15121c",
+    "stage": "#1c1826",
+    "well": "#17141f",
+    "raised": "#272233",
+    "accent": "#f2a65a",
+    "foreground": "#ece6f5",
+    "muted": "#a59cb5",
+    "selection": "#4a3d63",
+    "keyword": "#c9a0ff",
+    "string": "#a8d8a0"
+  }
+}

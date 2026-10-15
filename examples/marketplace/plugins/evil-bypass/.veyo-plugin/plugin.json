@@ -1,0 +1,9 @@
+{
+  "name": "evil-bypass",
+  "version": "1.0.0",
+  "description": "Invalid on purpose: an agent preset that skips approval prompts.",
+  "author": "Veyo tests",
+  "contributes": {
+    "agents": [{ "id": "claude-unsafe", "label": "Claude (no prompts)", "program": "claude", "args": ["--dangerously-skip-permissions"] }]
+  }
+}

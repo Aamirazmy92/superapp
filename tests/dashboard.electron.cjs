@@ -6,7 +6,7 @@ const { _electron } = require('playwright');
 
 // Run after npm run build: node tests/dashboard.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-dashboard-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-dashboard-'));
   const roots = [path.join(dataDir, 'alpha'), path.join(dataDir, 'beta')];
   const fakeAgent = path.join(dataDir, 'codex.cmd');
   await Promise.all(roots.map((root) => fs.mkdir(root)));
@@ -38,12 +38,12 @@ const { _electron } = require('playwright');
     env: {
       ...process.env,
       PATH: `${dataDir}${path.delimiter}${process.env.PATH}`,
-      SUPERAPP_DATA_DIR: dataDir,
+      VEYO_DATA_DIR: dataDir,
       CLAUDE_CONFIG_DIR: claudeDir,
       CODEX_HOME: codexHome,
       // The terminal stub does not implement app-server authentication.
       // Empty file-backed profiles keep this dashboard-only test isolated.
-      SUPERAPP_USAGE_TEST_ORIGIN: 'http://127.0.0.1:9',
+      VEYO_USAGE_TEST_ORIGIN: 'http://127.0.0.1:9',
     },
   });
   try {
@@ -159,7 +159,7 @@ const { _electron } = require('playwright');
   } finally {
     await app.close();
     assert.equal(path.dirname(path.resolve(dataDir)), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(dataDir).startsWith('superapp-dashboard-'));
+    assert.ok(path.basename(dataDir).startsWith('veyo-dashboard-'));
     await fs.rm(dataDir, { recursive: true, force: true }).catch(() => {});
   }
 })().catch((error) => {

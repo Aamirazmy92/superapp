@@ -5,16 +5,15 @@
    #383838 tiles), soft off-white text, off-white primary actions, blue for links
    and "on" states, and Claude's clay orange reserved for brand marks.
    Headings are sans; only assistant prose in chat uses the serif chat font.
-   Midnight and Plum keep their own palettes but share the shapes defined here. */
+   Other themes share the shapes defined here. */
 
 :root {
-  --font-sans: 'Figtree Variable', Figtree, 'Segoe UI Variable Text', system-ui, sans-serif;
+  --font-sans: var(--font-ui);
   --font-serif: var(--font-sans);
 
   --clay: #d97757;
   --clay-strong: #c6613f;
   --link: #6da7ec;
-  --switch-on: #2c84db;
 
   --radius-sm: 6px;
   --radius: 8px;
@@ -83,10 +82,10 @@
   --edge: #c3c2bc;
   --divider: #e2e1dd;
 
-  --text: #141413;
-  --text-soft: #3d3d3a;
-  --muted: #6f6e69;
-  --faint: #7a7973;
+  --text: #000000;
+  --text-soft: #000000;
+  --muted: #000000;
+  --faint: #000000;
 
   --primary: #141413;
   --primary-hover: #2e2e2c;
@@ -118,23 +117,23 @@
   font-family: var(--font-sans);
 }
 
-:root:not([data-theme='midnight']):not([data-theme='plum']) ::selection {
+:root ::selection {
   background: var(--accent-soft);
   color: var(--text);
 }
 
 /* Scrollbars ------------------------------------------------------------------ */
-:root:not([data-theme='midnight']):not([data-theme='plum']) ::-webkit-scrollbar-thumb {
+:root ::-webkit-scrollbar-thumb {
   background: var(--hairline-strong);
   border-radius: 999px;
 }
-:root:not([data-theme='midnight']):not([data-theme='plum']) ::-webkit-scrollbar-thumb:hover {
+:root ::-webkit-scrollbar-thumb:hover {
   background: var(--edge);
 }
 
 /* Surfaces ---------------------------------------------------------------------
    Claude separates panes with a flat 1px line rather than shadows. */
-:root:not([data-theme='midnight']):not([data-theme='plum']) :is(.workspace, .chat-main) {
+:root :is(.workspace, .chat-main) {
   border-color: var(--divider);
   box-shadow: none;
 }
@@ -152,13 +151,13 @@
 :root:root .chat-layout .chat-message.assistant .message-content {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: 15.5px;
+  font-size: var(--type-lead);
   line-height: 1.65;
 }
 
 :root:root .chat-layout .chat-message.assistant .message-content :is(pre, code, kbd) {
   font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
-  font-size: 13px;
+  font-size: var(--type-body);
 }
 
 :root:root .chat-layout .chat-message.assistant .message-content table {
@@ -385,7 +384,7 @@
 }
 
 .preferences-search input {
-  font-size: 13.5px;
+  font-size: var(--type-body);
 }
 
 .preferences-sidebar nav {
@@ -396,7 +395,7 @@
 .preferences-sidebar nav button {
   gap: 12px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: var(--type-title);
   font-weight: 460;
   color: var(--text-soft);
 }
@@ -428,13 +427,13 @@
 
 .preferences-row strong,
 .preferences-theme-setting > strong {
-  font-size: 14px;
+  font-size: var(--type-title);
   font-weight: 500;
 }
 
 .preferences-row small,
 .preferences-theme-setting > small {
-  font-size: 13px;
+  font-size: var(--type-body);
 }
 
 .preferences-row select {
@@ -476,39 +475,6 @@
 
 .preferences-theme > svg {
   color: var(--text);
-}
-
-/* Toggles: #313130 track with a white knob; blue when on. */
-.preferences-switch,
-:root[data-theme='light'] .preferences-switch {
-  width: 36px;
-  height: 20px;
-  border: 0;
-  background: #313130;
-}
-
-:root[data-theme='light'] .preferences-switch {
-  background: #d6d5d0;
-}
-
-.preferences-switch:before,
-:root[data-theme='light'] .preferences-switch:before {
-  left: 3px;
-  top: 3px;
-  width: 14px;
-  height: 14px;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-:root:root .preferences-switch:checked {
-  border: 0;
-  background: var(--switch-on);
-}
-
-:root:root .preferences-switch:checked:before {
-  left: 19px;
-  background: #ffffff;
 }
 
 /* Dialogs & popovers ------------------------------------------------------------ */
@@ -556,8 +522,13 @@ body:has(.modal-backdrop) .titlebar {
 }
 
 /* Settings → Commands: divided rows like the other settings, runnable on click. */
-.preferences-commands {
+:root .preferences .preferences-commands {
   display: grid;
+  margin-top: 16px;
+  padding: 0 10px;
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
 }
 
 .preferences-command {
@@ -569,7 +540,7 @@ body:has(.modal-backdrop) .titlebar {
   padding: 0 10px;
   border-radius: var(--radius);
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: var(--type-title);
   text-align: left;
 }
 
@@ -584,15 +555,6 @@ body:has(.modal-backdrop) .titlebar {
 .preferences-command > span {
   flex: 1;
   min-width: 0;
-}
-
-.preferences-command kbd {
-  padding: 2px 6px;
-  border: 0;
-  border-radius: 5px;
-  color: var(--muted);
-  background: var(--tile, var(--raised));
-  font-size: 11.5px;
 }
 
 .preferences-command-run {
@@ -638,7 +600,7 @@ body:has(.modal-backdrop) .titlebar {
   min-height: 25px;
   padding: 0 8px 0 10px;
   border-radius: 6px;
-  font-size: 13.5px;
+  font-size: var(--type-body);
   font-weight: 450;
   line-height: 1.2;
   text-align: left;
@@ -673,7 +635,7 @@ body:has(.modal-backdrop) .titlebar {
   border: 0;
   color: var(--faint);
   background: transparent;
-  font-size: 12px;
+  font-size: var(--type-small);
 }
 
 :root:root :is(.views-check, .menu-check, .menu-chevron) {
@@ -688,13 +650,13 @@ body:has(.modal-backdrop) .titlebar {
 }
 
 :root:root .new-pane-menu-header strong {
-  font-size: 12px;
+  font-size: var(--type-small);
   font-weight: 560;
   color: var(--muted);
 }
 
 :root:root .new-pane-menu-header span {
-  font-size: 11.5px;
+  font-size: var(--type-micro);
 }
 
 :root:root .new-pane-menu-section {
@@ -715,7 +677,7 @@ body:has(.modal-backdrop) .titlebar {
 
 :root:root .chat-select-menu .chat-select-heading {
   padding: 5px 10px 3px;
-  font-size: 11.5px;
+  font-size: var(--type-micro);
 }
 
 /* Agent logos in the New agent menu keep their size (the label rule above
@@ -725,4 +687,32 @@ body:has(.modal-backdrop) .titlebar {
   width: 15px;
   height: 15px;
   overflow: visible;
+}
+
+/* White on dark ----------------------------------------------------------------
+   Text and icons rest at the same white they reach on hover instead of fading to
+   grey. Hierarchy comes from size and weight. Light theme is untouched. */
+:root:not([data-theme='light']) {
+  --text: #ffffff;
+  --text-soft: #ffffff;
+  --muted: #f3f2ef;
+  --faint: #e2e1dc;
+}
+
+:root:not([data-theme='light']) .secondary-button,
+:root:not([data-theme='light']) .secondary-button:hover:not(:disabled) {
+  color: #ffffff;
+}
+
+/* Secondary buttons rest in the fill they used to reach on hover. */
+:root:not([data-theme='light']) .secondary-button {
+  background: var(--selected);
+}
+
+:root:not([data-theme='light']) .secondary-button:hover:not(:disabled) {
+  background: var(--edge);
+}
+
+:root:not([data-theme='light']) .icon-button {
+  color: #ffffff;
 }

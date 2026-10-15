@@ -15,7 +15,7 @@
 /* Hover, focus and selection colours. Overrides the blanket
    `transition: none` in design.css; terminal and editor internals keep their own. */
 :root:not(.reduce-motion)
-  :is(button, [role='button'], [role='menuitem'], [role='option'], [role='tab'], a):not(
+  :is(button, [role='button'], [role='menuitem'], [role='option'], [role='tab'], a):not(.switch):not(
     :is(.xterm, .monaco-editor) *
   ) {
   transition:
@@ -28,7 +28,7 @@
 
 /* Pressing darkens right away; letting go eases back. */
 :root:not(.reduce-motion)
-  :is(button, [role='button'], [role='menuitem'], [role='option'], [role='tab']):active:not(
+  :is(button, [role='button'], [role='menuitem'], [role='option'], [role='tab']):active:not(.switch):not(
     :is(.xterm, .monaco-editor) *
   ) {
   transition-duration: var(--dur-press) !important;
@@ -91,13 +91,6 @@
 /* A folder's children fade in where they will sit; nothing slides. */
 :root:not(.reduce-motion) .tree-children {
   animation: fade-in var(--dur) var(--ease) both;
-}
-
-/* Preferences switch: the knob glides with the same curve as everything else. */
-:root:not(.reduce-motion) .preferences-switch:before {
-  transition:
-    left var(--dur-spring) var(--ease),
-    background-color var(--dur-fast) var(--ease);
 }
 
 /* Loading messages wait a moment before appearing, so a fast load never

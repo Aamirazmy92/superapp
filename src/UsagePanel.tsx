@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw } from './icons';
 import AgentLogo from './AgentLogo';
 import type { PlanUsage, UsageProvider, UsageWindow } from './types';
 import type { UsageReadings } from './useUsage';
@@ -47,6 +47,9 @@ function heatColor(percent: number) {
   return 'var(--running)';
 }
 
+/** Below this share of the bar the percentage no longer fits inside the fill. */
+const LABEL_INSIDE_FROM = 14;
+
 function Meter({
   label,
   window,
@@ -61,6 +64,9 @@ function Meter({
   current: boolean;
 }) {
   const percent = Math.round(window.percent);
+  // Shown as what is left: the bar starts full and drains toward the limit.
+  const remainingExact = Math.min(100, Math.max(0, 100 - window.percent));
+  const remaining = Math.max(0, 100 - percent);
   const pace = usagePace(window, lengthMs, now);
   const pending = resetPending(window, now);
   const elapsed = pace.elapsed === null ? null : Math.round(pace.elapsed * 100);
@@ -77,31 +83,34 @@ function Meter({
       className={`usage-meter ${pending ? 'pending' : usageTone(window.percent)}`}
       style={pending ? undefined : ({ '--tone': heatColor(window.percent) } as CSSProperties)}
     >
-      <span className="usage-meter-label">{label}</span>
       <span
-        className="usage-meter-track"
+        className={`usage-meter-track${!pending && remainingExact < LABEL_INSIDE_FROM ? ' label-outside' : ''}`}
         role={pending ? undefined : 'meter'}
-        aria-label={`${label} usage`}
+        aria-label={`${label} usage remaining`}
         aria-valuemin={pending ? undefined : 0}
         aria-valuemax={pending ? undefined : 100}
-        aria-valuenow={pending ? undefined : window.percent}
+        aria-valuenow={pending ? undefined : remainingExact}
         aria-valuetext={
           pending
             ? undefined
-            : `${percent}% used, ${100 - percent}% remaining${current ? '' : ', last known reading'}${elapsed === null ? '' : `, ${elapsed}% of the window passed`}`
+            : `${remaining}% remaining, ${percent}% used${current ? '' : ', last known reading'}${elapsed === null ? '' : `, ${elapsed}% of the window passed`}`
         }
         title={
-          elapsed === null ? undefined : `${percent}% used · ${elapsed}% of the window has passed`
+          elapsed === null
+            ? `${percent}% used`
+            : `${remaining}% left · ${elapsed}% of the window has passed`
         }
       >
-        <span className="usage-meter-fill" style={{ width: `${pending ? 0 : window.percent}%` }} />
+        <span className="usage-meter-fill" style={{ width: `${pending ? 0 : remainingExact}%` }} />
+        <strong
+          className="usage-meter-value"
+          aria-hidden="true"
+          style={pending ? undefined : ({ '--fill': `${remainingExact}%` } as CSSProperties)}
+        >
+          {pending ? '—' : `${remaining}%${remainingExact >= 45 ? ' left' : ''}`}
+        </strong>
       </span>
-      <strong
-        className="usage-meter-value"
-        title={pending ? 'Waiting for current usage' : `${100 - percent}% remaining`}
-      >
-        {pending ? '—' : `${percent}%`}
-      </strong>
+      <span className="usage-meter-label" title={`${label} usage remaining`}>{label}</span>
       <span
         className="usage-meter-reset"
         title={

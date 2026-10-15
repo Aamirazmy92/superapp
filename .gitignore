@@ -3,7 +3,7 @@ dist/
 release/
 output/
 *.log
-.superapp-dev/
+.veyo-dev/
 .npm-cache/
 .playwright-cli/
 .pnpm-store/

@@ -7,7 +7,7 @@ const { listAgents, catalog } = require('../electron/agents.cjs');
 
 const ext = process.platform === 'win32' ? '.cmd' : '';
 async function bin(t, ...commands) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp agents '));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo agents '));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   for (const command of commands)
     await fs.writeFile(path.join(dir, command + ext), '', { mode: 0o755 });

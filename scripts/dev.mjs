@@ -9,15 +9,15 @@ const server = await createServer({
     host: '127.0.0.1',
     // Port 0 asks the OS for a free localhost port. This also avoids Windows
     // excluded-port ranges that can report EACCES instead of EADDRINUSE.
-    port: Number(process.env.SUPERAPP_DEV_PORT) || 0,
+    port: Number(process.env.VEYO_DEV_PORT) || 0,
     strictPort: false,
   },
 });
 await server.listen();
 const address = server.httpServer?.address();
 const port = typeof address === 'object' && address ? address.port : 5173;
-console.log(`[superapp] Vite running at http://127.0.0.1:${port}`);
-const env = { ...process.env, SUPERAPP_DEV_URL: `http://127.0.0.1:${port}` };
+console.log(`[veyo] Vite running at http://127.0.0.1:${port}`);
+const env = { ...process.env, VEYO_DEV_URL: `http://127.0.0.1:${port}` };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = spawn(electron, ['.', ...process.argv.slice(2)], { stdio: 'inherit', env });
 child.on('exit', async (code) => {

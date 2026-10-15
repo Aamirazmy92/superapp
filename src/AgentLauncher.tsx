@@ -1,5 +1,6 @@
+import ChatSelect from './ChatSelect';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Minus, Plus, RefreshCw, X } from 'lucide-react';
+import { Check, Minus, Plus, RefreshCw, X } from './icons';
 import type { AgentOption, TerminalInfo } from './types';
 import AgentLogo from './AgentLogo';
 import { useIsPresent } from 'motion/react';
@@ -198,9 +199,10 @@ export default function AgentLauncher({
                   }
                   onClick={() => changeCount(agent.id, (current) => (current ? 0 : 1))}
                 >
-                  <AgentLogo agentId={agent.id} size={18} className="agent-mark" />
-                  <span className="agent-option-name">
+                  <AgentLogo agentId={agent.id} mark={agent.source ? agent.mark : undefined} size={18} className="agent-mark" />
+                  <span className="agent-option-name" title={agent.problem}>
                     {agent.label}
+                    {agent.source && <small className="plugin-source">from {agent.source}</small>}
                     {!agent.installed && <small>Unavailable</small>}
                   </span>
                   <span className="agent-check">{count > 0 && <Check size={12} />}</span>
@@ -233,13 +235,15 @@ export default function AgentLauncher({
         {!!counts.terminal && (
           <label className="agent-shell">
             Plain terminal shell
-            <select value={shell} disabled={launching} onChange={(e) => setShell(e.target.value)}>
-              {shells.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+            <ChatSelect
+              variant="field"
+              compact
+              label="Plain terminal shell"
+              value={shell}
+              disabled={launching}
+              options={shells.map((s) => ({ value: s.id, label: s.label }))}
+              onChange={setShell}
+            />
           </label>
         )}
         {error && (

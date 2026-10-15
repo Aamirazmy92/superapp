@@ -17,7 +17,7 @@ const NOW = Date.parse('2026-09-30T20:00:00Z');
 const HOUR = 3_600_000;
 
 async function tempDir(t) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp usage '));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo usage '));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   return dir;
 }

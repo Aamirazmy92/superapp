@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
-import { fadeMotion, FreezeOnExit, PopoverSurface, surfaceMotion } from './motion';
+import { fadeMotion, FreezeOnExit, PopoverSurface, surfaceMotion, useClosingProps } from './motion';
 
 type Placement = { top: number; left: number; origin: string };
 
@@ -87,10 +87,12 @@ export function AnchoredPopover({
   }, [anchor, align, gap]);
 
   const motionProps = contentAnimation === 'surface' ? surfaceMotion() : fadeMotion();
+  const closingProps = useClosingProps();
 
   return createPortal(
     <motion.div
       {...motionProps}
+      {...closingProps}
       ref={ref}
       className={`${className} anchored-popover`}
       role={role}

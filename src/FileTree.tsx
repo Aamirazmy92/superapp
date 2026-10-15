@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Folder, FileCode2, FileJson, FileText, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, Folder, FileCode2, FileJson, FileText, MoreHorizontal } from './icons';
 import type { Entry } from './types';
 import { parentFolders } from './editorModel';
 export function FileIcon({ name }: { name: string }) {
@@ -27,7 +27,7 @@ export default function FileTree({
   onOpen(path: string): void;
   refresh: number;
   onError(error: unknown): void;
-  onManage?(entry: Entry): void;
+  onManage?(entry: Entry, anchor?: HTMLElement): void;
   dirtyPaths?: string[];
   showIgnored?: boolean;
   collapse?: number;
@@ -178,7 +178,8 @@ export default function FileTree({
             <button
               className="icon-button tree-manage"
               aria-label={`Manage ${entry.path}`}
-              onClick={() => onManage(entry)}
+              aria-haspopup="menu"
+              onClick={(event) => onManage(entry, event.currentTarget)}
             >
               <MoreHorizontal size={14} />
             </button>

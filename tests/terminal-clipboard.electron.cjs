@@ -6,11 +6,11 @@ const { _electron } = require('playwright');
 
 // Run after npm run build: node tests/terminal-clipboard.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-clipboard-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-clipboard-'));
   const app = await _electron.launch({
     executablePath: require('electron'),
     args: [path.resolve('.')],
-    env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+    env: { ...process.env, VEYO_DATA_DIR: dataDir },
   });
   try {
     const page = await app.firstWindow();

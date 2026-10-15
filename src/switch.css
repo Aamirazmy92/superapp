@@ -1,0 +1,53 @@
+/* Switch: the one on/off toggle. Geometry and behaviour are here; colours are the
+   --switch-* tokens in tokens.css. The :root:root prefix keeps older button rules
+   from repainting it. */
+:root:root .switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 42px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  outline: 0;
+  background: var(--switch-off);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+:root:root .switch:hover:not(:disabled) { background: var(--switch-off); }
+:root:root .switch[aria-checked='true'],
+:root:root .switch[aria-checked='true']:hover:not(:disabled) { background: var(--switch-on); }
+
+/* 44px-tall hit area without changing the visual size. */
+.switch::before {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--switch-thumb);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  /* Position and width are animated by framer-motion in Switch.tsx. */
+  transition: background-color 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch[aria-checked='true'] .switch-thumb { background: var(--switch-thumb-on); }
+
+:root:root .switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:root:root .switch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .switch-thumb { transition: none; }
+}
+:root.reduce-motion .switch,
+:root.reduce-motion .switch-thumb { transition: none; }

@@ -25,10 +25,12 @@ import {
  *
  * The CSS side uses the same curve and durations via --ease-out / --dur-*.
  */
-/* Crisp and immediate: surfaces are solid within ~100ms, never overshoot, and
-   close with a plain fade. Same curve as --ease in design.css. */
+/* Surfaces are readable within ~100ms, settle smoothly by ~300ms and close
+   faster than they open with an accelerating fade. Same curve as --ease in
+   design.css. */
 const easeOut = [0.16, 1, 0.3, 1] as const;
 const easeIn = [0.4, 0, 1, 1] as const;
+const easeInOut = [0.4, 0, 0.2, 1] as const;
 
 export const springs = {
   press: { duration: 0.08, ease: easeOut },
@@ -36,61 +38,129 @@ export const springs = {
 } satisfies Record<string, Transition>;
 
 export const fade = {
-  in: { duration: 0.1, ease: easeOut },
-  out: { duration: 0.07, ease: easeIn },
+  in: { duration: 0.09, ease: easeOut },
+  out: { duration: 0.08, ease: easeInOut },
 } as const;
 
+type Kind = 'popover' | 'dialog' | 'toast';
+
 /*
- * Open: the panel grows from 97% out of the trigger while the content fades in
- * place, solid in ~90ms. Close: a short fade, with the panel easing back only
- * slightly. Content is never transformed, so text is rasterised once at its
- * final position and cannot shift or re-sharpen when the animation ends.
+ * One motion for every floating surface: dialogs, menus, popovers and toasts.
+ * Tweak the feel here, in one place.
+ * Open ~120ms: the backdrop leads by 15ms, then the card fades and scales 0.96 -> 1.
+ * Close ~80ms, quicker than open: card fades and scales to 0.97 while the backdrop
+ * fades in parallel. No slide. Dialogs scale from the centre; menus and popovers
+ * from the corner of their trigger (their transform-origin).
  */
-const panelEnter = { duration: 0.16, ease: easeOut, opacity: { duration: 0.09, ease: easeOut } };
-const panelLeave = { duration: 0.1, ease: easeIn };
+export const modalTiming = {
+  openMs: 120,
+  closeMs: 160,
+  backdropOpenMs: 100,
+  cardDelayMs: 15,
+  openFrom: 0.96,
+  closeTo: 0.97,
+  openEase: [0.16, 1, 0.3, 1] as const,
+  closeEase: [0.4, 0, 0.2, 1] as const,
+};
 
-const panelMotion = {
-  initial: { opacity: 0, scale: 0.97 },
-  animate: { opacity: 1, scale: 1, transition: panelEnter },
-  exit: { opacity: 0, scale: 0.985, transition: panelLeave },
-} satisfies HTMLMotionProps<'span'>;
+const ms = (value: number) => value / 1000;
 
-const contentMotion = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.11, ease: easeOut } },
-  exit: { opacity: 0, pointerEvents: 'none', transition: { duration: 0.08, ease: easeIn } },
-} satisfies HTMLMotionProps<'div'>;
-
-const instantMotion = {
-  initial: false,
-  animate: { opacity: 1, scale: 1, transition: { duration: 0 } },
-  exit: { opacity: 1, scale: 1, transition: { duration: 0 } },
-} satisfies HTMLMotionProps<'div'>;
-
-/** For the element holding a floating surface's content: fades, never moves. */
-export function surfaceMotion() {
-  return motionReduced() ? instantMotion : contentMotion;
+function modalCardMotion(interactive: boolean) {
+  const t = modalTiming;
+  return {
+    initial: { opacity: 0, scale: t.openFrom },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      ...(interactive ? { pointerEvents: 'auto' } : null),
+      transition: { duration: ms(t.openMs), delay: ms(t.cardDelayMs), ease: t.openEase },
+    },
+    exit: {
+      opacity: 0,
+      scale: t.closeTo,
+      ...(interactive ? { pointerEvents: 'none' } : null),
+      transition: { duration: ms(t.closeMs), ease: t.closeEase },
+    },
+  } as HTMLMotionProps<'div'>;
 }
 
-function panelMotionProps() {
-  return motionReduced() ? instantMotion : panelMotion;
+const modalBackdropMotion = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: ms(modalTiming.backdropOpenMs), ease: easeOut } },
+  exit: { opacity: 0, transition: { duration: ms(modalTiming.closeMs), ease: easeIn } },
+} satisfies HTMLMotionProps<'div'>;
+
+/* Reduced motion for modals: no scale, just a short opacity fade. */
+const modalReducedMotion = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, pointerEvents: 'auto', transition: { duration: ms(modalTiming.closeMs), ease: 'linear' } },
+  exit: { opacity: 0, pointerEvents: 'none', transition: { duration: ms(modalTiming.closeMs), ease: 'linear' } },
+} satisfies HTMLMotionProps<'div'>;
+
+const modalCardInteractive = modalCardMotion(true);
+const modalCardPanel = modalCardMotion(false);
+
+/** Hints the compositor only while a modal animates, then lets go. */
+function useWillChange<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  return {
+    ref,
+    onAnimationStart: () => {
+      if (ref.current) ref.current.style.willChange = 'transform, opacity';
+    },
+    onAnimationComplete: () => {
+      if (ref.current) ref.current.style.willChange = '';
+    },
+  };
+}
+
+/** For the element holding a floating surface's content: it scales and fades with its panel. */
+export function surfaceMotion(_kind: Kind = 'popover') {
+  return motionReduced() ? modalReducedMotion : modalCardInteractive;
+}
+
+function panelMotionProps(_kind: Kind) {
+  return motionReduced() ? modalReducedMotion : modalCardPanel;
+}
+
+/**
+ * A surface that is fading out is already closed: it must not take clicks or
+ * focus, and code looking for an open dialog or menu must skip it. `inert`
+ * gives the first two; `[inert]` is what the rest checks for (see isClosing).
+ */
+export function useClosingProps() {
+  const present = useIsPresent();
+  return present ? {} : { inert: true, 'data-closing': '' };
+}
+
+/**
+ * A motion.div that goes inert while it animates out. Needed when the surface
+ * is rendered inline under AnimatePresence: an exiting child keeps the props it
+ * last had, so the parent cannot pass "closing" down itself.
+ */
+export function PresenceDiv(props: HTMLMotionProps<'div'>) {
+  return <motion.div {...props} {...useClosingProps()} />;
+}
+
+/** Whether an element belongs to a surface that is animating out. */
+export function isClosing(element: Element) {
+  return !!element.closest('[inert], [data-closing]');
 }
 
 export function fadeMotion() {
   return motionReduced()
     ? {
         initial: false,
-        animate: { opacity: 1, transition: { duration: 0 } },
+        animate: { opacity: 1, pointerEvents: 'auto' as const, transition: { duration: 0 } },
         exit: { opacity: 1, pointerEvents: 'none' as const, transition: { duration: 0 } },
       }
     : {
         initial: { opacity: 0 },
-        animate: { opacity: 1, transition: fade.in },
+        animate: { opacity: 1, pointerEvents: 'auto' as const, transition: fade.in },
         exit: { opacity: 0, pointerEvents: 'none' as const, transition: fade.out },
       };
 }
 
-const surfaceKinds = { popover: true, dialog: true, toast: true } as const;
 type SurfaceRect = {
   left: number;
   top: number;
@@ -107,13 +177,17 @@ export function Surface({
   rect,
   animateSurface = true,
 }: {
-  kind?: keyof typeof surfaceKinds;
+  kind?: Kind;
   origin?: string;
   rect?: SurfaceRect;
   animateSurface?: boolean;
 }) {
+  const hint = useWillChange<HTMLSpanElement>();
   return (
     <motion.span
+      ref={hint.ref}
+      onAnimationStart={hint.onAnimationStart}
+      onAnimationComplete={hint.onAnimationComplete}
       aria-hidden="true"
       className={`motion-surface motion-surface-${kind}`}
       style={{
@@ -130,7 +204,7 @@ export function Surface({
           : null),
         ...(origin ? { transformOrigin: origin } : null),
       }}
-      {...(animateSurface ? panelMotionProps() : {})}
+      {...(animateSurface ? panelMotionProps(kind) : {})}
     />
   );
 }
@@ -171,6 +245,24 @@ export function MotionDialog({
 }) {
   const local = useRef<HTMLElement | null>(null);
   const [rect, setRect] = useState<SurfaceRect | null>(null);
+  const present = useIsPresent();
+  const wasPresent = useRef(present);
+
+  /*
+   * Reopened while still fading out, the dialog is the same element brought
+   * back rather than a new one, so autoFocus does not run again; and focus left
+   * it when it closed (it went inert). Put focus back where an opening puts it.
+   */
+  useEffect(() => {
+    const reopened = present && !wasPresent.current;
+    wasPresent.current = present;
+    const element = local.current;
+    if (!reopened || !element) return;
+    (
+      element.querySelector<HTMLElement>('input, textarea, select') ||
+      element.querySelector<HTMLElement>('button')
+    )?.focus();
+  }, [present]);
 
   useLayoutEffect(() => {
     const element = local.current;
@@ -235,12 +327,23 @@ export function MotionDialog({
     if (typeof dialogRef === 'function') dialogRef(node);
     else if (dialogRef) (dialogRef as RefObject<HTMLElement | null>).current = node;
   };
+  const closing = useClosingProps();
+  const modalHint = {
+    onAnimationStart: () => {
+      if (local.current) local.current.style.willChange = 'transform, opacity';
+    },
+    onAnimationComplete: () => {
+      if (local.current) local.current.style.willChange = '';
+    },
+  };
   const Tag = as === 'section' ? motion.section : as === 'form' ? motion.form : motion.div;
   return (
     <>
       {rect && <Surface kind="dialog" rect={rect} />}
       <Tag
-        {...(surfaceMotion() as object)}
+        {...(surfaceMotion('dialog') as object)}
+        {...modalHint}
+        {...closing}
         {...(props as object)}
         ref={setRef as never}
         className={`${className} has-motion-surface`}
@@ -251,11 +354,17 @@ export function MotionDialog({
   );
 }
 
-export function Backdrop(props: HTMLMotionProps<'div'>) {
+export function Backdrop({ onMouseDown, onClick, ...props }: HTMLMotionProps<'div'>) {
+  const present = useIsPresent();
+  /* Not inert while it fades out: an inert scrim would let clicks fall through to the
+     page behind. It keeps catching them, and ignores them, until it is gone. */
   return (
     <motion.div
-      {...fadeMotion()}
+      {...(motionReduced() ? modalReducedMotion : modalBackdropMotion)}
       {...props}
+      {...(present ? null : { 'data-closing': '' })}
+      onMouseDown={present ? onMouseDown : undefined}
+      onClick={present ? onClick : undefined}
     />
   );
 }
@@ -263,6 +372,19 @@ export function Backdrop(props: HTMLMotionProps<'div'>) {
 /** Set from Settings → Appearance; also covers CSS via the `reduce-motion` class. */
 export function motionReduced() {
   return document.documentElement.classList.contains('reduce-motion');
+}
+
+/**
+ * For a menu with no separate panel (its box is also its scroll container):
+ * slide it the last few pixels out of its trigger as it fades in. Uses the
+ * `translate` property so it composes with Motion's transform, and no fill.
+ */
+export function dropIn(element: HTMLElement, downward: boolean) {
+  if (motionReduced()) return;
+  element.animate(
+    { translate: [`0 ${downward ? -5 : 5}px`, '0 0'] },
+    { duration: 260, easing: easeOutCss },
+  );
 }
 
 /** Show the requested view in the same commit, then animate its arrival. */

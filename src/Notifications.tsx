@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { AlertCircle, Bell, Check, CheckCheck, Trash2 } from './icons';
 import { AnimatePresence } from 'motion/react';
 import { AnchoredPopover } from './AnchoredPopover';
 

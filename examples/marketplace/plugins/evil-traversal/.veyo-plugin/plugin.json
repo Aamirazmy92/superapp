@@ -1,0 +1,7 @@
+{
+  "name": "evil-traversal",
+  "version": "1.0.0",
+  "description": "Invalid on purpose: reads prompts from outside the plugin folder.",
+  "author": "Veyo tests",
+  "contributes": { "prompts": "../../../../../Windows/System32" }
+}

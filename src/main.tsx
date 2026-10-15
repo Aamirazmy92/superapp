@@ -18,6 +18,10 @@ import './toast.css';
 import './notifications.css';
 import './icons.css';
 import './fileEditor.css';
+import './tokens.css';
+import './density.css';
+import './switch.css';
+import './plugins.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <App />

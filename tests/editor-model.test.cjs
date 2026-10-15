@@ -5,7 +5,7 @@ const { language } = require('../src/workspaceModel.ts');
 
 test('model identities separate projects and escape URI control characters', () => {
   assert.notEqual(editorPath('one', 'src/file.ts'), editorPath('two', 'src/file.ts'));
-  assert.equal(editorPath('one', 'a #b/what?.ts'), 'superapp://one/a%20%23b/what%3F.ts');
+  assert.equal(editorPath('one', 'a #b/what?.ts'), 'veyo://one/a%20%23b/what%3F.ts');
   assert.notEqual(editorPath('one', 'what?.ts'), editorPath('one', 'what%3F.ts'));
 });
 test('tabs use the shortest unambiguous path', () => {

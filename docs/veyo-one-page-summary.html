@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veyo: one-page summary</title>
+<style>
+  @page { size: Letter; margin: 0.45in 0.55in; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 8.6pt; line-height: 1.32; color: #1c1f26; margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 1px; color: #14213d; }
+  .sub { color: #5b6270; margin-bottom: 6px; font-size: 9pt; }
+  h2 { font-size: 9.2pt; text-transform: uppercase; letter-spacing: .06em; color: #2b59c3; margin: 7px 0 2px; border-bottom: 1px solid #dfe4ee; padding-bottom: 1px; }
+  p { margin: 1px 0; }
+  ul, ol { margin: 1px 0; padding-left: 15px; }
+  li { margin: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 2px 0; }
+  th, td { border: 1px solid #d5dbe8; padding: 2px 5px; text-align: left; vertical-align: top; }
+  th { background: #eef2fb; }
+  .cols { display: flex; gap: 16px; }
+  .cols > div { flex: 1; }
+  .box { background: #f4f7fd; border-left: 3px solid #2b59c3; padding: 3px 7px; margin-top: 6px; }
+  .foot { color: #6b7280; font-size: 7.4pt; margin-top: 5px; }
+</style>
+</head>
+<body>
+<h1>Veyo</h1>
+<div class="sub">One workspace for all your AI coding agents &middot; one-page summary</div>
+
+<h2>What it is</h2>
+<p>A Windows desktop workspace for running several AI coding agents (Claude Code, Codex and others) side by side. It has real terminals, a code editor and a usage dashboard. Agents run locally with the user's own logins.</p>
+
+<div class="cols">
+<div>
+<h2>Problem</h2>
+<p>Developers now run multiple coding agents at once. They end up with scattered terminal windows, no view of what each agent is doing, no safe way to let two agents work on one repo, and no warning before they hit plan limits mid-task.</p>
+</div>
+<div>
+<h2>Solution</h2>
+<ul>
+<li>Launch and monitor many agents in one place.</li>
+<li>Forecast Claude and Codex usage limits, and pause or queue agents near a limit.</li>
+<li>Give each agent its own git worktree, then review all changes on one screen.</li>
+<li>Searchable history across all agents, with cost per project.</li>
+</ul>
+</div>
+</div>
+
+<h2>Who it's for</h2>
+<p>Heavy agent users on Windows: indie developers, freelancers, dev agencies and small SaaS teams. Regulated industries (fintech, healthcare) come later, once audit and security features exist.</p>
+
+<h2>Why it can win</h2>
+<ul>
+<li><b>Neutral.</b> Anthropic and OpenAI won't build a view that works across their competitors.</li>
+<li><b>Cheap to run.</b> Agents run on the user's machine, so there are no model costs.</li>
+<li><b>Underserved platform.</b> Most agent tooling targets Mac first.</li>
+<li><b>Gets harder to leave.</b> Cross-agent history, team playbooks and per-client cost data build up inside Veyo.</li>
+</ul>
+
+<h2>Risks and how we address them</h2>
+<table>
+<tr><th style="width:34%">Risk</th><th>Mitigation</th></tr>
+<tr><td>Vendors add multi-agent panes</td><td>Compete on what they won't build: cross-vendor history, worktree isolation, team playbooks</td></tr>
+<tr><td>Usage readings break when a CLI updates</td><td>Layered data sources, daily contract tests, a visible confidence label on every reading</td></tr>
+<tr><td>Pre-launch stage (v0.1, no installer, accounts or pricing)</td><td>Private beta with about 30 users, weekly retention as the proof point</td></tr>
+</table>
+
+<div class="cols">
+<div>
+<h2>Business model</h2>
+<p>Free for individuals. Paid Team plan for shared setups, team usage and cost dashboards, and permission policy, sold per seat. Start with agencies and small SaaS teams. Offer the first 50 teams a founding rate to test willingness to pay before building full billing.</p>
+</div>
+<div>
+<h2>Engineering priorities</h2>
+<p>Reliable terminal startup, splitting <code>main.cjs</code> into modules, a local-versus-syncable state layer and a release pipeline. Then the differentiators: usage forecasting, worktree isolation and session history.</p>
+</div>
+</div>
+
+<h2>Plan</h2>
+<ol>
+<li><b>Weeks 1&ndash;4, make it shippable:</b> signed installer, auto-update, crash reporting, startup checks for missing folders and CLIs, landing page.</li>
+<li><b>Weeks 4&ndash;10, find users:</b> recruit 20&ndash;30 real users, interview ten, measure four-week retention.</li>
+<li><b>Weeks 10&ndash;16, launch:</b> Show HN and Product Hunt, led by a 30-second demo of three agents and a limit warning.</li>
+<li><b>Months 4&ndash;8, monetize:</b> accounts, billing and the Team plan. Sync only metadata, never code or CLI credentials.</li>
+<li><b>Month 8 onward:</b> Mac and Linux, audit and security features, partnerships.</li>
+</ol>
+
+<div class="box">
+<p><b>Metric that matters most:</b> weekly active users still using it after four weeks.</p>
+<p><b>Investor view today:</b> interesting, not fundable yet. The question is company or feature. A few paying teams with growing usage would change the answer.</p>
+<p><b>Next step:</b> get ten real users on a signed build and measure how many come back.</p>
+</div>
+
+<p class="foot">Based on the product and internal analysis. It contains no market data, so verify the claims before sharing outside the team.</p>
+</body>
+</html>

@@ -11,10 +11,10 @@
   --hairline: rgba(31, 30, 29, 0.10);
   --hairline-strong: rgba(31, 30, 29, 0.17);
   --edge: rgba(37, 88, 165, 0.35);
-  --text: #202936;
-  --text-soft: #3b485a;
-  --muted: #4f6074;
-  --faint: #58677a;
+  --text: #000000;
+  --text-soft: #000000;
+  --muted: #000000;
+  --faint: #000000;
   --primary: #2558a5;
   --primary-hover: #194b96;
   --on-primary: #ffffff;
@@ -108,12 +108,6 @@
 }
 :root[data-theme='light'] .preferences-footer .preferences-error {
   color: var(--danger);
-}
-:root[data-theme='light'] .preferences-switch {
-  background: #d9d6ca;
-}
-:root[data-theme='light'] .preferences-switch:before {
-  background: #ffffff;
 }
 :root[data-theme='light'] .preview-comment { color: #73726c; }
 :root[data-theme='light'] .preview-keyword { color: #7345a9; }

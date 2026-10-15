@@ -11,17 +11,18 @@ import {
   Search,
   Undo2,
   WrapText,
-} from 'lucide-react';
+} from './icons';
 import { editorContent, editorPath } from './editorModel';
 import { language } from './workspaceModel';
 import { fontStack, type Preferences } from './preferences';
+import { editorThemeName } from './editorSetup';
 import type { OpenFile } from './types';
 
 export function releaseClosedEditorModels(paths: string[]) {
   const open = new Set(paths);
   for (const model of monaco.editor.getModels())
     if (
-      model.uri.scheme === 'superapp' &&
+      model.uri.scheme === 'veyo' &&
       model.uri.query !== 'disk' &&
       !open.has(model.uri.toString())
     )
@@ -181,7 +182,7 @@ export default function FileEditor({
     renderLineHighlight: 'gutter',
     ariaLabel: `Editor content for ${file.path}`,
   };
-  const theme = preferences.theme === 'graphite' ? 'superapp' : `superapp-${preferences.theme}`;
+  const theme = editorThemeName(preferences.theme, preferences.pluginTheme);
   return (
     <>
       <div className="file-breadcrumb editor-toolbar">

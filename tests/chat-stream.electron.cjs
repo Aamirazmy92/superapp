@@ -37,12 +37,12 @@ const { _electron } = require('playwright');
     res.end('{"message":{"content":" response"},"done":false}\n{"done":true}\n');
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-chat-stream-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-chat-stream-'));
   const launch = () =>
     _electron.launch({
       executablePath: require('electron'),
       args: [path.resolve('.')],
-      env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+      env: { ...process.env, VEYO_DATA_DIR: dataDir },
     });
   let app = await launch();
   try {
@@ -51,7 +51,7 @@ const { _electron } = require('playwright');
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
     await page.getByRole('combobox', { name: 'Chat provider' }).click();
     await page.getByRole('option', { name: /^Ollama/ }).click();
-    await page.getByRole('button', { name: 'Chat settings' }).click();
+    await page.locator('.chat-layout').getByRole('button', { name: 'Settings', exact: true }).click();
     await page
       .getByLabel('Ollama server address')
       .fill(`http://127.0.0.1:${server.address().port}`);
@@ -112,7 +112,7 @@ const { _electron } = require('playwright');
       .locator('.chat-message.assistant:not(.streaming)')
       .getByText('Retried response')
       .waitFor();
-    await reopened.getByRole('button', { name: 'Chat settings' }).click();
+    await reopened.locator('.chat-layout').getByRole('button', { name: 'Settings', exact: true }).click();
     assert.equal(
       await reopened.getByLabel('Ollama server address').inputValue(),
       `http://127.0.0.1:${server.address().port}`,
@@ -124,7 +124,7 @@ const { _electron } = require('playwright');
     server.close();
     if (
       !path.resolve(dataDir).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`) ||
-      !path.basename(dataDir).startsWith('superapp-chat-stream-')
+      !path.basename(dataDir).startsWith('veyo-chat-stream-')
     )
       throw new Error('Refusing to remove a directory outside the test profile.');
     // Electron can hold profile files briefly after close on Windows.

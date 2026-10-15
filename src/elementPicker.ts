@@ -2,7 +2,7 @@
 // that outlines the element under the cursor, and helpers that turn the
 // element a user clicked into a prompt for a coding agent.
 
-export const PICK_PREFIX = '__superapp_pick__';
+export const PICK_PREFIX = '__veyo_pick__';
 
 export type ElementPick =
   | { type: 'pick'; element: PickedElement }
@@ -20,13 +20,13 @@ export type PickedElement = {
 // Reads the page only; the one thing it writes is its own overlay. Messages
 // reach the app through console.log with PICK_PREFIX.
 export const PICKER_START_SCRIPT = `(() => {
-  if (window.__superappPicker) window.__superappPicker.stop();
+  if (window.__veyoPicker) window.__veyoPicker.stop();
   const PREFIX = ${JSON.stringify(PICK_PREFIX)};
   const doc = document;
   const box = doc.createElement('div');
   const tag = doc.createElement('div');
   const style = doc.createElement('style');
-  const mark = 'data-superapp-picker';
+  const mark = 'data-veyo-picker';
   for (const el of [box, tag, style]) el.setAttribute(mark, '');
   style.textContent = '*{cursor:crosshair !important}';
   box.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;'
@@ -126,7 +126,7 @@ export const PICKER_START_SCRIPT = `(() => {
   for (const type of blocked) doc.addEventListener(type, swallow, true);
   addEventListener('scroll', reposition, true);
   addEventListener('resize', reposition);
-  window.__superappPicker = {
+  window.__veyoPicker = {
     // Clears the frozen selection so another element can be picked.
     reset() { chosen = null; hovered = null; place(null); },
     stop() {
@@ -137,13 +137,13 @@ export const PICKER_START_SCRIPT = `(() => {
       removeEventListener('scroll', reposition, true);
       removeEventListener('resize', reposition);
       box.remove(); tag.remove(); style.remove();
-      delete window.__superappPicker;
+      delete window.__veyoPicker;
     },
   };
 })()`;
 
-export const PICKER_STOP_SCRIPT = 'window.__superappPicker && window.__superappPicker.stop()';
-export const PICKER_RESET_SCRIPT = 'window.__superappPicker && window.__superappPicker.reset()';
+export const PICKER_STOP_SCRIPT = 'window.__veyoPicker && window.__veyoPicker.stop()';
+export const PICKER_RESET_SCRIPT = 'window.__veyoPicker && window.__veyoPicker.reset()';
 
 // Console output from the page: returns the picker message, or null for any
 // other line (pages log plenty of their own).

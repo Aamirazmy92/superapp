@@ -17,34 +17,58 @@ export const themes: Record<ThemeName, {
   string: string;
 }> = {
   graphite: {
-    label: 'Dark', description: 'Claude dark',
-    chrome: '#111111', stage: '#151515', well: '#111111', raised: '#212121',
-    accent: '#d97757', foreground: '#f0efec', muted: '#898781',
+    label: 'Ember', description: 'Warm charcoal tones',
+    chrome: '#161615', stage: '#1b1b1a', well: '#171716', raised: '#262625',
+    accent: '#d97757', foreground: '#ececea', muted: '#8d8d8a',
     selection: '#264f78', keyword: '#c792ea', string: '#a5d6a7',
   },
-  midnight: {
-    label: 'Midnight', description: 'Cool blue tones',
-    chrome: '#0c1220', stage: '#131c2b', well: '#0f1724', raised: '#1c2838',
-    accent: '#b8d5ff', foreground: '#e4edfa', muted: '#91a5c0',
-    selection: '#345681', keyword: '#b7adff', string: '#92d8c1',
-  },
-  plum: {
-    label: 'Plum', description: 'Warm violet tones',
-    chrome: '#171119', stage: '#211923', well: '#1a141d', raised: '#2b2230',
-    accent: '#e8c7ee', foreground: '#f0e8f0', muted: '#b5a0b7',
-    selection: '#684869', keyword: '#d8a9f1', string: '#b3d9b8',
-  },
   light: {
-    label: 'Light', description: 'Claude light',
+    label: 'Linen', description: 'Soft paper tones',
     chrome: '#f4f4f1', stage: '#faf9f7', well: '#f4f4f1', raised: '#ededea',
     accent: '#c6613f', foreground: '#141413', muted: '#6f6e69',
     selection: '#cfe2f7', keyword: '#8a3fb8', string: '#3d7a2a',
   },
 };
 
-export function terminalTheme(name: ThemeName) {
-  const palette = themes[name];
-  const light = name === 'light';
+export type Palette = Omit<(typeof themes)[ThemeName], 'label' | 'description'>;
+export type PluginTheme = { key: string; label: string; plugin: string; base: ThemeName; colors: Palette };
+
+// Themes from enabled plugins, keyed "plugin:theme". App replaces the set whenever
+// plugins change, so a disabled plugin's theme stops applying at once.
+const pluginThemes = new Map<string, PluginTheme>();
+export function setPluginThemes(list: PluginTheme[]) {
+  pluginThemes.clear();
+  for (const theme of list) pluginThemes.set(theme.key, theme);
+}
+/** The plugin theme for a preference value, if that plugin is still enabled. */
+export function pluginTheme(key: string | undefined) {
+  return key ? pluginThemes.get(key) : undefined;
+}
+/** The workspace CSS colours a plugin theme sets on top of its base theme. */
+export function pluginThemeTokens({ colors }: PluginTheme): Record<string, string> {
+  const mix = (colour: string, amount: number) => `color-mix(in srgb, ${colour} ${amount}%, transparent)`;
+  return {
+    '--chrome': colors.chrome,
+    '--stage': colors.stage,
+    '--well': colors.well,
+    '--raised': colors.raised,
+    '--overlay': colors.raised,
+    '--text': colors.foreground,
+    '--text-soft': `color-mix(in srgb, ${colors.foreground} 80%, ${colors.muted})`,
+    '--muted': colors.muted,
+    '--accent': colors.accent,
+    '--accent-strong': colors.accent,
+    '--accent-soft': mix(colors.accent, 14),
+    '--accent-faint': mix(colors.accent, 7),
+    '--preview-keyword': colors.keyword,
+    '--preview-string': colors.string,
+  };
+}
+
+export function terminalTheme(name: ThemeName, pluginKey?: string) {
+  const plugin = pluginTheme(pluginKey);
+  const palette = plugin?.colors ?? themes[name];
+  const light = (plugin?.base ?? name) === 'light';
   return {
     background: palette.well,
     foreground: palette.foreground,

@@ -11,7 +11,7 @@ import {
   Plus,
   RefreshCw,
   X,
-} from 'lucide-react';
+} from './icons';
 import type { AgentOption, AgentSelection } from './types';
 import BrandLogo from './AgentLogo';
 
@@ -147,7 +147,7 @@ export default function AgentPicker({
 
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   const installedAgents = agents.filter((agent) => agent.installed);
-  const missingAgents = agents.filter((agent) => !agent.installed);
+  const missingAgents = agents.filter((agent) => !agent.installed && !agent.source);
   const selectedAgents = installedAgents.filter((agent) => (counts[agent.id] || 0) > 0);
   const currentKey = lineupKey(toSelections(counts));
   const labelFor = (agentId: string) =>
@@ -193,8 +193,12 @@ export default function AgentPicker({
     }
   }
 
+  // Plugin agent presets come and go as plugins are enabled or removed.
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
   useEffect(() => {
     refresh();
+    return window.workspace!.onPluginsChanged?.(() => refreshRef.current());
   }, []);
 
   // Ctrl+Enter launches from anywhere on the page, like sending a prompt.
@@ -363,8 +367,9 @@ export default function AgentPicker({
           title={selected ? `Remove ${agent.label}` : `Add ${agent.label}`}
           onClick={() => toggleAgent(agent)}
         >
-          <BrandLogo agentId={agent.id} size={16} className="home-tile-logo" />
+          <BrandLogo agentId={agent.id} mark={agent.source ? agent.mark : undefined} size={16} className="home-tile-logo" />
           <span className="home-tile-name">{agent.label}</span>
+          {agent.source && <small className="plugin-source">from {agent.source}</small>}
         </button>
         {selected ? (
           <div className="home-stepper" role="group" aria-label={`${agent.label} sessions`}>

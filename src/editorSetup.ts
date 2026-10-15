@@ -5,7 +5,7 @@ import JsonWorker from 'monaco-editor/languages/features/json/json.worker.js?wor
 import TsWorker from 'monaco-editor/languages/features/typescript/ts.worker.js?worker';
 import CssWorker from 'monaco-editor/languages/features/css/css.worker.js?worker';
 import HtmlWorker from 'monaco-editor/languages/features/html/html.worker.js?worker';
-import { themes, type ThemeName } from './themes';
+import { pluginTheme, themes, type Palette, type ThemeName } from './themes';
 // Bundle editor assets locally: opening a project never requires a CDN.
 self.MonacoEnvironment = {
   getWorker: (_id, label) =>
@@ -34,7 +34,7 @@ monaco.typescript.typescriptDefaults.setCompilerOptions({
   target: monaco.typescript.ScriptTarget.ESNext,
   allowNonTsExtensions: true,
 });
-monaco.editor.defineTheme('superapp', {
+monaco.editor.defineTheme('veyo', {
   base: 'vs-dark',
   inherit: true,
   rules: [
@@ -71,10 +71,8 @@ monaco.editor.defineTheme('superapp', {
   },
 });
 
-for (const name of ['midnight', 'plum', 'light'] as ThemeName[]) {
-  const palette = themes[name];
-  const light = name === 'light';
-  monaco.editor.defineTheme(`superapp-${name}`, {
+function defineEditorTheme(id: string, palette: Palette, light: boolean) {
+  monaco.editor.defineTheme(id, {
     base: light ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [
@@ -108,4 +106,14 @@ for (const name of ['midnight', 'plum', 'light'] as ThemeName[]) {
       } : {}),
     },
   });
+}
+for (const name of ['light'] as ThemeName[]) defineEditorTheme(`veyo-${name}`, themes[name], name === 'light');
+
+/** The Monaco theme for the current preferences; plugin themes are defined on first use. */
+export function editorThemeName(name: ThemeName, pluginKey?: string) {
+  const plugin = pluginTheme(pluginKey);
+  if (!plugin) return name === 'graphite' ? 'veyo' : `veyo-${name}`;
+  const id = `veyo-plugin-${plugin.key.replace(':', '-')}-${Object.values(plugin.colors).join('').replace(/#/g, '')}`;
+  defineEditorTheme(id, plugin.colors, plugin.base === 'light');
+  return id;
 }

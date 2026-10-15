@@ -89,7 +89,7 @@ function validate(request) {
   if (
     !request ||
     !['codex', 'claude'].includes(request.provider) ||
-    !['ask', 'auto', 'full'].includes(request.permission) ||
+    !['ask', 'auto', 'edits', 'plan', 'full'].includes(request.permission) ||
     typeof request.prompt !== 'string' ||
     !request.prompt.trim() ||
     request.prompt.length > 500000 ||
@@ -262,7 +262,7 @@ class CodexConnection {
   }
   async initialize() {
     await this.call('initialize', {
-      clientInfo: { name: 'superapp', title: 'Superapp', version: '0.1.0' },
+      clientInfo: { name: 'veyo', title: 'Veyo', version: '0.1.0' },
     });
     this.write({ method: 'initialized' });
   }
@@ -823,7 +823,7 @@ async function sendCodex(request, signal, onChunk, ask, onActivity, onSession, o
           cwd: request.cwd,
           approvalPolicy: policy,
           sandbox,
-          serviceName: 'superapp',
+          serviceName: 'veyo',
         });
     threadId = started.thread.id;
     await onSession(threadId);
@@ -937,9 +937,7 @@ async function sendClaude(request, controller, onChunk, ask, onActivity, onSessi
       ? 'dontAsk'
       : request.permission === 'full'
         ? 'bypassPermissions'
-        : request.permission === 'auto'
-          ? 'auto'
-          : 'default',
+        : { auto: 'auto', edits: 'acceptEdits', plan: 'plan' }[request.permission] || 'default',
     allowDangerouslySkipPermissions: !!request.projectId && request.permission === 'full',
     canUseTool: async (toolName, input, context = {}) => {
       if (!request.projectId || controller.signal.aborted || context.signal?.aborted)

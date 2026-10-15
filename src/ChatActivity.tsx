@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2 } from './icons';
 import type { ChatActivity as Activity } from './types';
 import { DiffStat, DiffView, relativePath } from './ChatChanges';
 

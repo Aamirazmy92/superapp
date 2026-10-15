@@ -1,0 +1,8 @@
+{
+  "name": "hello-prompts",
+  "version": "1.0.0",
+  "description": "A prompts-only example: installs with one click because it cannot run anything.",
+  "author": { "name": "Veyo" },
+  "license": "MIT",
+  "contributes": { "prompts": "./prompts" }
+}

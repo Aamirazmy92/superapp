@@ -126,4 +126,4 @@ async function listAgents(directories) {
     }),
   );
 }
-module.exports = { listAgents, catalog };
+module.exports = { listAgents, catalog, searchPath, executable };

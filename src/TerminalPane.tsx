@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { X, Circle, Maximize2, Plus } from 'lucide-react';
+import { X, Circle, ImagePlus, LoaderCircle, Maximize2, Plus } from './icons';
 import AgentLogo from './AgentLogo';
 import type { TerminalInfo, TerminalEvent } from './types';
 import { displayTerminalLabel, displayTerminalTitle } from './sessionTitle';
 import '@xterm/xterm/css/xterm.css';
 import { fontStack, type Preferences } from './preferences';
 import { terminalTheme } from './themes';
+import { acceptsDrop, quotePath, readDrop, resolveDrop } from './terminalDrop';
 
 type TerminalMoveKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
 
@@ -68,6 +69,30 @@ export default function TerminalPane({
   callbacks.current = { onExit, onError, onActivate, onInput };
   const infoRef = useRef(info);
   infoRef.current = info;
+  // Files and images dragged onto the terminal; see terminalDrop.ts.
+  const [dropState, setDropState] = useState<'over' | 'saving' | null>(null);
+  const dragDepth = useRef(0);
+  const canDrop = (event: React.DragEvent) =>
+    !info.exited && dropState !== 'saving' && acceptsDrop(event.dataTransfer.types);
+  async function dropFiles(event: React.DragEvent) {
+    event.preventDefault();
+    dragDepth.current = 0;
+    const items = readDrop(event.dataTransfer);
+    setDropState('saving');
+    try {
+      const paths = await resolveDrop(items, window.workspace!);
+      const term = terminalRef.current;
+      if (!paths.length) throw new Error('Drop an image or a file to add it to the terminal.');
+      if (!term || infoRef.current.exited) return;
+      term.paste(paths.map(quotePath).join(' '));
+      onActivate();
+      term.focus();
+    } catch (error) {
+      callbacks.current.onError(error);
+    } finally {
+      setDropState(null);
+    }
+  }
   useEffect(() => {
     const api = window.workspace!;
     const term = new Terminal({
@@ -80,7 +105,7 @@ export default function TerminalPane({
       lineHeight: 1.4,
       customGlyphs: true,
       scrollback: preferences.scrollback,
-      theme: terminalTheme(preferences.theme),
+      theme: terminalTheme(preferences.theme, preferences.pluginTheme),
     });
     terminalRef.current = term;
     const fit = new FitAddon();
@@ -97,6 +122,15 @@ export default function TerminalPane({
     }
     let disposed = false;
     term.attachCustomKeyEventHandler((event) => {
+      // xterm sends a plain CR for Shift+Enter, which submits. Send LF (Ctrl+J) instead,
+      // which Claude Code and Codex treat as "insert newline".
+      if (event.key === 'Enter' && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (event.type === 'keydown') {
+          event.preventDefault();
+          api.writeTerminal(info.id, '\n').catch((error) => callbacks.current.onError(error));
+        }
+        return false;
+      }
       if (event.type !== 'keydown' || !(event.ctrlKey || event.metaKey) || event.altKey)
         return true;
       const key = event.key.toLowerCase();
@@ -264,7 +298,7 @@ export default function TerminalPane({
     terminal.options.fontFamily = terminalFont(preferences);
     terminal.options.cursorBlink = preferences.cursorBlink;
     terminal.options.scrollback = preferences.scrollback;
-    terminal.options.theme = terminalTheme(preferences.theme);
+    terminal.options.theme = terminalTheme(preferences.theme, preferences.pluginTheme);
     resizeRef.current?.();
   }, [
     preferences.terminalFontSize,
@@ -273,6 +307,7 @@ export default function TerminalPane({
     preferences.cursorBlink,
     preferences.scrollback,
     preferences.theme,
+    preferences.pluginTheme,
   ]);
   useEffect(() => {
     if (!isActive) return;
@@ -370,8 +405,35 @@ export default function TerminalPane({
           </button>
         </div>
       </header>
-      <div className="terminal-host">
+      <div
+        className="terminal-host"
+        onDragEnter={(event) => {
+          if (!canDrop(event)) return;
+          event.preventDefault();
+          dragDepth.current += 1;
+          setDropState('over');
+        }}
+        onDragOver={(event) => {
+          if (!canDrop(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragLeave={() => {
+          if (dropState !== 'over') return;
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (!dragDepth.current) setDropState(null);
+        }}
+        onDrop={(event) => {
+          if (canDrop(event)) void dropFiles(event);
+        }}
+      >
         <div className="terminal-surface" ref={host} />
+        {dropState && (
+          <div className={`terminal-drop-overlay ${dropState}`} role="status">
+            {dropState === 'saving' ? <LoaderCircle size={18} className="spinning" /> : <ImagePlus size={18} />}
+            <span>{dropState === 'saving' ? 'Adding to terminal…' : `Drop to add to ${displayLabel}`}</span>
+          </div>
+        )}
         {booting && (
           <div className="terminal-booting" role="status">
             <AgentLogo agentId={info.agentId} size={18} />

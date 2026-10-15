@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const core = require('../electron/core.cjs');
 async function fixture(t) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp files '));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo files '));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;
 }

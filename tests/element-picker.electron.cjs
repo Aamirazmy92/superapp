@@ -7,7 +7,7 @@ const { _electron } = require('playwright');
 
 // Run after npm run build: node tests/element-picker.electron.cjs
 (async () => {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'superapp-picker-'));
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'veyo-picker-'));
   const projectRoot = path.join(dataDir, 'project');
   await fs.mkdir(projectRoot);
   await fs.writeFile(path.join(dataDir, 'workspaces.json'), JSON.stringify({
@@ -26,7 +26,7 @@ const { _electron } = require('playwright');
     app = await _electron.launch({
       executablePath: require('electron'),
       args: [path.resolve('.')],
-      env: { ...process.env, SUPERAPP_DATA_DIR: dataDir },
+      env: { ...process.env, VEYO_DATA_DIR: dataDir },
     });
     const page = await app.firstWindow();
     await page.locator('.app').waitFor();
@@ -52,9 +52,9 @@ const { _electron } = require('playwright');
     const point = { x: box.x + 70, y: box.y + 50 };
     await page.mouse.move(point.x, point.y, { steps: 3 });
     await page.waitForFunction(() => document.querySelector('webview').executeJavaScript(
-      "(() => { const o = document.querySelector('[data-superapp-picker]'); return !!o; })()"), null, { timeout: 5000 });
+      "(() => { const o = document.querySelector('[data-veyo-picker]'); return !!o; })()"), null, { timeout: 5000 });
     const outlined = await view.evaluate((element) => element.executeJavaScript(
-      "[...document.querySelectorAll('[data-superapp-picker]')].some((n) => n.style.display === 'block')"));
+      "[...document.querySelectorAll('[data-veyo-picker]')].some((n) => n.style.display === 'block')"));
     assert.equal(outlined, true, 'hovered element is outlined');
 
     // Clicking selects it without activating the page's own handler.
@@ -78,7 +78,7 @@ const { _electron } = require('playwright');
     await toggle.click();
     assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
     const left = await view.evaluate((element) => element.executeJavaScript(
-      "document.querySelectorAll('[data-superapp-picker]').length"));
+      "document.querySelectorAll('[data-veyo-picker]').length"));
     assert.equal(left, 0, 'picker removes its overlay');
     console.log('element picker ok');
   } finally {

@@ -1,5 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, session, shell, clipboard, webContents, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell, clipboard, webContents, net, Menu } = require('electron');
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const core = require('./core.cjs');
@@ -11,6 +13,45 @@ const { createAttachmentStore } = require('./chat-attachments.cjs');
 let chatAttachments;
 function attachments() {
   return chatAttachments ||= createAttachmentStore(path.join(app.getPath('userData'), 'chat-attachments'));
+}
+const { createTerminalDrops } = require('./terminal-drops.cjs');
+let droppedImages;
+function terminalDrops() {
+  // Downloads go through the built-in browser's session, so an image dragged
+  // from a signed-in page there downloads with the same sign-in.
+  return droppedImages ||= createTerminalDrops(path.join(app.getPath('userData'), 'terminal-drops'), {
+    fetch: (url, options) => session.fromPartition('persist:veyo-browser').fetch(url, options),
+  });
+}
+const { createPluginService } = require('./plugins/index.cjs');
+const { publicCatalogSource } = require('./plugins/public.cjs');
+let pluginService;
+// Created on first use, once the data directory is settled.
+function plugins() {
+  return pluginService ||= createPluginService({
+    dataDir: app.getPath('userData'),
+    appVersion: app.getVersion(),
+    writeAtomic,
+    publicCatalog: publicCatalogSource(app.isPackaged, process.env.VEYO_PUBLIC_CATALOG),
+    onChange: () => {
+      if (win && !win.webContents.isDestroyed()) win.webContents.send('plugins:changed');
+    },
+  });
+}
+const { createBrowserHistory } = require('./browser-history.cjs');
+let browserHistoryService;
+// Pages visited in the built-in browser. Created on first use, once the data
+// directory is settled.
+function browserHistory() {
+  if (browserHistoryService) return browserHistoryService;
+  const file = path.join(app.getPath('userData'), 'browser-history.json');
+  return browserHistoryService = createBrowserHistory({
+    load: async () => JSON.parse(await fs.readFile(file, 'utf8')),
+    save: (entries) => writeAtomic(file, JSON.stringify(entries)),
+    onChange: () => {
+      if (win && !win.webContents.isDestroyed()) win.webContents.send('browser:history-changed');
+    },
+  });
 }
 const { createUsageService } = require('./usage.cjs');
 const { createUsageAdapters } = require('./usage-adapters.cjs');
@@ -83,9 +124,36 @@ const browserDevices = {
     model: '',
   },
 };
+const { acceptLanguages, chromeUserAgent } = require('./browser-locale.cjs');
+const { browserShortcut, contextMenuTemplate } = require('./browser-guest.cjs');
+const { HISTORY_RANGES } = require('./browser-history.cjs');
+// Permissions pages get without asking, as in Chrome: video and other
+// fullscreen, and copying from "copy" buttons. Everything else is denied.
+const BROWSER_PERMISSIONS = new Set(['fullscreen', 'clipboard-sanitized-write']);
 const { listAgents } = require('./agents.cjs');
 const { canDetachProcesses } = require('./job.cjs');
 const { selectCodexFullAccess } = require('./terminal-permissions.cjs');
+const { programCommand } = require('./terminal-command.cjs');
+const { buildLaunch } = require('./plugins/launch.cjs');
+const { CLIS, cliSupport, mcpAddArgs, mcpRemoveArgs, serverName } = require('./plugins/mcp.cjs');
+/*
+ * Whether an environment variable is set: in Veyo's own environment (which its
+ * terminals inherit) and, on Windows, in the user's saved environment. Only
+ * whether it is set is reported, never its value.
+ */
+async function envStatus(name) {
+  if (typeof name !== 'string' || !/^[A-Z_][A-Z0-9_]{0,63}$/.test(name)) return { name: '', inApp: false, saved: false };
+  const inApp = !!process.env[name];
+  const saved =
+    process.platform === 'win32'
+      ? await new Promise((resolve) =>
+          require('node:child_process').execFile('reg', ['query', 'HKCU\\Environment', '/v', name], { windowsHide: true, timeout: 5000 }, (error) => resolve(!error)),
+        )
+      : inApp;
+  return { name, inApp, saved };
+}
+const { checkArgs, isBatch } = require('./plugins/manifest.cjs');
+const { searchPath, executable: findExecutable } = require('./agents.cjs');
 // The probe takes seconds (it compiles C# in PowerShell). Launches never wait
 // for it: until it answers, terminals use the safe no-detach setup.
 let detachable = null;
@@ -106,7 +174,7 @@ let chatFile;
 let chatSaveQueue = Promise.resolve();
 const terminals = new Map();
 const permissionChanges = new Map();
-const devURL = process.env.SUPERAPP_DEV_URL;
+const devURL = process.env.VEYO_DEV_URL;
 function trustedDevURL(value) {
   if (typeof value !== 'string') return false;
   try {
@@ -125,8 +193,8 @@ function trustedDevURL(value) {
     return false;
   }
 }
-if (process.env.SUPERAPP_DATA_DIR)
-  app.setPath('userData', path.resolve(process.env.SUPERAPP_DATA_DIR));
+if (process.env.VEYO_DATA_DIR)
+  app.setPath('userData', path.resolve(process.env.VEYO_DATA_DIR));
 const shells =
   process.platform === 'win32'
     ? [
@@ -237,6 +305,48 @@ function availableAgents(fresh = false) {
     });
   return agentScan;
 }
+/** A program name looked up on PATH only, never in the project folder. */
+async function resolveProgram(name) {
+  const directories = await searchPath();
+  if (!/\.(exe|cmd|bat|ps1)$/i.test(name) || process.platform !== 'win32') return findExecutable(name, directories);
+  for (const directory of directories) {
+    const candidate = path.join(directory, name);
+    if (await fs.stat(candidate).then((stat) => stat.isFile(), () => false)) return candidate;
+  }
+  return null;
+}
+/*
+ * Agent presets from the plugins that apply to a project. `installed` is false
+ * when the program is missing or the arguments cannot be passed safely here;
+ * `problem` says why.
+ */
+async function pluginAgents(projectId) {
+  const root = project(projectId).root;
+  const { agents } = await plugins().contributions(projectId);
+  return Promise.all(
+    agents.map(async (item) => {
+      let launch = null;
+      let problem;
+      try {
+        const resolved = await plugins().resolve(projectId, 'agents', item.key);
+        launch = await buildLaunch(resolved.item, { pluginRoot: resolved.pluginRoot, projectRoot: root, resolveProgram });
+      } catch (error) {
+        problem = error.message;
+      }
+      return {
+        id: `plugin:${item.key}`,
+        label: item.label,
+        command: item.program,
+        mark: item.mark,
+        source: item.plugin,
+        installed: !!launch,
+        executable: launch?.executable,
+        args: launch?.args,
+        ...(problem && { problem }),
+      };
+    }),
+  );
+}
 function registerIPC() {
   availableAgents();
   handle('agents:list', async (id, workspaceName, fresh) => {
@@ -247,8 +357,10 @@ function registerIPC() {
     if (agents) {
       if (Date.now() - agentsCheckedAt >= 1500) availableAgents().catch(() => {});
     } else agents = await availableAgents(fresh === true);
+    // Plugin presets come last, after Terminal; a broken plugin never hides the built-in agents.
+    const fromPlugins = await pluginAgents(id).catch(() => []);
     return {
-      agents: agents.map(({ executable, ...agent }) => agent),
+      agents: [...agents, ...fromPlugins].map(({ executable, args, ...agent }) => agent),
       remaining: Math.max(
         0,
         MAX_TERMINALS_PER_WORKSPACE - workspaceTerminalCount(id, workspaceName),
@@ -264,17 +376,24 @@ function registerIPC() {
     let available = cachedAgents || (await availableAgents());
     if (
       selections.some(
-        (selection) => !available.find((a) => a.id === selection?.agentId)?.installed,
+        (selection) =>
+          !String(selection?.agentId).startsWith('plugin:') &&
+          !available.find((a) => a.id === selection?.agentId)?.installed,
       )
     )
       available = await availableAgents(true);
+    // Plugin presets are resolved now, so a plugin disabled a moment ago cannot launch.
+    if (selections.some((selection) => String(selection?.agentId).startsWith('plugin:')))
+      available = [...available, ...(await pluginAgents(id))];
     const seen = new Set();
     let total = 0;
     for (const selection of selections) {
       const agent = available.find((a) => a.id === selection.agentId);
       if (!agent || !agent.installed)
         throw new Error(
-          `${agent?.label || 'Agent'} is not available on PATH. Refresh the list after installing it.`,
+          agent?.problem
+            ? `${agent.label}: ${agent.problem}`
+            : `${agent?.label || 'Agent'} is not available on PATH. Refresh the list after installing it.`,
         );
       if (
         seen.has(agent.id) ||
@@ -348,6 +467,7 @@ function registerIPC() {
     delete state.runPresets[id];
     if (state.activeProject === id) state.activeProject = state.projects[0]?.id || null;
     await persist();
+    await plugins().forgetProject(id).catch(() => {});
     return state.activeProject;
   });
   handle('project:update', async (id, patch) => {
@@ -574,6 +694,169 @@ function registerIPC() {
       throw new Error('Only web links can be opened in your browser.');
     await shell.openExternal(url.href);
   });
+  // Plugins. The renderer names plugins by registry key and contributions by
+  // namespaced key; paths, programs and arguments are resolved here.
+  const optionalProject = (id) => {
+    if (id === undefined || id === null) return null;
+    return project(id).id;
+  };
+  const pluginKey = (key) => {
+    if (typeof key !== 'string' || !key || key.length > 400) throw new Error('Unknown plugin.');
+    return key;
+  };
+  handle('plugins:state', (projectId) => plugins().state(optionalProject(projectId)));
+  handle('plugins:contributions', (projectId) => plugins().contributions(optionalProject(projectId)));
+  handle('plugins:details', (key) => plugins().details(pluginKey(key)));
+  handle('plugins:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(win, { title: 'Choose a plugin folder', properties: ['openDirectory'] });
+    return result.canceled ? null : result.filePaths[0];
+  });
+  handle('plugins:preview', (request) => {
+    if (!request || typeof request !== 'object' || Array.isArray(request)) throw new Error('Choose a plugin to install.');
+    const { kind, path: folder, marketplace, name, url, ref } = request;
+    const text = (value, max) => (value === undefined ? undefined : typeof value === 'string' && value.length <= max ? value : '');
+    return plugins().preview({ kind, path: text(folder, 4096), marketplace: text(marketplace, 64), name: text(name, 64), url: text(url, 2048), ref: text(ref, 200) });
+  });
+  handle('plugins:cancel-preview', (id) => (typeof id === 'string' ? plugins().cancelPreview(id) : undefined));
+  handle('plugins:install', (previewId, scope, projectId) => {
+    if (typeof previewId !== 'string') throw new Error('This preview has expired.');
+    return plugins().install(previewId, scope, scope === 'project' ? project(projectId).id : undefined);
+  });
+  handle('plugins:set-enabled', (key, enabled) => plugins().setEnabled(pluginKey(key), enabled === true));
+  handle('plugins:uninstall', (key) => plugins().uninstall(pluginKey(key)));
+  // MCP servers are added by the coding CLI itself, after the person has seen the
+  // exact command. `plan` returns it; `add` runs it in a visible terminal.
+  const mcpServerName = (server) => {
+    if (typeof server !== 'string' || !server || server.length > 64) throw new Error('Unknown MCP server.');
+    return server;
+  };
+  const cliName = (cli) => {
+    if (!Object.hasOwn(CLIS, cli)) throw new Error('Choose Claude Code or Codex.');
+    return cli;
+  };
+  const clientIdOf = (options) =>
+    options && typeof options === 'object' && typeof options.clientId === 'string' && options.clientId.length <= 200 ? options.clientId.trim() : '';
+  const workspaceOf = (name) => (typeof name === 'string' && name.trim() && name.length <= 40 ? name : 'Main');
+  // Builds the exact command for one CLI. With `display`, a missing OAuth client ID
+  // is shown as a placeholder; running always needs the real one.
+  const mcpPlan = async (id, key, server, cli, options, display) => {
+    project(id);
+    // "preview:<id>" plans a plugin still under review, for display only.
+    const previewId = typeof key === 'string' && key.startsWith('preview:') ? key.slice('preview:'.length) : null;
+    if (previewId && !display) throw new Error('Install the plugin first.');
+    const info = previewId
+      ? await plugins().previewMcpServer(previewId, mcpServerName(server), options?.scope)
+      : await plugins().mcpServer(pluginKey(key), mcpServerName(server));
+    cliName(cli);
+    const executable = await resolveProgram(cli);
+    const base = { cli, label: CLIS[cli], available: !!executable, auth: info.server.auth?.type ?? null };
+    const unsupported = cliSupport(cli, info.server);
+    if (unsupported) return { ...base, unsupported };
+    const needsClientId = info.server.auth?.type === 'oauth-client';
+    const clientId = clientIdOf(options);
+    const plan = mcpAddArgs(cli, info, { clientId: needsClientId && display && !clientId ? 'YOUR_CLIENT_ID' : clientId });
+    if (executable) {
+      try {
+        checkArgs(plan.args, { batch: isBatch(executable) });
+      } catch (error) {
+        return { ...base, unsupported: `${error.message} Add this server to ${CLIS[cli]} by hand.` };
+      }
+    }
+    return { ...base, ...plan, executable, info, needsClientId };
+  };
+  handle('plugins:mcp-plan', async (id, key, server, cli, options) => {
+    const plan = await mcpPlan(id, key, server, cli, options, true);
+    const { executable, info, args, ...shown } = plan;
+    return {
+      ...shown,
+      ...(args && { commandLine: [cli, ...args] }),
+      ...(plan.followUp?.kind === 'env' && { variable: await envStatus(plan.followUp.variable) }),
+    };
+  });
+  handle('plugins:mcp-add', async (id, key, server, cli, options, workspaceName) => {
+    const plan = await mcpPlan(id, key, server, cli, options, false);
+    if (plan.unsupported) throw new Error(plan.unsupported);
+    if (!plan.executable) throw new Error(`${CLIS[cli]} is not installed on PATH.`);
+    const title = `Add ${plan.name} to ${plan.label}`;
+    const registryKey = pluginKey(key);
+    return createTerminal(
+      id,
+      undefined,
+      {
+        label: title,
+        terminalLabel: title,
+        executable: plan.executable,
+        args: plan.args,
+        // Recorded only when the CLI accepted the server.
+        onExit: (code) =>
+          code === 0 && plugins().recordConnection(registryKey, { cli, name: plan.name, server: plan.info.server.name, scope: plan.info.scope }),
+      },
+      workspaceOf(workspaceName),
+      detachable === true,
+    );
+  });
+  // Browser sign-in for servers that use OAuth, run by the CLI in a terminal.
+  handle('plugins:mcp-login', async (id, key, server, cli, workspaceName) => {
+    project(id);
+    const info = await plugins().mcpServer(pluginKey(key), mcpServerName(server));
+    const executable = await resolveProgram(cliName(cli));
+    if (!executable) throw new Error(`${CLIS[cli]} is not installed on PATH.`);
+    const name = serverName(info.plugin, info.server);
+    const title = `Sign in to ${name} (${CLIS[cli]})`;
+    return createTerminal(id, undefined, { label: title, terminalLabel: title, executable, args: ['mcp', 'login', name] }, workspaceOf(workspaceName), detachable === true);
+  });
+  // Removes a server Veyo added earlier, by its recorded connection.
+  handle('plugins:mcp-remove', async (id, key, cli, name, workspaceName) => {
+    project(id);
+    const registryKey = pluginKey(key);
+    const connection = (await plugins().connectionsOf(registryKey)).find((item) => item.cli === cli && item.name === name);
+    if (!connection) throw new Error('Veyo has no record of adding that server.');
+    const executable = await resolveProgram(cli);
+    if (!executable) throw new Error(`${CLIS[cli]} is not installed on PATH.`);
+    const title = `Remove ${name} from ${CLIS[cli]}`;
+    return createTerminal(
+      id,
+      undefined,
+      {
+        label: title,
+        terminalLabel: title,
+        executable,
+        args: mcpRemoveArgs(cli, name, connection.scope),
+        onExit: (code) => code === 0 && plugins().forgetConnection(registryKey, cli, name),
+      },
+      workspaceOf(workspaceName),
+      detachable === true,
+    );
+  });
+  // Marketplaces are added only from what the person typed or picked.
+  const marketplaceName = (name) => {
+    if (typeof name !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name) || name.length > 64) throw new Error('Unknown marketplace.');
+    return name;
+  };
+  handle('plugins:catalog', () => plugins().catalog());
+  handle('plugins:refresh-public', () => plugins().refreshPublic());
+  handle('plugins:add-marketplace', (input) => {
+    if (typeof input !== 'string' || input.length > 2048) throw new Error('Enter a Git address, owner/repo, or a folder path.');
+    return plugins().addMarketplace(input);
+  });
+  handle('plugins:refresh-marketplace', (name) => plugins().refreshMarketplace(marketplaceName(name)));
+  handle('plugins:remove-marketplace', (name) => plugins().removeMarketplace(marketplaceName(name)));
+  // Runs a plugin command in a new, visible terminal in the project. The renderer
+  // names the command; the program and arguments come from the installed plugin.
+  handle('plugins:run-command', async (id, key, workspaceName) => {
+    const root = project(id).root;
+    if (workspaceName !== undefined && (typeof workspaceName !== 'string' || !workspaceName.trim() || workspaceName.length > 40))
+      throw new Error('Invalid workspace name.');
+    const resolved = await plugins().resolve(id, 'commands', pluginKey(key));
+    const launch = await buildLaunch(resolved.item.run, { pluginRoot: resolved.pluginRoot, projectRoot: root, resolveProgram });
+    return createTerminal(
+      id,
+      undefined,
+      { label: resolved.item.title, terminalLabel: resolved.item.title, executable: launch.executable, args: launch.args },
+      workspaceName || 'Main',
+      detachable === true,
+    );
+  });
   handle('run-presets:get', (id) => {
     project(id);
     return state.runPresets[id] || null;
@@ -621,43 +904,20 @@ function registerIPC() {
     // Codex composer.
     env.TERM = 'xterm-256color';
     env.COLORTERM = 'truecolor';
-    env.TERM_PROGRAM = 'superapp';
+    env.TERM_PROGRAM = 'veyo';
     env.TERM_PROGRAM_VERSION = app.getVersion();
     // Codex uses WT_SESSION to enable the richer Windows terminal composer
     // colors when it is hosted inside a ConPTY-backed terminal.
-    env.WT_SESSION ||= `superapp-${crypto.randomUUID()}`;
-    const directAgent =
-      !!agent?.executable && (process.platform !== 'win32' || /\.exe$/i.test(agent.executable));
-    const batchAgent =
-      !!agent?.executable && process.platform === 'win32' && /\.(cmd|bat)$/i.test(agent.executable);
-    const agentArgs = agent?.args || [];
-    const command =
-      agent && directAgent
-        ? agent.executable
-        : batchAgent
-          ? process.env.ComSpec || 'cmd.exe'
-          : selected.command;
-    const args = agent
-      ? directAgent
-        ? agentArgs
-        : batchAgent
-          ? // A string is passed to ConPTY verbatim; node-pty would escape the quotes in an array.
-            `/d /s /c "${[agent.executable, ...agentArgs].map((part) => `"${part}"`).join(' ')}"`
-        : process.platform === 'win32'
-          ? [
-              '-NoLogo',
-              '-NoProfile',
-              '-Command',
-              ['&', agent.executable, ...agentArgs]
-                .map((part, index) => (index ? `'${part.replaceAll("'", "''")}'` : part))
-                .join(' '),
-            ]
-          : [
-              '-c',
-              ['exec', agent.executable, ...agentArgs]
-                .map((part, index) => (index ? `"${part.replaceAll('"', '\\"')}"` : part))
-                .join(' '),
-            ]
+    env.WT_SESSION ||= `veyo-${crypto.randomUUID()}`;
+    const launch = agent
+      ? programCommand(agent.executable, agent.args || [], {
+          comSpec: process.env.ComSpec,
+          powershell: shells[0].command,
+        })
+      : null;
+    const command = launch ? launch.command : selected.command;
+    const args = launch
+      ? launch.args
       : detachable || process.platform !== 'win32'
         ? selected.args
         : selected.id === 'cmd'
@@ -673,7 +933,10 @@ function registerIPC() {
       projectId: id,
       workspaceName,
       shell: selected.id,
-      label: agent
+      // Plugin commands keep their own title; agents are numbered.
+      label: agent?.terminalLabel
+        ? agent.terminalLabel
+        : agent
         ? `${agent.label} ${1 + [...terminals.values()].filter((t) => t.projectId === id && t.agentId === agent.id).length}`
         : selected.label,
       agentId: agent?.id,
@@ -696,13 +959,24 @@ function registerIPC() {
       item.exitCode = exitCode;
       item.finishedAt = Date.now();
       emit({ exitCode, at: item.finishedAt });
+      // Plugin MCP commands record their result once the CLI has finished.
+      if (agent?.onExit) Promise.resolve().then(() => agent.onExit(exitCode)).catch(() => {});
     };
     const start = () => {
+      // A project folder that was moved or deleted makes ConPTY fail with
+      // "Cannot create process, error code: 267"; start in the home folder instead.
+      let cwd = root;
+      if (!fsSync.existsSync(root)) {
+        cwd = os.homedir();
+        const data = `\x1b[33mProject folder not found (${root}); starting in ${cwd}.\x1b[0m\r\n`;
+        item.output += data;
+        emit({ data, at: Date.now() });
+      }
       const proc = pty.spawn(command, args, {
         name: 'xterm-256color',
         cols: item.cols,
         rows: item.rows,
-        cwd: root,
+        cwd,
         env,
       });
       item.proc = proc;
@@ -780,6 +1054,8 @@ function registerIPC() {
       hasImage: items.some((item) => item.types.some((type) => type.startsWith('image/'))),
     };
   });
+  handle('terminal:drop-image-save', (image) => terminalDrops().saveImage(image));
+  handle('terminal:drop-image-download', (url) => terminalDrops().downloadImage(url));
   handle('terminal:clipboard-write', (text) => {
     if (typeof text !== 'string') throw new Error('Invalid clipboard text.');
     return clipboard.writeText(text);
@@ -809,10 +1085,32 @@ function registerIPC() {
       throw new Error('Browser view is no longer available.');
     return guest;
   };
-  handle('browser:clear-history', (guestId) => {
-    // History belongs to the view, not the session's cache or site storage.
-    // Validate the view before making any changes and preserve sign-ins.
-    browserGuest(guestId).navigationHistory.clear();
+  handle('browser:history', (query) =>
+    browserHistory().list(typeof query === 'string' ? query.slice(0, 500) : ''));
+  handle('browser:history-remove', (ids) => {
+    if (!Array.isArray(ids) || ids.length > 5000 || !ids.every((id) => typeof id === 'string'))
+      throw new Error('Choose pages to remove from history.');
+    return browserHistory().remove(ids);
+  });
+  // Chrome's "Clear browsing data". The range applies to visited pages;
+  // Chromium clears cookies, site storage and the cache for all time.
+  handle('browser:clear-data', async (options) => {
+    const { range, history, siteData, cache } = options && typeof options === 'object' ? options : {};
+    if (!HISTORY_RANGES.includes(range)) throw new Error('Choose a time range to clear.');
+    if (history !== true && siteData !== true && cache !== true) throw new Error('Choose what to clear.');
+    const browserSession = session.fromPartition('persist:veyo-browser');
+    if (history === true) {
+      await browserHistory().clear(range);
+      // Open tabs' back and forward lists are history too. Each tab keeps
+      // the page it shows.
+      for (const guest of webContents.getAllWebContents())
+        if (guest.getType() === 'webview' && guest.hostWebContents === win.webContents)
+          guest.navigationHistory.clear();
+    }
+    if (siteData === true) await browserSession.clearStorageData();
+    if (cache === true) await browserSession.clearCache();
+    // Tabs re-read their back and forward state.
+    if (!win.webContents.isDestroyed()) win.webContents.send('browser:history-changed');
   });
   // Same emulation DevTools device mode uses: mobile viewport rules, screen
   // size, touch support and user agent (including client hints), so sites
@@ -867,7 +1165,7 @@ function registerIPC() {
     if (action === 'maximize') win.isMaximized() ? win.unmaximize() : win.maximize();
     if (action === 'close') win.close();
     if (action === 'close-ready') {
-      await Promise.all([saveQueue, chatSaveQueue]);
+      await Promise.all([saveQueue, chatSaveQueue, browserHistoryService?.flush().catch(() => {})]);
       closeApproved = true;
       win.close();
     }
@@ -912,8 +1210,9 @@ app
       minWidth: 760,
       minHeight: 560,
       frame: false,
-      backgroundColor: '#191713',
-      title: 'Superapp',
+      backgroundColor: '#161615',
+      title: 'Veyo',
+      icon: path.join(__dirname, '..', 'build', 'icon.png'),
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
@@ -932,7 +1231,7 @@ app
     });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (event) => event.preventDefault());
-    const browserPartition = 'persist:superapp-browser';
+    const browserPartition = 'persist:veyo-browser';
     const allowedBrowserURL = (value) => {
       try {
         const url = new URL(value);
@@ -943,8 +1242,15 @@ app
       }
     };
     const browserSession = session.fromPartition(browserPartition);
-    browserSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-    browserSession.setPermissionCheckHandler(() => false);
+    // Sites see Chrome in the user's own languages, so Google and others
+    // serve the results, spelling, units and dates of the user's region.
+    browserSession.setUserAgent(
+      chromeUserAgent(process.platform, process.versions.chrome),
+      acceptLanguages(app.getPreferredSystemLanguages()),
+    );
+    browserSession.setPermissionRequestHandler((_contents, permission, callback) =>
+      callback(BROWSER_PERMISSIONS.has(permission)));
+    browserSession.setPermissionCheckHandler((_contents, permission) => BROWSER_PERMISSIONS.has(permission));
     win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
       if (params.partition !== browserPartition || params.src !== 'about:blank') {
         event.preventDefault();
@@ -957,12 +1263,58 @@ app
       webPreferences.webSecurity = true;
     });
     win.webContents.on('did-attach-webview', (_event, guest) => {
-      guest.setWindowOpenHandler(() => ({ action: 'deny' }));
+      // New windows open as browser tabs instead; the tab loads the URL
+      // through the same navigation checks as any other page.
+      guest.setWindowOpenHandler(({ url }) => {
+        if (allowedBrowserURL(url) && !win.isDestroyed()) win.webContents.send('browser:open-tab', url);
+        return { action: 'deny' };
+      });
       guest.on('will-navigate', (event, url) => {
         if (!allowedBrowserURL(url)) event.preventDefault();
       });
       guest.on('will-redirect', (event, url) => {
         if (!allowedBrowserURL(url)) event.preventDefault();
+      });
+      // Visits are recorded here rather than by the renderer, so history
+      // holds only pages that actually loaded.
+      guest.on('did-navigate', (_event, url, httpResponseCode) => {
+        if (httpResponseCode > 0) void browserHistory().record(url, guest.getTitle()).catch(() => {});
+      });
+      guest.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+        if (isMainFrame) void browserHistory().record(url, guest.getTitle()).catch(() => {});
+      });
+      guest.on('page-title-updated', (_event, title) => {
+        void browserHistory().retitle(guest.getURL(), title).catch(() => {});
+      });
+      const command = (action, value) => {
+        if (!win.isDestroyed()) win.webContents.send('browser:command', guest.id, action, value);
+      };
+      guest.on('before-input-event', (event, input) => {
+        const action = browserShortcut(input);
+        if (!action) return;
+        event.preventDefault();
+        if (action === 'devtools') guest.isDevToolsOpened() ? guest.closeDevTools() : guest.openDevTools();
+        else command(action);
+      });
+      guest.on('context-menu', (_event, params) => {
+        const history = guest.navigationHistory;
+        const template = contextMenuTemplate(params, {
+          canOpen: allowedBrowserURL,
+          canGoBack: () => history.canGoBack(),
+          canGoForward: () => history.canGoForward(),
+          back: () => history.goBack(),
+          forward: () => history.goForward(),
+          reload: () => guest.reload(),
+          print: () => guest.print(),
+          inspect: () => guest.inspectElement(params.x, params.y),
+          openTab: (url) => { if (allowedBrowserURL(url)) win.webContents.send('browser:open-tab', url); },
+          search: (text) => command('search', text),
+          copyText: (text) => clipboard.writeText(text),
+          copyImage: () => guest.copyImageAt(params.x, params.y),
+          replaceMisspelling: (word) => guest.replaceMisspelling(word),
+          addToDictionary: (word) => browserSession.addWordToSpellCheckerDictionary(word),
+        });
+        Menu.buildFromTemplate(template).popup({ window: win, frame: params.frame ?? undefined });
       });
     });
     win.webContents.on('will-prevent-unload', (event) => {
@@ -990,7 +1342,7 @@ app
     win.show();
   })
   .catch((error) => {
-    dialog.showErrorBox('Superapp could not start', error.message);
+    dialog.showErrorBox('Veyo could not start', error.message);
     app.quit();
   });
 app.on('window-all-closed', () => {

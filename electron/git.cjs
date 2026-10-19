@@ -2,16 +2,50 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const core = require('./core.cjs');
 const run = promisify(execFile);
+const options = () => ({
+  windowsHide: true,
+  timeout: 15000,
+  maxBuffer: 4 * 1024 * 1024,
+  env: { ...process.env, GIT_LITERAL_PATHSPECS: '1', GIT_TERMINAL_PROMPT: '0' },
+});
+/*
+ * Overrides that switch off filter drivers the repository's own config
+ * defines or changes. A project unpacked from an archive brings its .git/config,
+ * and Git runs a driver's programs whenever it re-reads a file, status
+ * included. Drivers the person set up themselves (Git LFS) keep working.
+ */
+async function repositoryFilterOverrides(root) {
+  let listing;
+  try {
+    // Reading config runs nothing.
+    listing = (await run('git', ['-C', root, 'config', '--show-scope', '-z', '--get-regexp', '^filter\\.'], options())).stdout;
+  } catch {
+    return []; // No filters configured.
+  }
+  const parts = listing.split('\0');
+  const own = new Set();
+  const planted = new Set();
+  const entries = [];
+  for (let i = 0; i + 1 < parts.length; i += 2) {
+    const newline = parts[i + 1].indexOf('\n');
+    const key = newline < 0 ? parts[i + 1] : parts[i + 1].slice(0, newline);
+    const value = newline < 0 ? '' : parts[i + 1].slice(newline + 1);
+    const driver = /^filter\.(.+)\.[^.]+$/i.exec(key)?.[1];
+    if (!driver) continue;
+    const pair = `${key.toLowerCase()}\n${value}`;
+    if (['system', 'global'].includes(parts[i])) own.add(pair);
+    else entries.push({ driver, pair });
+  }
+  for (const { driver, pair } of entries) if (!own.has(pair)) planted.add(driver);
+  return [...planted].flatMap((driver) =>
+    ['clean', 'smudge', 'process'].flatMap((name) => ['-c', `filter.${driver}.${name}=`]).concat('-c', `filter.${driver}.required=false`),
+  );
+}
 async function git(root, args) {
   return (
     // Repositories can configure fsmonitor as an executable. Source-control
     // refreshes happen automatically, so never run that repository command.
-    await run('git', ['-c', 'core.fsmonitor=false', '-C', root, ...args], {
-      windowsHide: true,
-      timeout: 15000,
-      maxBuffer: 4 * 1024 * 1024,
-      env: { ...process.env, GIT_LITERAL_PATHSPECS: '1', GIT_TERMINAL_PROMPT: '0' },
-    })
+    await run('git', ['-c', 'core.fsmonitor=false', ...(await repositoryFilterOverrides(root)), '-C', root, ...args], options())
   ).stdout;
 }
 async function status(root) {

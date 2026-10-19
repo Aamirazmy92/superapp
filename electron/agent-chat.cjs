@@ -922,7 +922,13 @@ async function sendClaude(request, controller, onChunk, ask, onActivity, onSessi
     abortController: controller,
     tools: request.projectId ? { type: 'preset', preset: 'claude_code' } : [],
     ...(request.projectId
-      ? { systemPrompt: { type: 'preset', preset: 'claude_code' } }
+      ? {
+          systemPrompt: { type: 'preset', preset: 'claude_code' },
+          // A project's .claude settings can run hooks and pre-approve tools,
+          // and the SDK skips Claude Code's folder trust prompt, so they load
+          // only after the person trusted this project in Veyo.
+          settingSources: request.trustProjectSettings === true ? ['user', 'project', 'local'] : ['user'],
+        }
       : {
           settingSources: [],
           strictMcpConfig: true,

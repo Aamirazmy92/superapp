@@ -649,6 +649,21 @@ test('Claude without a project disables tools and never bypasses permission chec
   assert.equal((await options.canUseTool('Bash', { command: 'touch x' })).behavior, 'deny');
 });
 
+test('Claude loads a project\'s own settings only once the project is trusted', async () => {
+  const sources = async (extra) => {
+    const api = fixture({
+      claudeMessages: [{ type: 'result', subtype: 'success', result: 'Answer', is_error: false }],
+    });
+    await api.send(request({ provider: 'claude', ...extra }), new AbortController(), () => {}, async () => true);
+    // Copied out of the module's VM realm for deepEqual.
+    return [...api.captures.claude.options.settingSources];
+  };
+  // Hooks and allow rules in .claude/settings.json would run or apply unasked.
+  assert.deepEqual(await sources({}), ['user']);
+  assert.deepEqual(await sources({ trustProjectSettings: 'yes' }), ['user']);
+  assert.deepEqual(await sources({ trustProjectSettings: true }), ['user', 'project', 'local']);
+});
+
 test('both providers stop before emitting more than 2 MiB of response text', async () => {
   const tooLarge = 'x'.repeat(2 * 1024 * 1024 + 1);
   const codex = fixture({

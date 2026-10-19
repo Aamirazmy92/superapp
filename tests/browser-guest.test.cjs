@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { browserShortcut, contextMenuTemplate } = require('../electron/browser-guest.cjs');
+const { browserShortcut, contextMenuTemplate, inOtherProcess } = require('../electron/browser-guest.cjs');
 
 const key = (k, mods = {}) => ({ type: 'keyDown', key: k, control: false, meta: false, shift: false, alt: false, ...mods });
 
@@ -103,4 +103,13 @@ test('text fields offer editing and spelling suggestions', () => {
   template[0].click();
   template[2].click();
   assert.deepEqual(calls, [['replaceMisspelling', 'hello'], ['addToDictionary', 'helo']]);
+});
+
+test('frames behind another process need DevTools to find the element', () => {
+  const frame = (processId, parent = null) => ({ processId, parent });
+  const top = frame(1);
+  assert.equal(inOtherProcess(top), false);
+  assert.equal(inOtherProcess(frame(1, top)), false, 'a same-site iframe');
+  assert.equal(inOtherProcess(frame(2, top)), true, 'an iframe from another site');
+  assert.equal(inOtherProcess(frame(1, frame(2, top))), true, 'back on the first site, inside another one');
 });

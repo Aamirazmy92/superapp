@@ -9,7 +9,7 @@ import { displayTerminalLabel, displayTerminalTitle } from './sessionTitle';
 import '@xterm/xterm/css/xterm.css';
 import { fontStack, type Preferences } from './preferences';
 import { terminalTheme } from './themes';
-import { acceptsDrop, quotePath, readDrop, resolveDrop } from './terminalDrop';
+import { acceptsDrop, pasteTarget, quotePath, readDrop, resolveDrop } from './terminalDrop';
 
 type TerminalMoveKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
 
@@ -84,7 +84,8 @@ export default function TerminalPane({
       const term = terminalRef.current;
       if (!paths.length) throw new Error('Drop an image or a file to add it to the terminal.');
       if (!term || infoRef.current.exited) return;
-      term.paste(paths.map(quotePath).join(' '));
+      const target = pasteTarget(infoRef.current.shell, infoRef.current.agentId);
+      term.paste(paths.map((item) => quotePath(item, target)).join(' '));
       onActivate();
       term.focus();
     } catch (error) {

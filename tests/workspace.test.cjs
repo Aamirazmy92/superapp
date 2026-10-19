@@ -197,6 +197,58 @@ test('automatic Git status does not run a repository fsmonitor command', async (
   assert.equal((await git.status(root)).available, true);
   assert.equal(await fs.readFile(marker, 'utf8').then(() => true, () => false), false);
 });
+test('Git operations do not run filter programs set in the repository config', async (t) => {
+  const root = await fixture(t);
+  const command = (...args) => execFileSync('git', ['-C', root, ...args], { windowsHide: true });
+  command('init');
+  command('config', 'user.name', 'Test');
+  command('config', 'user.email', 'test@example.com');
+  await fs.writeFile(path.join(root, 'tracked.txt'), 'content');
+  command('add', 'tracked.txt');
+  command('commit', '-m', 'first');
+  await fs.writeFile(path.join(root, '.gitattributes'), '*.txt filter=planted\n');
+  const marker = path.join(root, 'filter-ran');
+  const program = path.join(root, 'filter.sh');
+  await fs.writeFile(program, '#!/bin/sh\nprintf ran > filter-ran\ncat\n');
+  await fs.chmod(program, 0o755);
+  command('config', 'filter.planted.clean', 'sh ./filter.sh');
+  const ran = () => fs.readFile(marker, 'utf8').then(() => true, () => false);
+  // Stale stat data makes Git re-read the file through its filter, as it
+  // does for a project unpacked from an archive.
+  const stale = (time) => fs.utimes(path.join(root, 'tracked.txt'), time, time);
+  await stale(new Date('2001-01-01'));
+  command('status', '--porcelain');
+  assert.equal(await ran(), true);
+  await fs.unlink(marker);
+  await stale(new Date('2002-01-01'));
+  assert.equal((await git.status(root)).available, true);
+  await fs.writeFile(path.join(root, 'tracked.txt'), 'changed');
+  assert.match(await git.diff(root, 'tracked.txt'), /changed/);
+  await git.stage(root, 'tracked.txt');
+  assert.equal(await ran(), false);
+});
+test('Git still runs filters the person configured, such as Git LFS', async (t) => {
+  const root = await fixture(t);
+  const command = (...args) => execFileSync('git', ['-C', root, ...args], { windowsHide: true });
+  command('init');
+  const marker = path.join(root, 'filter-ran');
+  const program = path.join(root, 'filter.sh');
+  await fs.writeFile(program, '#!/bin/sh\nprintf ran > filter-ran\ncat\n');
+  const globalConfig = path.join(root, 'global.gitconfig');
+  await fs.writeFile(globalConfig, '[filter "mine"]\n\tclean = sh ./filter.sh\n');
+  // Repositories commonly repeat the person's driver (`git lfs install --local`).
+  command('config', 'filter.mine.clean', 'sh ./filter.sh');
+  const previous = process.env.GIT_CONFIG_GLOBAL;
+  process.env.GIT_CONFIG_GLOBAL = globalConfig;
+  t.after(() => {
+    if (previous === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = previous;
+  });
+  await fs.writeFile(path.join(root, '.gitattributes'), '*.txt filter=mine\n');
+  await fs.writeFile(path.join(root, 'tracked.txt'), 'content');
+  await git.stage(root, 'tracked.txt');
+  assert.equal(await fs.readFile(marker, 'utf8').then(() => true, () => false), true);
+});
 test('chat validates local endpoints and supports responses, provider errors and cancellation', async (t) => {
   for (const endpoint of [
     'https://example.com',

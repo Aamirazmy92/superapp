@@ -194,6 +194,8 @@ export interface WorkspaceAPI {
   pickProject(): Promise<Project | null>;
   removeProject(id: string): Promise<string | null>;
   updateProject(id: string, patch: { pinned?: boolean }): Promise<Project>;
+  claudeSettings(id: string): Promise<{ decision: 'trusted' | 'ignored' | null; files: string[] }>;
+  setClaudeSettings(id: string, decision: 'trusted' | 'ignored'): Promise<void>;
   listFiles(id: string, path?: string, includeIgnored?: boolean): Promise<Entry[]>;
   searchFiles(id: string, query: string): Promise<Entry[]>;
   readFile(id: string, path: string): Promise<DiskFile>;

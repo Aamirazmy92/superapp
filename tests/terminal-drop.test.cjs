@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createTerminalDrops } = require('../electron/terminal-drops.cjs');
-const { droppedImageAddress, quotePath, resolveDrop } = require('../src/terminalDrop.ts');
+const { droppedImageAddress, pasteTarget, quotePath, resolveDrop } = require('../src/terminalDrop.ts');
 
 const PNG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]);
 
@@ -18,6 +18,32 @@ test('quotes paths the shell would split', () => {
   assert.equal(quotePath('C:\\shots\\a.png'), 'C:\\shots\\a.png');
   assert.equal(quotePath('C:\\My Pictures\\a b.png'), '"C:\\My Pictures\\a b.png"');
   assert.equal(quotePath('C:\\x\\(1).png'), '"C:\\x\\(1).png"');
+});
+
+test('PowerShell gets single quotes, so a file name cannot run a command', () => {
+  assert.equal(quotePath('C:\\shots\\a.png', 'powershell'), 'C:\\shots\\a.png');
+  assert.equal(quotePath('C:\\x\\$(calc).png', 'powershell'), "'C:\\x\\$(calc).png'");
+  assert.equal(quotePath('C:\\x\\$env:USERNAME.png', 'powershell'), "'C:\\x\\$env:USERNAME.png'");
+  assert.equal(quotePath("C:\\x\\it's `here`.png", 'powershell'), "'C:\\x\\it''s `here`.png'");
+  // PowerShell treats typographic single quotes as quotes too.
+  assert.equal(quotePath('C:\\x\\a\u2019b.png', 'powershell'), "'C:\\x\\a\u2019\u2019b.png'");
+});
+
+test('Command Prompt refuses names it would expand even inside quotes', () => {
+  assert.equal(quotePath('C:\\My Pictures\\a&b.png', 'cmd'), '"C:\\My Pictures\\a&b.png"');
+  assert.throws(() => quotePath('C:\\x\\%PATH%.png', 'cmd'), /cannot be pasted/);
+  assert.throws(() => quotePath('C:\\x\\wow!.png', 'cmd'), /cannot be pasted/);
+});
+
+test('POSIX shells get single quotes', () => {
+  assert.equal(quotePath('/tmp/a.png', 'posix'), '/tmp/a.png');
+  assert.equal(quotePath('/tmp/$(id) a.png', 'posix'), "'/tmp/$(id) a.png'");
+  assert.equal(quotePath("/tmp/it's.png", 'posix'), "'/tmp/it'\\''s.png'");
+});
+
+test('names with control characters are refused in every terminal', () => {
+  for (const kind of [undefined, 'powershell', 'cmd', 'posix'])
+    assert.throws(() => quotePath('/tmp/a\nrm -rf ~\n.png', kind), /cannot be pasted/);
 });
 
 test('finds the image dragged out of a page, not plain links', () => {
@@ -88,4 +114,12 @@ test('downloads web images only, within the size limit', async (t) => {
   await assert.rejects(drops.downloadImage('https://x.test/huge.png'), /under 20 MB/);
   await assert.rejects(drops.downloadImage('file:///C:/Windows/win.ini'), /Only web images/);
   assert.equal((await fs.readdir(root)).length, 1);
+});
+
+test('agents read the prompt; plain terminals and plugin commands are shells', () => {
+  assert.equal(pasteTarget('powershell', 'claude'), 'agent');
+  assert.equal(pasteTarget('powershell', 'terminal'), 'powershell');
+  assert.equal(pasteTarget('powershell', undefined), 'powershell');
+  assert.equal(pasteTarget('cmd', undefined), 'cmd');
+  assert.equal(pasteTarget('default', undefined), 'posix');
 });

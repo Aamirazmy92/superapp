@@ -1016,8 +1016,9 @@ export default function App() {
     const target = agents.find((t) => t.id === activeTerminalId) ?? agents.at(-1);
     if (!api || !target) throw new Error('Open an agent first, then send your change request.');
     // A bracketed paste keeps the line breaks in one prompt; the agent
-    // submits it on the Enter that follows.
-    const paste = `\u001b[200~${prompt}\u001b[201~`;
+    // submits it on the Enter that follows. The prompt quotes the page, so
+    // control characters that could end the paste early are dropped.
+    const paste = terminalPaste(prompt);
     recordTerminalInput(target, `${paste}\r`);
     setActiveTerminalId(target.id);
     await api.writeTerminal(target.id, paste);

@@ -94,4 +94,82 @@ function contextMenuTemplate(params, actions) {
   return sections.flatMap((items, index) => (index ? [{ type: 'separator' }, ...items] : items));
 }
 
-module.exports = { browserShortcut, contextMenuTemplate };
+/**
+ * Whether `frame` (a WebFrameMain) sits behind a frame from another process,
+ * such as an iframe from another site. webContents.inspectElement hit-tests
+ * the top frame's process only, so there it would select the <iframe>.
+ */
+function inOtherProcess(frame) {
+  for (let child = frame; child?.parent; child = child.parent)
+    if (child.processId !== child.parent.processId) return true;
+  return false;
+}
+
+/**
+ * Runs inside the DevTools front end (serialised into executeJavaScript), so
+ * it may use only its arguments. Starting from the top frame, it finds the
+ * element at (x, y), in device pixels from the page view's top left, and
+ * steps into each frame from another process that the point lands on, as
+ * Chrome's Inspect does. Elements then shows the innermost element.
+ * Resolves to its node name, or null when nothing is there.
+ */
+async function inspectNodeAt(x, y) {
+  const SDK = await import('./core/sdk/sdk.js');
+  const targets = SDK.TargetManager.TargetManager.instance();
+  // DevTools has just opened, or has yet to attach a frame's process.
+  const settle = async (find) => {
+    for (let tries = 0; tries < 50; tries++) {
+      const found = find();
+      if (found) return found;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return null;
+  };
+  // Where a frame's layout viewport sits in its document, and (for the top
+  // frame) how many device pixels a CSS pixel takes: page zoom shows up in
+  // devicePixelRatio, or in the page scale under mobile emulation.
+  const viewport = async (target) => {
+    const { result } = await target.runtimeAgent().invoke_evaluate({
+      expression: `(({ pageLeft, pageTop, offsetLeft, offsetTop, scale }) =>
+        [pageLeft - offsetLeft, pageTop - offsetTop, offsetLeft, offsetTop, devicePixelRatio * scale])(visualViewport)`,
+      returnByValue: true,
+    });
+    if (!Array.isArray(result?.value)) throw new Error('Could not read the page viewport.');
+    return result.value;
+  };
+  let target = await settle(() => targets.primaryPageTarget());
+  if (!target) return null;
+  // From here (x, y) is in CSS pixels, relative to the frame's layout viewport.
+  const [, , visualLeft, visualTop, pixels] = await viewport(target);
+  x = visualLeft + x / pixels;
+  y = visualTop + y / pixels;
+  let found = null;
+  for (let depth = 0; target && depth < 16; depth++) {
+    const dom = target.domAgent();
+    const [scrollLeft, scrollTop] = await viewport(target);
+    const hit = await dom.invoke_getNodeForLocation({
+      x: Math.round(scrollLeft + x),
+      y: Math.round(scrollTop + y),
+      ignorePointerEventsNone: true,
+    });
+    if (!hit.backendNodeId) break;
+    const { node } = await dom.invoke_describeNode({ backendNodeId: hit.backendNodeId });
+    found = { target, backendNodeId: hit.backendNodeId, name: node?.nodeName };
+    // A frame owner whose document is in another process: carry on in that
+    // process, relative to the frame's content box. (Frames in this process
+    // are already searched by the hit test.)
+    const resources = target.model(SDK.ResourceTreeModel.ResourceTreeModel);
+    if (!node?.frameId || resources?.frameForId(node.frameId)) break;
+    const child = await settle(() => targets.targetById(node.frameId));
+    const { model } = child ? await dom.invoke_getBoxModel({ backendNodeId: hit.backendNodeId }) : {};
+    if (!model) break;
+    x -= model.content[0];
+    y -= model.content[1];
+    target = child;
+  }
+  if (!found) return null;
+  found.target.model(SDK.OverlayModel.OverlayModel).inspectNodeRequested({ backendNodeId: found.backendNodeId });
+  return found.name;
+}
+
+module.exports = { browserShortcut, contextMenuTemplate, inOtherProcess, inspectNodeAt };

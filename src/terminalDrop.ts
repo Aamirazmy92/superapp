@@ -31,8 +31,36 @@ export function readDrop(transfer: DataTransfer): DroppedItems {
   };
 }
 
-/** Quotes a path the way Windows Terminal does when a file is dropped on it. */
-export function quotePath(filePath: string) {
+/**
+ * What reads the pasted path: an agent's prompt, or a shell that will run
+ * the line once Enter is pressed.
+ */
+export type PasteTarget = 'agent' | 'powershell' | 'cmd' | 'posix';
+
+/** The paste target for a terminal, from its shell and agent. */
+export function pasteTarget(shell: string, agentId?: string): PasteTarget {
+  if (agentId && agentId !== 'terminal') return 'agent';
+  if (shell === 'powershell') return 'powershell';
+  if (shell === 'cmd') return 'cmd';
+  return 'posix';
+}
+
+/**
+ * Quotes a dropped path for the terminal it is pasted into, so that a file
+ * name can never run a command: shells get quoting that expands nothing,
+ * agents get double quotes the way Windows Terminal drops files.
+ */
+export function quotePath(filePath: string, target: PasteTarget = 'agent') {
+  const refuse = () => {
+    throw new Error(`${filePath.replace(/[\x00-\x1f\x7f-\x9f]/g, '?')} cannot be pasted into this terminal safely. Rename it first.`);
+  };
+  if (/[\x00-\x1f\x7f-\x9f]/.test(filePath)) refuse();
+  if (target === 'powershell')
+    return /^[\w\\/:.\-]+$/.test(filePath) ? filePath : `'${filePath.replace(/['‘’‚‛]/g, '$&$&')}'`;
+  if (target === 'posix')
+    return /^[\w/.\-]+$/.test(filePath) ? filePath : `'${filePath.replace(/'/g, "'\\''")}'`;
+  // Command Prompt expands %VAR% (and !VAR! with delayed expansion) even inside quotes.
+  if (target === 'cmd' && /[%!]/.test(filePath)) refuse();
   return /[\s"&'()^;,`]/.test(filePath) ? `"${filePath.replace(/"/g, '')}"` : filePath;
 }
 

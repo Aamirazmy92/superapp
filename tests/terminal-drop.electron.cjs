@@ -99,11 +99,12 @@ const PNG = Buffer.from(
 
     await input.setInputFiles([onDisk]);
     await drop('disk');
-    assert.equal(await waitForTyped(), `"${onDisk}"`);
+    // A plain PowerShell terminal: single quotes, which expand nothing.
+    assert.equal(await waitForTyped(), `'${onDisk}'`);
 
     const savedDir = path.join(dataDir, 'terminal-drops');
     await drop('bytes', PNG.toString('base64'));
-    const saved = (await waitForTyped()).replace(/"/g, '');
+    const saved = (await waitForTyped()).replace(/["']/g, '');
     assert.equal(path.dirname(saved), savedDir);
     assert.match(path.basename(saved), /^from-browser-[a-f0-9]{8}\.png$/);
     assert.deepEqual(await fs.readFile(saved), PNG);

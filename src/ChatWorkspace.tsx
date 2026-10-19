@@ -250,6 +250,10 @@ export default function ChatWorkspace({
     );
   };
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [trustPrompt, setTrustPrompt] = useState<{
+    files: string[];
+    resolve(decision: 'trusted' | 'ignored' | null): void;
+  } | null>(null);
   const [includeFile, setIncludeFile] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -791,6 +795,28 @@ export default function ChatWorkspace({
         );
       setSettings(true);
       return;
+    }
+    // A project's own Claude settings can run hooks and pre-approve tools, so
+    // the first Claude chat in a project that has them asks whether to trust
+    // it. Until it is trusted, chat uses only the person's own settings.
+    if (chosenProvider === 'claude' && target.projectId) {
+      sending.current = true;
+      try {
+        const status = await api.claudeSettings(target.projectId).catch(() => null);
+        if (status && !status.decision && status.files.length) {
+          const decision = await new Promise<'trusted' | 'ignored' | null>((resolve) =>
+            setTrustPrompt({ files: status.files, resolve }),
+          );
+          setTrustPrompt(null);
+          if (!decision) return;
+          await api.setClaudeSettings(target.projectId, decision);
+        }
+      } catch (error) {
+        setStorageError(cleanError(error));
+        return;
+      } finally {
+        sending.current = false;
+      }
     }
     const attached = !retry && !rewrite && includeFile && target.projectId === activeProject ? activeFile : undefined;
     let messageAttachments = rewrite ? rewrite.attachments || [] : target.draftAttachments || [];
@@ -1924,6 +1950,29 @@ export default function ChatWorkspace({
                 </button>
               </div>
             </form>
+          </Modal>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {trustPrompt && (
+          <Modal title="Trust this project’s Claude settings?" onClose={() => trustPrompt.resolve(null)}>
+            <p className="chat-delete-description">
+              This project includes Claude configuration ({trustPrompt.files.join(', ')}). Its
+              settings can run commands automatically (hooks) and allow tools without asking. Trust
+              it only if you trust whoever wrote this project.
+            </p>
+            <p className="chat-delete-description muted">
+              If you don’t trust it, chat uses only your own Claude settings and ignores the
+              project’s, including its CLAUDE.md.
+            </p>
+            <div className="chat-approval-actions">
+              <button className="secondary-button" onClick={() => trustPrompt.resolve('ignored')}>
+                Don’t trust
+              </button>
+              <button className="primary-button" onClick={() => trustPrompt.resolve('trusted')}>
+                Trust project
+              </button>
+            </div>
           </Modal>
         )}
       </AnimatePresence>

@@ -175,7 +175,20 @@ export function parsePickMessage(text: string): ElementPick | null {
   return null;
 }
 
-export function buildPickPrompt(element: PickedElement, instruction: string): string {
+export function buildPickPrompt(picked: PickedElement, instruction: string): string {
+  // Everything but the instruction comes from the page. It is typed into an
+  // agent terminal, where an ESC could end the bracketed paste and a CR press
+  // Enter, so control characters are dropped; the prompt's own line breaks stay.
+  const text = (value: string) => value.replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ');
+  const element = {
+    ...picked,
+    url: text(picked.url),
+    tag: text(picked.tag),
+    selector: text(picked.selector),
+    text: text(picked.text),
+    html: text(picked.html),
+    styles: Object.fromEntries(Object.entries(picked.styles).map(([name, value]) => [text(name), text(value)])),
+  };
   const styles = Object.entries(element.styles)
     .filter(([, value]) => value && value !== 'none' && value !== '0px')
     .map(([name, value]) => `${name}: ${value}`)

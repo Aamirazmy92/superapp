@@ -58,6 +58,8 @@ contextBridge.exposeInMainWorld('workspace', {
   pickProject: invoke('project:pick'),
   removeProject: invoke('project:remove'),
   updateProject: invoke('project:update'),
+  claudeSettings: invoke('project:claude-settings'),
+  setClaudeSettings: invoke('project:set-claude-settings'),
   listFiles: invoke('files:list'),
   readFile: invoke('files:read'),
   saveFile: invoke('files:save'),

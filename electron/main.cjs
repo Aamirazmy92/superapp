@@ -53,6 +53,7 @@ function browserHistory() {
     },
   });
 }
+const { claudeConfigFiles, claudeSettingsDecision } = require('./project-trust.cjs');
 const { createUsageService } = require('./usage.cjs');
 const { createUsageAdapters } = require('./usage-adapters.cjs');
 const {
@@ -125,7 +126,7 @@ const browserDevices = {
   },
 };
 const { acceptLanguages, chromeUserAgent } = require('./browser-locale.cjs');
-const { browserShortcut, contextMenuTemplate } = require('./browser-guest.cjs');
+const { browserShortcut, contextMenuTemplate, inOtherProcess, inspectNodeAt } = require('./browser-guest.cjs');
 const { HISTORY_RANGES } = require('./browser-history.cjs');
 // Permissions pages get without asking, as in Chrome: video and other
 // fullscreen, and copying from "copy" buttons. Everything else is denied.
@@ -481,6 +482,17 @@ function registerIPC() {
     await persist();
     return target;
   });
+  // Whether chat may load the project's own Claude settings; see project-trust.cjs.
+  handle('project:claude-settings', async (id) => {
+    const target = project(id);
+    return { decision: claudeSettingsDecision(target), files: await claudeConfigFiles(target.root) };
+  });
+  handle('project:set-claude-settings', async (id, decision) => {
+    const target = project(id);
+    if (!['trusted', 'ignored'].includes(decision)) throw new Error('Choose whether to trust this project.');
+    target.claudeSettings = decision;
+    await persist();
+  });
   handle('files:list', (id, relative, includeIgnored) => core.listFiles(project(id).root, relative, includeIgnored));
   handle('files:read', (id, relative) => core.readFile(project(id).root, relative));
   handle('files:save', (id, relative, content, revision) =>
@@ -576,9 +588,11 @@ function registerIPC() {
         if (!chunkTimer) chunkTimer = setTimeout(flushChunks, 40);
       };
       if (request.provider && request.provider !== 'ollama') {
-        const cwd = request.projectId ? project(request.projectId).root : app.getPath('home');
+        const target = request.projectId ? project(request.projectId) : null;
+        const cwd = target ? target.root : app.getPath('home');
         const response = await agentChat.send(
-          { ...request, cwd },
+          // Trust comes from the saved project, never from the renderer.
+          { ...request, cwd, trustProjectSettings: claudeSettingsDecision(target) === 'trusted' },
           controller,
           onChunk,
           (approval) =>
@@ -1177,6 +1191,47 @@ function registerIPC() {
     }
   });
 }
+// Inspect from a page's right-click menu. webContents.inspectElement only
+// hit-tests the top frame, so inside a frame from another site (an embedded
+// video, a sign-in or payment form) it selects the <iframe>. There DevTools
+// is asked to follow the point down to the element itself.
+async function inspectElement(guest, params) {
+  let otherProcess = false;
+  try {
+    otherProcess = Boolean(params.frame) && inOtherProcess(params.frame);
+  } catch {
+    /* The frame has gone; inspect what is at the point now. */
+  }
+  if (!otherProcess) {
+    guest.inspectElement(params.x, params.y);
+    return;
+  }
+  try {
+    // The menu's point is in window pixels. DevTools takes device pixels
+    // from the page view's top left, which do not depend on either zoom.
+    const view = await win.webContents.executeJavaScript(`(() => {
+      const view = [...document.querySelectorAll('webview')].find((view) => view.getWebContentsId() === ${guest.id});
+      const box = view?.getBoundingClientRect();
+      return box ? { left: box.left, top: box.top, pixels: devicePixelRatio } : null;
+    })()`);
+    if (!view || guest.isDestroyed()) return;
+    const hostZoom = win.webContents.getZoomFactor();
+    const x = (params.x / hostZoom - view.left) * view.pixels;
+    const y = (params.y / hostZoom - view.top) * view.pixels;
+    if (!guest.devToolsWebContents)
+      await new Promise((resolve) => {
+        guest.once('devtools-opened', resolve);
+        guest.openDevTools();
+      });
+    const devTools = guest.devToolsWebContents;
+    if (!devTools) return;
+    devTools.focus();
+    const inspected = await devTools.executeJavaScript(`(${inspectNodeAt})(${x}, ${y})`);
+    if (!inspected) guest.inspectElement(params.x, params.y);
+  } catch {
+    if (!guest.isDestroyed()) guest.inspectElement(params.x, params.y);
+  }
+}
 app
   .whenReady()
   .then(async () => {
@@ -1306,7 +1361,7 @@ app
           forward: () => history.goForward(),
           reload: () => guest.reload(),
           print: () => guest.print(),
-          inspect: () => guest.inspectElement(params.x, params.y),
+          inspect: () => inspectElement(guest, params),
           openTab: (url) => { if (allowedBrowserURL(url)) win.webContents.send('browser:open-tab', url); },
           search: (text) => command('search', text),
           copyText: (text) => clipboard.writeText(text),

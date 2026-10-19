@@ -79,3 +79,21 @@ Plugins (`electron/plugins/`, format in `docs/plugins.md`) add commands, agent p
 The app intentionally grants the selected coding agents and terminal the current user's operating-system privileges. Opening or running code in an untrusted project therefore requires the same care as running it in a normal terminal.
 
 Reference guidance: [Electron security checklist](https://www.electronjs.org/docs/latest/tutorial/security), [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fuses), and [Electron ASAR integrity](https://www.electronjs.org/docs/latest/tutorial/asar-integrity).
+
+## Untrusted content reaching commands — 18 October 2026
+
+A full review of the app after the browser history, terminal drop and plugin work. Fixed:
+
+- **Element picker → agent terminal.** A page controls the picked element's text, HTML, selector and styles. These are now stripped of control characters (`buildPickPrompt`), and the prompt is pasted through `terminalPaste()`, so a page cannot end the bracketed paste early and type its own keystrokes (for example `!command` in Claude Code).
+- **Repository Git filters.** `git status` re-reads files through `filter.<driver>.clean`, so a project unpacked with its `.git/config` could run a program as soon as it was opened. Every Git call now switches off filter drivers that the repository config defines or changes, while drivers in the person's global or system config (Git LFS) keep working. Tests prove that Git would run the planted filter and that status, diff and stage do not.
+- **Dropped file paths.** Paths are quoted for the terminal they are pasted into: single quotes for PowerShell (typographic quotes doubled) and POSIX shells, which expand nothing; Command Prompt refuses `%` and `!`, which it expands even inside quotes; agent prompts keep Windows Terminal's double quotes. Names with control characters are refused everywhere.
+- **Project Claude settings in chat.** The Agent SDK loads every settings source when `settingSources` is omitted and skips Claude Code's folder trust prompt, so a project's `.claude/settings.json` could run hooks or pre-approve tools. Project chats now load only the person's user settings until they trust the project. The first Claude chat in a project that has `.claude`, `CLAUDE.md`, `CLAUDE.local.md` or `.mcp.json` asks once; the main process reads the decision from the saved project and ignores the renderer's say (`project:claude-settings`, `project:set-claude-settings`).
+
+Open, lower risk:
+
+- `terminal:drop-image-download` fetches any http(s) address, including localhost and the local network, with the built-in browser's cookies. Only real image bytes are saved and the person must drag the image.
+- Programmatic `webview.loadURL` does not emit `will-navigate`, so only the renderer checks addresses typed or picked from history.
+- Codex chat without a project runs read-only with approval `never` in the home folder, so it can read any file there.
+- `git:commit` runs the repository's commit hooks and `gpg.program`, as Git does in a terminal. Submodules are not covered by the filter override.
+- A trust decision cannot yet be changed from the UI (edit `claudeSettings` in `workspaces.json`).
+- `npm audit` reports 14 advisories (4 high). The only one in shipped runtime code is `@modelcontextprotocol/sdk` (through the Claude Agent SDK); the rest are build tooling.

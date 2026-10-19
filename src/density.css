@@ -1110,3 +1110,24 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* Effort row and flyout inside the model menu ---------------------------------------------- */
+:root:root:root .chat-select-effort-row .chat-select-effort-value {
+  margin-left: auto;
+  color: var(--menu-muted);
+  font-size: 12px;
+}
+:root:root:root .chat-select-effort-row .chat-select-effort-value + .chat-select-key {
+  margin-left: 0;
+}
+:root:root:root .chat-select-sub.effort {
+  width: 244px;
+}
+:root:root:root .chat-select-sub-note {
+  margin: 0;
+  padding: 5px 8px 7px;
+  color: var(--menu-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+}

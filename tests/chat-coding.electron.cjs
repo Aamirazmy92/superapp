@@ -156,7 +156,24 @@ class Fixture {
     });
     await fs.mkdir(path.join('output', 'playwright'), { recursive: true });
     await page.screenshot({ path: 'output/playwright/chat-coding-startup.png' });
-    await page.getByRole('combobox', { name: 'Chat model' }).getByText('Fixture coding model').waitFor();
+    const modelPicker = page.getByRole('combobox', { name: 'Chat model' });
+    await modelPicker.getByText('Fixture coding model').waitFor();
+    // Model and reasoning effort share one button and one menu.
+    assert.equal(await modelPicker.locator('.chat-select-effort').innerText(), 'Medium');
+    assert.equal(await page.getByRole('combobox', { name: 'Reasoning effort' }).count(), 0);
+    phase = 'model and effort menu';
+    await modelPicker.click();
+    const effortRow = page.getByRole('option', { name: /^Effort/ });
+    await effortRow.waitFor();
+    await effortRow.hover();
+    const effortMenu = page.getByRole('listbox', { name: 'Reasoning effort' });
+    await effortMenu.getByText('Higher effort means more thorough responses').waitFor();
+    const medium = effortMenu.getByRole('option', { name: /^Medium/ });
+    assert.equal(await medium.getAttribute('aria-selected'), 'true');
+    await medium.getByText('Recommended').waitFor();
+    await page.screenshot({ path: 'output/playwright/chat-model-effort.png' });
+    await page.keyboard.press('Escape');
+    await effortMenu.waitFor({ state: 'detached' });
     assert.equal((await page.evaluate(() => window.workspace.bootstrap())).terminals.length, 0, 'fixture starts without interactive terminals');
     phase = 'upload attachments';
     await page.getByRole('button', { name: 'New chat' }).click();

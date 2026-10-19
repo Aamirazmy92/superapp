@@ -170,16 +170,19 @@
   box-shadow: none;
 }
 
-/* Every other button is white too, so the only colour in a dialog is the red below. */
-.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button {
-  border: 1px solid transparent;
-  color: var(--on-primary) !important;
-  background: var(--primary);
+/* Secondary buttons (Cancel, Back, ...) are quiet: a raised fill and a hairline with
+   the normal text colour, so the white primary and the red danger button stay the
+   only loud ones. The doubled :root outranks the theme-wide secondary fill in
+   claude.css, which loads later and would otherwise leave a dark label on it. */
+:root:root .modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button {
+  border: 1px solid var(--hairline-strong);
+  color: var(--text) !important;
+  background: var(--raised);
 }
 
-.modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button:hover:not(:disabled) {
-  border-color: transparent;
-  background: var(--primary-hover);
+:root:root .modal-backdrop :is(.settings-modal, .tool-modal, .confirm-modal) .secondary-button:hover:not(:disabled) {
+  border-color: var(--edge);
+  background: var(--surface-hover);
 }
 
 /* Closing or deleting: a vivid red fill. */

@@ -2,12 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "start",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "start"
-      ],
+      "name": "veyo-dev",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set VEYO_DEV_PORT=5173&& node scripts/dev.mjs"],
       "port": 5173
     }
   ]

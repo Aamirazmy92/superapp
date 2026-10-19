@@ -59,6 +59,7 @@ export default function ChatSelect({
   featured,
   moreLabel = 'More',
   compact: compactProp,
+  effort,
 }: {
   label: string;
   heading?: string;
@@ -81,6 +82,19 @@ export default function ChatSelect({
   moreLabel?: string;
   /** The flat Claude menu layout. Implied by `featured`. */
   compact?: boolean;
+  /**
+   * Adds an "Effort" row under the models whose flyout lists `levels`, and shows the
+   * current level beside the value on the trigger. `note` heads the flyout.
+   */
+  effort?: {
+    label: string;
+    levels: string[];
+    value: string;
+    defaultLevel: string;
+    note?: string;
+    name(level: string): string;
+    onChange(level: string): void;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -88,6 +102,7 @@ export default function ChatSelect({
   const trigger = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const id = useId();
+  const menuId = `${id}-menu`;
   const selected = options.find((option) => option.value === value);
   const compact = compactProp ?? featured !== undefined;
   const main = options.filter((option) => !option.footer);
@@ -95,12 +110,38 @@ export default function ChatSelect({
   const split = featured !== undefined && main.length > featured + 1 ? featured : main.length;
   const top = main.slice(0, split);
   const more = main.slice(split);
-  const footBase = top.length + (more.length ? 1 : 0);
+  const effortIndex = effort ? top.length : -1;
+  const moreIndex = more.length ? top.length + (effort ? 1 : 0) : -1;
+  const footBase = top.length + (effort ? 1 : 0) + (more.length ? 1 : 0);
   const rows = footBase + foot.length;
   const rowOption = (index: number) => (index < top.length ? top[index] : foot[index - footBase]);
   const [subHighlight, setSubHighlight] = useState(-1);
   const [subFocus, setSubFocus] = useState(false);
-  const subOpen = more.length > 0 && highlight === top.length;
+  // The flyout beside the highlighted Effort or More row.
+  const subKind = effort && highlight === effortIndex ? 'effort' : highlight === moreIndex ? 'more' : null;
+  const subOpen = subKind !== null;
+  const subLabel = subKind === 'effort' ? effort!.label : moreLabel;
+  const subItems =
+    subKind === 'effort'
+      ? effort!.levels.map((level) => ({
+          key: level || '__default',
+          label: effort!.name(level),
+          badge: level && level === effort!.defaultLevel ? 'Recommended' : undefined,
+          selected: level === effort!.value,
+          pick: () => {
+            effort!.onChange(level);
+            close();
+          },
+        }))
+      : subKind === 'more'
+        ? more.map((option) => ({
+            key: option.value,
+            label: option.label,
+            badge: option.badge,
+            selected: option.value === value,
+            pick: () => choose(option),
+          }))
+        : [];
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -110,7 +151,15 @@ export default function ChatSelect({
     if (!open) return;
     const inMain = main.findIndex((option) => option.value === value);
     const inFoot = foot.findIndex((option) => option.value === value);
-    setHighlight(inMain >= 0 ? Math.min(inMain, top.length) : inFoot >= 0 ? footBase + inFoot : 0);
+    setHighlight(
+      inMain >= 0
+        ? inMain < top.length
+          ? inMain
+          : moreIndex
+        : inFoot >= 0
+          ? footBase + inFoot
+          : 0,
+    );
     setSubHighlight(-1);
     setSubFocus(false);
     const place = () => {
@@ -145,10 +194,12 @@ export default function ChatSelect({
     document.addEventListener('scroll', onScroll, true);
     const dismiss = (event: PointerEvent) => {
       const target = event.target;
+      // The flyouts sit beside the list, not inside it, but are part of the menu.
       if (
         target instanceof Node &&
         !trigger.current?.contains(target) &&
-        !list.current?.contains(target)
+        !list.current?.contains(target) &&
+        !(target instanceof Element && target.closest(`#${CSS.escape(menuId)}`))
       )
         setOpen(false);
     };
@@ -190,14 +241,14 @@ export default function ChatSelect({
     }
     const last = rows - 1;
     if (subOpen && subFocus) {
-      if (event.key === 'ArrowDown') setSubHighlight((i) => (i >= more.length - 1 ? 0 : i + 1));
-      else if (event.key === 'ArrowUp') setSubHighlight((i) => (i <= 0 ? more.length - 1 : i - 1));
+      if (event.key === 'ArrowDown') setSubHighlight((i) => (i >= subItems.length - 1 ? 0 : i + 1));
+      else if (event.key === 'ArrowUp') setSubHighlight((i) => (i <= 0 ? subItems.length - 1 : i - 1));
       else if (event.key === 'ArrowLeft' || event.key === 'Escape') {
         setSubFocus(false);
         setSubHighlight(-1);
         event.stopPropagation();
       } else if (event.key === 'Enter' || event.key === ' ') {
-        if (more[subHighlight]) choose(more[subHighlight]);
+        subItems[subHighlight]?.pick();
       } else if (event.key === 'Tab') {
         close(false);
         return;
@@ -207,7 +258,7 @@ export default function ChatSelect({
     }
     if (subOpen && (event.key === 'ArrowRight' || event.key === 'Enter' || event.key === ' ')) {
       setSubFocus(true);
-      setSubHighlight(Math.max(0, more.findIndex((option) => option.value === value)));
+      setSubHighlight(Math.max(0, subItems.findIndex((item) => item.selected)));
     } else if (event.key === 'ArrowDown') setHighlight((i) => (i >= last ? 0 : i + 1));
     else if (event.key === 'ArrowUp') setHighlight((i) => (i <= 0 ? last : i - 1));
     else if (event.key === 'Home') setHighlight(0);
@@ -256,6 +307,7 @@ export default function ChatSelect({
       >
         {selected?.icon ?? icon}
         <span className="chat-select-value">{selected?.label || value || placeholder}</span>
+        {effort && <span className="chat-select-effort">{effort.name(effort.value)}</span>}
         <ChevronDown size={14} className="chat-select-chevron" aria-hidden="true" />
       </button>
       {createPortal(
@@ -264,6 +316,7 @@ export default function ChatSelect({
             <PresenceDiv
               {...dropdownMotion(placement?.origin.startsWith('top') ?? true)}
               key="menu"
+              id={menuId}
               className={`chat-select-menu ${compact ? 'compact' : ''}`}
               style={{
                 top: placement?.top ?? 0,
@@ -315,25 +368,42 @@ export default function ChatSelect({
                     )}
                   </div>
                 ))}
+                {(effort || more.length > 0) && <div className="chat-select-separator" role="separator" />}
+                {effort && (
+                  <div
+                    id={`${id}-${effortIndex}`}
+                    data-index={effortIndex}
+                    role="option"
+                    aria-selected={false}
+                    aria-haspopup="menu"
+                    aria-expanded={subKind === 'effort'}
+                    className={`chat-select-option chat-select-more chat-select-effort-row ${subKind === 'effort' ? 'highlight' : ''}`}
+                    onPointerMove={() => setHighlight(effortIndex)}
+                  >
+                    <span className="chat-select-text">
+                      <span>Effort</span>
+                    </span>
+                    <span className="chat-select-effort-value">{effort.name(effort.value)}</span>
+                    <ChevronRight size={14} className="chat-select-key" aria-hidden="true" />
+                  </div>
+                )}
+                {effort && more.length > 0 && <div className="chat-select-separator" role="separator" />}
                 {more.length > 0 && (
-                  <>
-                    <div className="chat-select-separator" role="separator" />
-                    <div
-                      id={`${id}-${top.length}`}
-                      data-index={top.length}
-                      role="option"
-                      aria-selected={false}
-                      aria-haspopup="menu"
-                      aria-expanded={subOpen}
-                      className={`chat-select-option chat-select-more ${subOpen ? 'highlight' : ''}`}
-                      onPointerMove={() => setHighlight(top.length)}
-                    >
-                      <span className="chat-select-text">
-                        <span>{moreLabel}</span>
-                      </span>
-                      <ChevronRight size={14} className="chat-select-key" aria-hidden="true" />
-                    </div>
-                  </>
+                  <div
+                    id={`${id}-${moreIndex}`}
+                    data-index={moreIndex}
+                    role="option"
+                    aria-selected={false}
+                    aria-haspopup="menu"
+                    aria-expanded={subKind === 'more'}
+                    className={`chat-select-option chat-select-more ${subKind === 'more' ? 'highlight' : ''}`}
+                    onPointerMove={() => setHighlight(moreIndex)}
+                  >
+                    <span className="chat-select-text">
+                      <span>{moreLabel}</span>
+                    </span>
+                    <ChevronRight size={14} className="chat-select-key" aria-hidden="true" />
+                  </div>
                 )}
                 {foot.map((option, j) => {
                   const index = footBase + j;
@@ -366,17 +436,20 @@ export default function ChatSelect({
               {subOpen && (
                 <div
                   role="listbox"
-                  aria-label={moreLabel}
-                  className={`chat-select-sub ${placement?.origin.startsWith('top') ? 'down' : 'up'} ${flip ? 'flip' : ''}`}
+                  aria-label={subLabel}
+                  className={`chat-select-sub ${subKind === 'effort' ? 'effort' : ''} ${placement?.origin.startsWith('top') ? 'down' : 'up'} ${flip ? 'flip' : ''}`}
                 >
-                  {more.map((option, index) => (
+                  {subKind === 'effort' && effort?.note && (
+                    <p className="chat-select-sub-note">{effort.note}</p>
+                  )}
+                  {subItems.map((option, index) => (
                     <div
-                      key={option.value}
+                      key={option.key}
                       role="option"
-                      aria-selected={option.value === value}
+                      aria-selected={option.selected}
                       className={`chat-select-option ${index === subHighlight ? 'highlight' : ''}`}
                       onPointerMove={() => setSubHighlight(index)}
-                      onClick={() => choose(option)}
+                      onClick={option.pick}
                     >
                       <span className="chat-select-text">
                         <span className="chat-select-title">
@@ -384,7 +457,7 @@ export default function ChatSelect({
                           {option.badge && <span className="chat-select-badge">{option.badge}</span>}
                         </span>
                       </span>
-                      {option.value === value && (
+                      {option.selected && (
                         <Check size={14} className="chat-select-check" aria-hidden="true" />
                       )}
                     </div>

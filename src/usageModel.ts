@@ -73,6 +73,52 @@ export function usageTone(percent: number) {
   return percent >= 90 ? 'critical' : percent >= 75 ? 'high' : 'normal';
 }
 
+export function updatedCopy(usage: PlanUsage, now: number) {
+  if (!usage.updatedAt) return '';
+  const age = Math.max(0, now - usage.updatedAt);
+  const when = age < 60_000 ? 'just now' : `${duration(age)} ago`;
+  return usage.source === 'session-log'
+    ? `From last Codex reply, ${when}`
+    : `${usage.status === 'ok' ? 'Updated' : 'Last known reading'} ${when}`;
+}
+
+export type ChatUsageRow = {
+  id: string;
+  label: string;
+  percent: number;
+  reset: string;
+  pending: boolean;
+  tone: ReturnType<typeof usageTone>;
+};
+
+/**
+ * What the chat usage ring and popover show for one provider. The ring only
+ * carries a figure when the reading is live and confirmed: a stale reading, or
+ * a window whose reset has passed, is listed in the popover but never drawn as
+ * the current level.
+ */
+export function chatUsageSummary(usage: PlanUsage | undefined, now: number) {
+  const rows: ChatUsageRow[] = usage
+    ? usageWindows(usage).map(({ id, label, window }) => ({
+        id,
+        label: id === 'fiveHour' ? 'Session limit' : label,
+        percent: Math.min(100, Math.max(0, Math.round(window.percent))),
+        reset: resetCopy(window, now),
+        pending: resetPending(window, now),
+        tone: usageTone(window.percent),
+      }))
+    : [];
+  const current = usage?.status === 'ok';
+  const binding = usage && current ? bindingLimit(usage, now) : null;
+  const ringPercent = binding ? Math.min(100, Math.max(0, Math.round(binding.window.percent))) : null;
+  return {
+    rows,
+    current,
+    ringPercent,
+    tone: ringPercent === null ? ('normal' as const) : usageTone(ringPercent),
+  };
+}
+
 export type UsageAlertState = Record<string, { resetsAt: number | null; level: number }>;
 export type UsageAlert = { id: string; title: string; detail: string; success: boolean };
 

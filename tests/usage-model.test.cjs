@@ -209,3 +209,51 @@ test('Nonstandard windows use the provider duration for pace calculations', () =
   assert.equal(window.lengthMs, 24 * HOUR);
   assert.equal(usagePace(window.window, window.lengthMs, NOW).elapsed, 0.5);
 });
+
+test('Chat usage ring shows the fullest live limit and labels the session window', () => {
+  const summary = require('../src/usageModel.ts').chatUsageSummary(
+    usage({ percent: 6, resetsAt: NOW + 3 * HOUR }, { percent: 91.4, resetsAt: NOW + 90 * HOUR }),
+    NOW,
+  );
+  assert.equal(summary.ringPercent, 91);
+  assert.equal(summary.tone, 'critical');
+  assert.deepEqual(
+    summary.rows.map((row) => [row.label, row.percent, row.reset]),
+    [
+      ['Session limit', 6, 'Resets in 3h 0m'],
+      ['Weekly', 91, summary.rows[1].reset],
+    ],
+  );
+});
+
+test('Chat usage never draws a stale or unconfirmed reading as the current level', () => {
+  const { chatUsageSummary } = require('../src/usageModel.ts');
+  const stale = chatUsageSummary(
+    usage({ percent: 80, resetsAt: NOW + HOUR }, null, { status: 'stale' }),
+    NOW,
+  );
+  assert.equal(stale.ringPercent, null);
+  assert.equal(stale.current, false);
+  assert.equal(stale.rows[0].percent, 80, 'the last known figure is still listed');
+
+  const ended = chatUsageSummary(usage({ percent: 95, resetsAt: NOW - HOUR }, null), NOW);
+  assert.equal(ended.ringPercent, null, 'a window that reset has no confirmed level');
+  assert.equal(ended.rows[0].pending, true);
+  assert.equal(ended.rows[0].reset, 'Reset passed · awaiting update');
+});
+
+test('Chat usage handles a missing reading and per-model limits', () => {
+  const { chatUsageSummary } = require('../src/usageModel.ts');
+  const none = chatUsageSummary(undefined, NOW);
+  assert.deepEqual([none.rows, none.ringPercent, none.current], [[], null, false]);
+
+  const extra = chatUsageSummary(
+    usage({ percent: 10, resetsAt: NOW + HOUR }, null, {
+      extras: [{ id: 'opus', label: 'Opus weekly', window: { percent: 120, resetsAt: NOW + 5 * HOUR } }],
+    }),
+    NOW,
+  );
+  assert.equal(extra.rows[1].label, 'Opus weekly');
+  assert.equal(extra.rows[1].percent, 100, 'percent is clamped to 100');
+  assert.equal(extra.ringPercent, 100);
+});

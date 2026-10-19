@@ -41,7 +41,8 @@ import Modal from './Modal';
 import MarkdownMessage from './MarkdownMessage';
 import AgentLogo from './AgentLogo';
 import ChatSelect from './ChatSelect';
-import ChatEffort from './ChatEffort';
+import ChatUsage from './ChatUsage';
+import type { UsageReadings } from './useUsage';
 import ChatAttachments, { readAttachment } from './ChatAttachments';
 import ChatActivity from './ChatActivity';
 import { ChangesDialog, ChangesSummary, collectChanges, type ChangedFile } from './ChatChanges';
@@ -193,6 +194,10 @@ export default function ChatWorkspace({
   activeProject,
   handoff,
   chatDefaults = { provider: 'last', permission: 'last' },
+  usage,
+  usageLoading,
+  usageError,
+  onRefreshUsage,
   onOpenFile,
 }: {
   projects: Project[];
@@ -201,6 +206,11 @@ export default function ChatWorkspace({
   handoff?: { id: string; projectId: string; draft: string; attachActiveFile: boolean } | null;
   /** From Settings: 'last' keeps what the previous chat used. */
   chatDefaults?: { provider: Provider | 'last'; permission: Permission | 'last' };
+  /** Shared plan usage; the ring in the composer is hidden without a refresh handler. */
+  usage?: UsageReadings | null;
+  usageLoading?: boolean;
+  usageError?: string | null;
+  onRefreshUsage?(): void;
   onOpenFile?(projectId: string, path: string): void;
 }) {
   const api = window.workspace!;
@@ -229,6 +239,17 @@ export default function ChatWorkspace({
   const [connectionError, setConnectionError] = useState('');
   const [storageError, setStorageError] = useState('');
   const [pending, setPending] = useState<{ threadId: string; requestId: string } | null>(null);
+  // A finished Claude or Codex reply has used some of the plan; count it once the provider has.
+  const wasPending = useRef(false);
+  const refreshUsageRef = useRef(onRefreshUsage);
+  refreshUsageRef.current = onRefreshUsage;
+  useEffect(() => {
+    const finished = wasPending.current && !pending;
+    wasPending.current = !!pending;
+    if (!finished) return;
+    const timer = setTimeout(() => refreshUsageRef.current?.(), 4_000);
+    return () => clearTimeout(timer);
+  }, [pending]);
   const streamRef = useRef<{ requestId: string; threadId: string; text: string; activities: Activity[] } | null>(null);
   const streamFrame = useRef<number | null>(null);
   const [streamText, setStreamText] = useState('');
@@ -1761,6 +1782,19 @@ export default function ChatWorkspace({
                   value={chosenModel}
                   disabled={!!pending || checking}
                   onChange={selectModel}
+                  effort={
+                    chosenProvider !== 'ollama' && supportedEfforts.length > 0
+                      ? {
+                          label: 'Reasoning effort',
+                          levels: reasoningLevels,
+                          value: shownEffort,
+                          defaultLevel: defaultEffort,
+                          note: 'Higher effort means more thorough responses, but takes longer and uses your limits faster.',
+                          name: effortLabel,
+                          onChange: (level) => selectEffort(level === defaultEffort ? '' : level),
+                        }
+                      : undefined
+                  }
                   emptyText={
                     connectionError
                       ? 'Models could not be loaded. Check Chat settings.'
@@ -1777,16 +1811,14 @@ export default function ChatWorkspace({
                       : []),
                   ]}
                 />
-                {chosenProvider !== 'ollama' && supportedEfforts.length > 0 && (
-                  <ChatEffort
-                    label="Reasoning effort"
-                    title={`Reasoning effort for ${selectedModel?.name || chosenModel}`}
-                    levels={reasoningLevels}
-                    value={shownEffort}
-                    defaultLevel={defaultEffort}
-                    name={effortLabel}
-                    disabled={!!pending || checking}
-                    onChange={(level) => selectEffort(level === defaultEffort ? '' : level)}
+                {chosenProvider !== 'ollama' && onRefreshUsage && (
+                  <ChatUsage
+                    provider={chosenProvider}
+                    usage={usage ?? null}
+                    loaded={usage != null}
+                    loading={!!usageLoading}
+                    error={usageError}
+                    onRefresh={onRefreshUsage}
                   />
                 )}
               </div>

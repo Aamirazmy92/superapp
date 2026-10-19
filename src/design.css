@@ -2624,3 +2624,73 @@ a {
   height: 56px;
   border-radius: 14px;
 }
+
+/* Logo and the Code / Chat switch sit together at the left of the title bar;
+   the rest of the bar is free for dragging the window. */
+:root:root .titlebar .brand {
+  flex: none;
+  width: auto;
+  padding-right: 12px;
+}
+:root:root .titlebar .mode-switch {
+  position: relative;
+  left: auto;
+  flex: none;
+  transform: none;
+}
+
+/* Code / Chat as two round icon buttons: a knob glides under the active one. */
+:root:root .titlebar .mode-switch {
+  align-self: center;
+  gap: 2px;
+  height: auto;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+:root:root .titlebar .mode-switch button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--faint);
+  background: transparent;
+  box-shadow: none;
+  transition: color var(--dur-fast) var(--ease);
+}
+:root:root .titlebar .mode-switch button:hover:not(.active) {
+  color: var(--muted);
+  background: transparent;
+}
+:root:root .titlebar .mode-switch button.active,
+:root:root .titlebar .mode-switch button.active:hover {
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+}
+:root:root .titlebar .mode-switch button:focus-visible {
+  outline: 2px solid var(--focus-ring, #a8b3ff);
+  outline-offset: 1px;
+}
+:root:root .titlebar .mode-switch .mode-switch-pill {
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: 30px;
+  height: auto;
+  margin: 0;
+  border-radius: 50%;
+  background: #333333;
+  box-shadow: none;
+}
+:root:root .titlebar .mode-switch[data-mode='chat'] .mode-switch-pill {
+  transform: translateX(calc(100% + 2px));
+}

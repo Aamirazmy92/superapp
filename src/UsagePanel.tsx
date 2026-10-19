@@ -8,6 +8,7 @@ import {
   providerLabels,
   resetCopy,
   resetPending,
+  updatedCopy,
   usagePace,
   usageTone,
   usageWindows,
@@ -17,15 +18,6 @@ const providers: UsageProvider[] = ['claude', 'codex'];
 
 function refreshDelay(ms: number) {
   return ms < 60_000 ? `${Math.max(1, Math.ceil(ms / 1000))}s` : duration(ms);
-}
-
-function updatedCopy(usage: PlanUsage, now: number) {
-  if (!usage.updatedAt) return '';
-  const age = Math.max(0, now - usage.updatedAt);
-  const when = age < 60_000 ? 'just now' : `${duration(age)} ago`;
-  return usage.source === 'session-log'
-    ? `From last Codex reply, ${when}`
-    : `${usage.status === 'ok' ? 'Updated' : 'Last known reading'} ${when}`;
 }
 
 const statusLabels: Record<PlanUsage['status'], string> = {

@@ -14,6 +14,9 @@ let chatModule: typeof import('./ChatWorkspace') | null = null;
 const loadChat = () => import('./ChatWorkspace').then((module) => (chatModule = module));
 let editorModule: typeof import('./EditorSurfaces') | null = null;
 const loadEditor = () => import('./EditorSurfaces').then((module) => (editorModule = module));
+// Plugins carries the Markdown renderer, so it stays out of the startup bundle.
+let pluginsModule: typeof import('./Plugins') | null = null;
+const loadPlugins = () => import('./Plugins').then((module) => (pluginsModule = module));
 import veyoIcon from './assets/brand/veyo-icon.png';
 import {
   ArrowDownToLine,
@@ -24,6 +27,7 @@ import {
   Pencil,
   Pin,
   Code2,
+  MessageSquare,
   Files,
   PanelLeft,
   FolderOpen,
@@ -92,7 +96,6 @@ import ProjectTools from './ProjectTools';
 import QuickOpen from './QuickOpen';
 import WorkspaceBrowser from './WorkspaceBrowser';
 import RunCommands from './RunCommands';
-import Plugins from './Plugins';
 import PluginPrompt from './PluginPrompt';
 import { usePluginContributions } from './usePlugins';
 import { pluginTheme, pluginThemeTokens, setPluginThemes } from './themes';
@@ -250,6 +253,7 @@ export default function App() {
     const id = requestIdleCallback(() => {
       void loadChat().catch(() => {});
       void loadEditor().catch(() => {});
+      void loadPlugins().catch(() => {});
     });
     return () => cancelIdleCallback(id);
   }, []);
@@ -298,6 +302,17 @@ export default function App() {
   const [runCommands, setRunCommands] = useState(false);
   const [settings, setSettings] = useState(false);
   const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [, setPluginsLoaded] = useState(false);
+  useEffect(() => {
+    if (!pluginsOpen || pluginsModule) return;
+    loadPlugins().then(
+      () => setPluginsLoaded(true),
+      (error) => {
+        setPluginsOpen(false);
+        setToast(`Could not open plugins: ${String(error)}`);
+      },
+    );
+  }, [pluginsOpen]);
   const [pluginPrompt, setPluginPrompt] = useState<PluginContributions['prompts'][number] | null>(null);
   const { preferences, update: updatePreferences, saveError: preferencesError } = usePreferences();
   const preferencesRef = useRef(preferences);
@@ -2008,14 +2023,15 @@ export default function App() {
     <div className={`app mode-${mode}`}>
       <header className={`titlebar ${notificationsOpen ? 'notifications-open' : ''}`}>
         <div className="brand">
-          <img className="brand-logo" src={veyoIcon} alt="" />
-          Veyo
+          <img className="brand-logo" src={veyoIcon} alt="Veyo" />
         </div>
         <nav className="mode-switch" aria-label="App mode" data-mode={mode}>
           <span className="mode-switch-pill" aria-hidden="true" />
           {(['code', 'chat'] as const).map((item) => (
             <button
               key={item}
+              aria-label={item[0].toUpperCase() + item.slice(1)}
+              title={item[0].toUpperCase() + item.slice(1)}
               aria-pressed={mode === item}
               className={mode === item ? 'active' : ''}
               onPointerEnter={
@@ -2023,7 +2039,7 @@ export default function App() {
               }
               onClick={() => (item === 'chat' ? openChat() : setMode(item))}
             >
-              {item[0].toUpperCase() + item.slice(1)}
+              {item === 'code' ? <Code2 size={16} aria-hidden="true" /> : <MessageSquare size={16} aria-hidden="true" />}
             </button>
           ))}
         </nav>
@@ -2104,6 +2120,10 @@ export default function App() {
             activeProject={activeProject}
             handoff={chatHandoff}
             chatDefaults={{ provider: preferences.chatProvider, permission: preferences.chatPermission }}
+            usage={planUsage.usage}
+            usageLoading={planUsage.loading}
+            usageError={planUsage.error}
+            onRefreshUsage={planUsage.refresh}
             onOpenFile={async (projectId, targetPath) => {
               const targetProject = projects.find((item) => item.id === projectId);
               if (!targetProject) return;
@@ -2962,8 +2982,8 @@ export default function App() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {pluginsOpen && (
-          <Plugins
+        {pluginsOpen && pluginsModule && (
+          <pluginsModule.default
             projectId={project?.id ?? null}
             projectName={project?.name}
             workspaceName={workspaceName}

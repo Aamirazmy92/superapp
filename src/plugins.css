@@ -15,19 +15,6 @@
   letter-spacing: -0.02em;
 }
 
-/* Quiet secondary buttons. The shared dialog rule pairs a dark label with the
-   dark-theme fill from claude.css, which leaves the label unreadable. */
-.modal-backdrop .tool-modal:is(.plugins-modal, .plugins-prompt-modal) .secondary-button {
-  border: 1px solid var(--hairline-strong);
-  color: var(--text) !important;
-  background: var(--raised);
-}
-
-.modal-backdrop .tool-modal:is(.plugins-modal, .plugins-prompt-modal) .secondary-button:hover:not(:disabled) {
-  border-color: var(--edge);
-  background: var(--surface-hover);
-}
-
 .plugins-modal .plugins-view {
   display: flex;
   flex: 1 1 auto;

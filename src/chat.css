@@ -1209,14 +1209,6 @@
   max-width: 220px;
 }
 
-/* Fixed width (fits "Extra high") so changing the level never shifts the
-   right-aligned provider/model buttons beside it. */
-.chat-layout .chat-select.chat-effort-trigger {
-  flex: none;
-  box-sizing: border-box;
-  width: 88px;
-  justify-content: flex-start;
-}
 
 .chat-layout .chat-model-refresh {
   display: inline-grid;
@@ -1630,10 +1622,54 @@
   .chat-changes-files { max-height: 30vh; border-right: 0; border-bottom: 1px solid var(--hairline); }
 }
 
-/* Effort slider ------------------------------------------------------------- */
-.chat-effort-pop {
+/* Plan usage ring ----------------------------------------------------------- */
+.chat-layout .chat-usage-trigger {
+  --tone: var(--muted);
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--tone);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.chat-usage-trigger.tone-high { --tone: var(--warning); }
+.chat-usage-trigger.tone-critical { --tone: var(--danger); }
+.chat-usage-trigger.inactive { --tone: var(--faint); }
+
+.chat-layout .chat-usage-trigger:hover,
+.chat-layout .chat-usage-trigger.open {
+  background: var(--hover);
+}
+
+.chat-layout .chat-usage-trigger:focus-visible {
+  outline: 2px solid var(--focus-ring, #a8b3ff);
+  outline-offset: 2px;
+}
+
+.chat-usage-ring-track {
+  fill: none;
+  stroke: var(--hairline-strong);
+  stroke-width: 2;
+}
+
+.chat-usage-ring-fill {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke-dasharray 240ms var(--ease);
+}
+
+.chat-usage-pop {
   z-index: 1000;
-  width: 248px;
+  width: 272px;
   border: 1px solid var(--hairline-strong);
   border-radius: 12px;
   background: #1e1e1e;
@@ -1642,122 +1678,127 @@
     0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
-.chat-effort-body {
-  position: relative;
-  padding: 12px 14px 10px;
+.chat-usage-body {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
-.chat-effort-head {
+.chat-usage-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  font-size: var(--type-body);
+  color: var(--text);
+}
+
+.chat-usage-plan {
+  color: var(--faint);
+  font-size: var(--type-small);
+  text-transform: capitalize;
+}
+
+.chat-usage-refresh {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--faint);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chat-usage-refresh:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.chat-usage-refresh:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.chat-usage-refresh.loading svg {
+  animation: chat-usage-spin 0.9s linear infinite;
+}
+
+@keyframes chat-usage-spin {
+  to { transform: rotate(360deg); }
+}
+
+.chat-usage-row {
+  --tone: var(--running);
+  display: grid;
+  gap: 5px;
+}
+
+.chat-usage-row.tone-high { --tone: var(--warning); }
+.chat-usage-row.tone-critical { --tone: var(--danger); }
+
+.chat-usage-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text);
   font-size: var(--type-body);
 }
 
-.chat-effort-head span {
-  color: var(--faint);
+.chat-usage-percent {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.chat-effort-head strong {
-  color: var(--text);
-  font-weight: 550;
-}
-
-.chat-effort-slider {
-  position: relative;
-  height: 28px;
-  --thumb: 16px;
-}
-
-.chat-effort-track {
-  position: absolute;
-  inset: 0 calc(var(--thumb) / 2);
-  top: 50%;
+.chat-usage-bar {
+  display: block;
   height: 6px;
-  margin-top: -3px;
+  overflow: hidden;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hairline-strong);
 }
 
-.chat-effort-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: var(--fill);
-  border-radius: 3px;
-  background: linear-gradient(90deg, rgba(123, 167, 255, 0.35), #7ba7ff);
-  transition: width var(--dur-fast) var(--ease);
-}
-
-.chat-effort-track i {
-  position: absolute;
-  top: 50%;
-  width: 3px;
-  height: 3px;
-  margin: -1.5px 0 0 -1.5px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.chat-effort-track i.passed {
-  background: rgba(10, 20, 40, 0.55);
-}
-
-.chat-effort-slider input[type='range'] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
+.chat-usage-bar > span {
+  display: block;
   height: 100%;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
+  border-radius: inherit;
+  background: var(--tone);
+  transition: width 240ms var(--ease);
 }
 
-.chat-effort-slider input[type='range']::-webkit-slider-runnable-track {
-  height: 28px;
-  background: transparent;
-}
-
-.chat-effort-slider input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: var(--thumb);
-  height: var(--thumb);
-  margin-top: calc((28px - var(--thumb)) / 2);
-  border: 0;
-  border-radius: 50%;
-  background: #f2f2f2;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-.chat-effort-slider input[type='range']:active::-webkit-slider-thumb {
-  transform: scale(1.12);
-}
-
-.chat-effort-slider input[type='range']:focus-visible {
-  outline: 0;
-}
-
-.chat-effort-slider input[type='range']:focus-visible::-webkit-slider-thumb {
-  box-shadow:
-    0 0 0 3px rgba(123, 167, 255, 0.45),
-    0 1px 4px rgba(0, 0, 0, 0.5);
-}
-
-.chat-effort-ends {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
+.chat-usage-reset,
+.chat-usage-updated {
   color: var(--faint);
-  font-size: var(--type-micro);
+  font-size: var(--type-small);
 }
 
-.chat-effort-note {
-  margin: 8px 0 0;
+.chat-usage-note {
+  margin: 0;
   padding-top: 8px;
   border-top: 1px solid var(--hairline);
   color: var(--muted);
   font-size: var(--type-small);
+}
+
+.chat-usage-note.warn {
+  color: var(--warning);
+}
+
+:root.reduce-motion :is(.chat-usage-ring-fill, .chat-usage-bar > span, .chat-usage-refresh.loading svg) {
+  transition: none;
+  animation: none;
+}
+
+/* The effort level shares the model button: "Sonnet 5.5 Medium". */
+.chat-layout .chat-select-effort {
+  flex: none;
+  margin-left: 6px;
+  color: var(--faint);
+}
+
+.chat-layout .chat-select:hover:not(:disabled) .chat-select-effort,
+.chat-layout .chat-select.open .chat-select-effort {
+  color: var(--muted);
 }

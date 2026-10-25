@@ -6,10 +6,10 @@ import { execFileSync } from 'node:child_process';
 const repo = 'Aamirazmy92/veyo-releases';
 const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
 const tag = `v${version}`;
-const run = (cmd, args, options = {}) => execFileSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', ...options });
+const run = (cmd, args) => execFileSync(cmd, args, { stdio: 'inherit', shell: cmd === 'npm' && process.platform === 'win32' });
 const exists = () => {
   try {
-    execFileSync('gh', ['release', 'view', tag, '--repo', repo], { stdio: 'ignore', shell: process.platform === 'win32' });
+    execFileSync('gh', ['release', 'view', tag, '--repo', repo], { stdio: 'ignore' });
     return true;
   } catch {
     return false;

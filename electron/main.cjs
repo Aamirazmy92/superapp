@@ -162,12 +162,15 @@ async function envStatus(name) {
 }
 const { checkArgs, isBatch } = require('./plugins/manifest.cjs');
 const { searchPath, executable: findExecutable } = require('./agents.cjs');
-// The probe takes seconds (it compiles C# in PowerShell). Launches never wait
+// The probe takes seconds (it compiles C# in PowerShell) and loads node-pty, so it
+// starts once the window is up rather than delaying launch. Launches never wait
 // for it: until it answers, terminals use the safe no-detach setup.
 let detachable = null;
-canDetachProcesses().then((value) => {
-  detachable = value;
-});
+function probeDetach() {
+  canDetachProcesses().then((value) => {
+    detachable = value;
+  });
+}
 
 const MAX_TERMINALS_PER_WORKSPACE = 16;
 let win;
@@ -1405,6 +1408,7 @@ app
     }
     else await win.loadFile(path.join(__dirname, '../dist/index.html'));
     win.show();
+    setTimeout(probeDetach, 300);
     // Quiet check shortly after launch, then every few hours while the app stays open.
     setTimeout(() => void appUpdater.check(), 15000);
     setInterval(() => void appUpdater.check(), 4 * 60 * 60 * 1000).unref();

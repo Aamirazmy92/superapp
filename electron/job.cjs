@@ -6,6 +6,10 @@
  * The probe runs through node-pty so it lands in the same job as a terminal;
  * children spawned by Node itself are placed in libuv's own job instead.
  */
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
 const probe = String.raw`
 $ErrorActionPreference = 'Stop'
 Add-Type -Namespace VeyoJob -Name Native -MemberDefinition @'
@@ -61,22 +65,24 @@ function canDetachProcesses() {
     };
     // If the probe cannot run, assume detaching is blocked; --no-daemon still works.
     const timer = setTimeout(() => finish(false), 20000);
+    // Run from a file: PowerShell with -EncodedCommand stalls process creation for
+    // seconds (Windows scans the command line), and the spawn blocks the main thread.
+    let folder;
     try {
+      folder = fs.mkdtempSync(path.join(os.tmpdir(), 'veyo-probe-'));
+      const script = path.join(folder, 'probe.ps1');
+      fs.writeFileSync(script, probe);
       proc = require('node-pty').spawn(
         'powershell.exe',
-        [
-          '-NoLogo',
-          '-NoProfile',
-          '-NonInteractive',
-          '-EncodedCommand',
-          Buffer.from(probe, 'utf16le').toString('base64'),
-        ],
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script],
         { name: 'xterm-256color', cols: 200, rows: 24, cwd: process.cwd(), env: process.env },
       );
     } catch {
+      if (folder) fs.rmSync(folder, { recursive: true, force: true });
       finish(false);
       return;
     }
+    proc.onExit(() => fs.rm(folder, { recursive: true, force: true }, () => {}));
     proc.onData((data) => {
       output += data;
       const match = output.match(/VEYO_DETACH=(yes|no)/);

@@ -76,7 +76,7 @@
   color: #ffffff;
   background: #2566d0;
   font-size: var(--type-micro);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   line-height: 1.4;
   text-align: center;
 }
@@ -116,7 +116,7 @@
   padding: 6px 10px 4px;
   color: var(--faint);
   font-size: var(--type-micro);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -400,13 +400,13 @@
   padding: 8px 10px 3px 38px;
   color: var(--faint);
   font-size: var(--type-micro);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 /* Unread: the name brightens and a blue dot sits beside it. */
 .app-body > .projects-sidebar .workspace-row.unread {
   color: var(--text);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 .app-body > .projects-sidebar .workspace-unread {
@@ -582,7 +582,7 @@
   padding: 4px 6px 7px;
   color: var(--muted);
   font-size: var(--type-micro);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }

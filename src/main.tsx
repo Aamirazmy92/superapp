@@ -22,6 +22,7 @@ import './tokens.css';
 import './density.css';
 import './switch.css';
 import './plugins.css';
+import './shell.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <App />

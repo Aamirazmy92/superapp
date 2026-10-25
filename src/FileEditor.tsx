@@ -18,11 +18,12 @@ import { fontStack, type Preferences } from './preferences';
 import { editorThemeName } from './editorSetup';
 import type { OpenFile } from './types';
 
-export function releaseClosedEditorModels(paths: string[]) {
+/** Disposes the editor models of one scheme that are no longer open (the chat file panel has its own). */
+export function releaseClosedEditorModels(paths: string[], scheme = 'veyo') {
   const open = new Set(paths);
   for (const model of monaco.editor.getModels())
     if (
-      model.uri.scheme === 'veyo' &&
+      model.uri.scheme === scheme &&
       model.uri.query !== 'disk' &&
       !open.has(model.uri.toString())
     )
@@ -41,6 +42,7 @@ export default function FileEditor({
   onAsk,
   onUseDisk,
   onWrap,
+  modelScheme,
 }: {
   projectId: string;
   file: OpenFile;
@@ -50,9 +52,12 @@ export default function FileEditor({
   reveal?: { path: string; line: number; column: number } | null;
   onChange(content: string): void;
   onSave(keepMine?: boolean): void;
-  onAsk(): void;
+  /** Without it the "Ask chat" button is hidden (the chat file panel is already in a chat). */
+  onAsk?(): void;
   onUseDisk(): void;
   onWrap(): void;
+  /** A separate model namespace keeps this editor's files from sharing models with the Code view. */
+  modelScheme?: string;
 }) {
   const [status, setStatus] = useState({
     line: 1,
@@ -73,7 +78,7 @@ export default function FileEditor({
   savedRef.current = file.saved;
   const contentRef = useRef(file.content);
   contentRef.current = file.content;
-  const path = editorPath(projectId, file.path);
+  const path = editorPath(projectId, file.path, modelScheme);
   useEffect(() => {
     if (!file.conflict) return;
     return () => {
@@ -241,14 +246,16 @@ export default function FileEditor({
             <WrapText size={14} />
           </button>
           <span className="editor-action-divider" />
-          <button
-            className="text-button"
-            onClick={onAsk}
-            title="Discuss this file or the selected code in chat"
-          >
-            <MessageSquare size={12} />
-            <span>Ask chat</span>
-          </button>
+          {onAsk && (
+            <button
+              className="text-button"
+              onClick={onAsk}
+              title="Discuss this file or the selected code in chat"
+            >
+              <MessageSquare size={12} />
+              <span>Ask chat</span>
+            </button>
+          )}
           <button
             className={`text-button editor-save ${dirty ? 'accent' : ''}`}
             disabled={busy || !dirty}

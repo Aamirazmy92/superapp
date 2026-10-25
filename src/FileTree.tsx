@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Folder, FileCode2, FileJson, FileText, MoreHorizontal } from './icons';
+import { ChevronRight, Folder, MoreHorizontal } from './icons';
+import { fileIconUrl } from './fileIcons';
 import type { Entry } from './types';
 import { parentFolders } from './editorModel';
+/** The file-type icon (Material Icon Theme), chosen by file name; a path is reduced to its name. */
 export function FileIcon({ name }: { name: string }) {
-  if (/\.(json|jsonc)$/i.test(name)) return <FileJson size={14} className="file-json" />;
-  if (
-    /\.(tsx?|jsx?|mts|cts|mjs|cjs|s?css|html?|py|rs|go|c|cpp|h|java|cs|vue|svelte|sh|ps1|sql|ya?ml)$/i.test(
-      name,
-    )
-  )
-    return <FileCode2 size={14} className="file-code" />;
-  return <FileText size={14} className="file-other" />;
+  return (
+    <img
+      className="file-mark"
+      src={fileIconUrl(name.split('/').pop() || name)}
+      width={16}
+      height={16}
+      alt=""
+      draggable={false}
+    />
+  );
 }
 export default function FileTree({
   projectId,
@@ -21,6 +25,7 @@ export default function FileTree({
   dirtyPaths = [],
   showIgnored = false,
   collapse = 0,
+  folderIcons = true,
 }: {
   projectId: string;
   active?: string;
@@ -31,6 +36,8 @@ export default function FileTree({
   dirtyPaths?: string[];
   showIgnored?: boolean;
   collapse?: number;
+  /** The chat Files pane shows folders with a chevron only. */
+  folderIcons?: boolean;
 }) {
   const [entries, setEntries] = useState<Record<string, Entry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(
@@ -163,7 +170,7 @@ export default function FileTree({
             {entry.directory ? (
               <>
                 <ChevronRight size={12} className="tree-chevron" />
-                <Folder size={14} />
+                {folderIcons && <Folder size={14} />}
               </>
             ) : (
               <>

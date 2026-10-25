@@ -282,7 +282,7 @@
   min-width: 18px;
   color: var(--text);
   font-size: var(--type-lead);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -468,7 +468,7 @@
   color: #000 !important;
   background: #8ec5ff;
   font-size: var(--type-body);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 :root:root .home-save-open:hover:not(:disabled) {
@@ -483,7 +483,7 @@
 }
 
 .home-composer-text strong {
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 .home-save {
@@ -582,7 +582,7 @@
 
 .home-meter strong {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 /* Error -------------------------------------------------------------------- */

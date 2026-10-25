@@ -1,6 +1,6 @@
 /** Stable model identities keep undo history separate across projects and files. */
-export const editorPath = (projectId: string, path: string) =>
-  `veyo://${encodeURIComponent(projectId)}/${path.split('/').map(encodeURIComponent).join('/')}`;
+export const editorPath = (projectId: string, path: string, scheme = 'veyo') =>
+  `${scheme}://${encodeURIComponent(projectId)}/${path.split('/').map(encodeURIComponent).join('/')}`;
 
 export function parentFolders(path: string): string[] {
   const parts = path.split('/');

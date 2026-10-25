@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MessageSquare,
-  SquarePen,
   Search,
   ArrowUp,
   ArrowDown,
+  Folder,
   FolderOpen,
   Settings2,
   Square,
@@ -13,9 +14,6 @@ import {
   Copy,
   Check,
   Mic,
-  Volume2,
-  VolumeX,
-  RefreshCw,
   RotateCcw,
   Sparkles,
   Paperclip,
@@ -23,7 +21,6 @@ import {
   X,
   FileDiff,
   Plus,
-  CornerDownLeft,
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
@@ -36,15 +33,19 @@ import {
   FolderInput,
   Archive,
   ArchiveRestore,
+  PanelRight,
 } from './icons';
 import Modal from './Modal';
 import MarkdownMessage from './MarkdownMessage';
 import AgentLogo from './AgentLogo';
 import ChatSelect from './ChatSelect';
 import ChatUsage from './ChatUsage';
+import ChatSide from './ChatSide';
+import type { Preferences } from './preferences';
 import type { UsageReadings } from './useUsage';
 import ChatAttachments, { readAttachment } from './ChatAttachments';
 import ChatActivity from './ChatActivity';
+import ChatRail from './ChatRail';
 import { ChangesDialog, ChangesSummary, collectChanges, type ChangedFile } from './ChatChanges';
 import { AnimatePresence, motion } from 'motion/react';
 import { motionReduced } from './motion';
@@ -163,7 +164,6 @@ function readLegacyChat(): SavedChatState {
       effort: read('chat-effort') || undefined,
       provider: read('chat-provider') || undefined,
       permission: read('chat-permission') || undefined,
-      speakReplies: read('chat-speak-replies') === 'true',
       modelEfforts: efforts && typeof efforts === 'object' && !Array.isArray(efforts) ? efforts : {},
     },
   };
@@ -198,6 +198,15 @@ export default function ChatWorkspace({
   usageLoading,
   usageError,
   onRefreshUsage,
+  preferences,
+  filesOpen = false,
+  onFilesOpenChange,
+  terminalOpen = false,
+  onTerminalOpenChange,
+  browserOpen = false,
+  onBrowserOpenChange,
+  titlebarSlot,
+  sidebarOpen = true,
   onOpenFile,
 }: {
   projects: Project[];
@@ -211,6 +220,20 @@ export default function ChatWorkspace({
   usageLoading?: boolean;
   usageError?: string | null;
   onRefreshUsage?(): void;
+  /** Editor settings for the project file panel; the panel is unavailable without them. */
+  preferences?: Preferences;
+  /** The Files pane is opened from the title bar, so its state lives in App. */
+  filesOpen?: boolean;
+  onFilesOpenChange?(open: boolean): void;
+  /** The chat Terminal pane, also opened from the title bar. */
+  terminalOpen?: boolean;
+  onTerminalOpenChange?(open: boolean): void;
+  browserOpen?: boolean;
+  onBrowserOpenChange?(open: boolean): void;
+  /** The title bar row the chat title and its actions are drawn into, like Claude; without it the chat keeps its own header. */
+  titlebarSlot?: HTMLElement | null;
+  /** The conversation list hides from the title bar's sidebar button, so its state lives in App. */
+  sidebarOpen?: boolean;
   onOpenFile?(projectId: string, path: string): void;
 }) {
   const api = window.workspace!;
@@ -232,7 +255,6 @@ export default function ChatWorkspace({
   const approval = approvals[0];
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [speakReplies, setSpeakReplies] = useState(false);
   const [settings, setSettings] = useState(false);
   const [checking, setChecking] = useState(false);
   const [connection, setConnection] = useState('');
@@ -301,6 +323,7 @@ export default function ChatWorkspace({
       ? 'ask'
       : storedPermission;
   const chosenProjectId = thread?.projectId ?? activeProject ?? '';
+  const filesProject = projects.find((item) => item.id === chosenProjectId);
   const chosenProject = projects.find((p) => p.id === chosenProjectId);
   const pendingHere = !!pending && pending.threadId === thread?.id;
   const busyElsewhere = !!pending && !pendingHere;
@@ -311,11 +334,96 @@ export default function ChatWorkspace({
     () => collectChanges([...visibleMessages.flatMap((message) => message.activities || []), ...(pendingHere ? streamActivities : [])]),
     [visibleMessages, pendingHere, streamActivities],
   );
+  const [railOpen, setRailOpen] = useState(() => {
+    try {
+      return localStorage.getItem('chat-rail') === 'open';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-rail', railOpen ? 'open' : 'closed');
+    } catch {}
+  }, [railOpen]);
+  // The Terminal and Files panes share the right edge with the session details, so only one side is open.
+  const sideShown = (filesOpen || terminalOpen || browserOpen) && !!preferences;
+  useEffect(() => {
+    if (sideShown) setRailOpen(false);
+  }, [sideShown]);
+  const setFilesOpen = (open: boolean) => onFilesOpenChange?.(open);
+  // A file path clicked in the conversation opens in the Files pane when it is inside the project.
+  const [filesRequest, setFilesRequest] = useState<{ path: string; nonce: number } | null>(null);
+  const openInFiles = (path: string) => {
+    const root = projectRoot?.replaceAll('\\', '/').replace(/\/$/, '');
+    const normalized = path.replaceAll('\\', '/');
+    const relative =
+      root && normalized.toLowerCase().startsWith(`${root.toLowerCase()}/`)
+        ? normalized.slice(root.length + 1)
+        : /^([a-z]:)?\//i.test(normalized)
+          ? null
+          : normalized.replace(/^\.\//, '');
+    if (!preferences || !relative) return false;
+    setFilesOpen(true);
+    setFilesRequest({ path: relative, nonce: Date.now() });
+    return true;
+  };
+  // The conversations sidebar can be dragged wider or narrower; its width is remembered.
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem('chat-sidebar-width'));
+      return Number.isFinite(saved) && saved >= 200 && saved <= 480 ? saved : 216;
+    } catch {
+      return 216;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-sidebar-width', String(sidebarWidth));
+    } catch {}
+    // The title bar aligns the chat title with the conversation, so it needs the width too.
+    document.documentElement.style.setProperty('--chat-sidebar-w', `${sidebarWidth}px`);
+  }, [sidebarWidth]);
+  // The title in the title bar lines up with the conversation, wherever the logo and switch end.
+  useLayoutEffect(() => {
+    if (!titlebarSlot) return;
+    const align = () => {
+      titlebarSlot.style.paddingLeft = '0px';
+      const left = titlebarSlot.getBoundingClientRect().left;
+      titlebarSlot.style.paddingLeft = `${Math.max(12, Math.round((sidebarOpen ? sidebarWidth : 0) - left + 20))}px`;
+    };
+    align();
+    window.addEventListener('resize', align);
+    return () => {
+      window.removeEventListener('resize', align);
+      titlebarSlot.style.paddingLeft = '';
+    };
+  }, [titlebarSlot, sidebarWidth, sidebarOpen]);
+  function startSidebarResize(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    document.body.classList.add('panel-resizing');
+    const move = (now: PointerEvent) =>
+      setSidebarWidth(Math.round(Math.max(200, Math.min(480, startWidth + now.clientX - startX))));
+    const end = () => {
+      document.body.classList.remove('panel-resizing');
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', end);
+      handle.removeEventListener('pointercancel', end);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+    event.preventDefault();
+  }
   const [changesView, setChangesView] = useState<{ title: string; files: ChangedFile[] } | null>(null);
   const openChangedFile = onOpenFile && thread?.projectId
     ? (path: string) => {
         setChangesView(null);
-        onOpenFile(thread.projectId!, path);
+        if (!openInFiles(path)) onOpenFile(thread.projectId!, path);
       }
     : undefined;
   const draftAttachments = thread?.draftAttachments || [];
@@ -446,7 +554,6 @@ export default function ChatWorkspace({
               ? (s.permission as Permission)
               : 'ask',
         );
-        setSpeakReplies(s.speakReplies === true);
         setModelEfforts(s.modelEfforts || {});
         setLoaded(true);
       });
@@ -458,9 +565,9 @@ export default function ChatWorkspace({
     () => ({
       threads,
       active,
-      settings: { endpoint, model, effort, provider, permission, speakReplies, modelEfforts },
+      settings: { endpoint, model, effort, provider, permission, modelEfforts },
     }),
-    [threads, active, endpoint, model, effort, provider, permission, speakReplies, modelEfforts],
+    [threads, active, endpoint, model, effort, provider, permission, modelEfforts],
   );
   const unsaved = useRef<SavedChatState | null>(null);
   const saveChat = useCallback(async () => {
@@ -513,7 +620,8 @@ export default function ChatWorkspace({
     if (!loaded) return;
     let current = true;
     const version = ++modelRequest.current;
-    setChecking(true);
+    // Background refreshes keep the current list usable instead of disabling the selector.
+    if (!models.length) setChecking(true);
     api
       .chatModels(chosenProvider, endpoint)
       .then((items) => {
@@ -938,7 +1046,7 @@ export default function ChatWorkspace({
             : t,
         ),
       );
-      if (speakReplies || voicePrompt) {
+      if (voicePrompt) {
         setSpeaking(true);
         api
           .voiceSpeak(response.text)
@@ -1057,18 +1165,18 @@ export default function ChatWorkspace({
       setListening(false);
     }
   }
-  function exportChat() {
-    if (!thread) return;
+  function exportChat(target: Thread) {
+    const messages = target.messages.filter((m) => m.role !== 'system');
     const blob = new Blob(
       [
-        `# ${thread.title}\n\n${visibleMessages.map((m) => `## ${m.role === 'user' ? 'You' : 'Assistant'}\n\n${m.content}`).join('\n\n')}`,
+        `# ${target.title}\n\n${messages.map((m) => `## ${m.role === 'user' ? 'You' : 'Assistant'}\n\n${m.content}`).join('\n\n')}`,
       ],
       { type: 'text/markdown' },
     );
     const url = URL.createObjectURL(blob),
       link = document.createElement('a');
     link.href = url;
-    link.download = `${thread.title.replace(/[^a-z0-9 -]/gi, '').trim().slice(0, 60) || 'chat'}.md`;
+    link.download = `${target.title.replace(/[^a-z0-9 -]/gi, '').trim().slice(0, 60) || 'chat'}.md`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -1085,12 +1193,29 @@ export default function ChatWorkspace({
         event.preventDefault();
         void attachFiles(Array.from(event.dataTransfer.files));
       }}>
-      <aside className="projects-sidebar chat-sidebar">
+      <aside
+        className="projects-sidebar chat-sidebar"
+        style={{ width: sidebarWidth, flexBasis: sidebarWidth, display: sidebarOpen ? undefined : 'none' }}
+      >
+        <div
+          className="chat-sidebar-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize conversations"
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={200}
+          aria-valuemax={480}
+          tabIndex={0}
+          onPointerDown={startSidebarResize}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            const step = (event.shiftKey ? 48 : 16) * (event.key === 'ArrowRight' ? 1 : -1);
+            setSidebarWidth((value) => Math.max(200, Math.min(480, value + step)));
+          }}
+        />
+        {/* Claude's order: the search field first, then the New row. */}
         <div className="chat-sidebar-top">
-          <button className="chat-new-button" aria-label="New chat" onClick={() => startNewChat()}>
-            <SquarePen size={15} aria-hidden="true" />
-            <span>New chat</span>
-          </button>
           <label className="chat-search">
             <Search size={14} aria-hidden="true" />
             <input
@@ -1113,6 +1238,10 @@ export default function ChatWorkspace({
               </button>
             )}
           </label>
+          <button className="chat-new-button" aria-label="New chat" onClick={() => startNewChat()}>
+            <Plus size={16} aria-hidden="true" />
+            <span>New chat</span>
+          </button>
         </div>
         <nav className="chat-thread-list" aria-label="Conversations">
           {groups.length > 1 && !searching && (
@@ -1279,6 +1408,14 @@ export default function ChatWorkspace({
               <div className="menu-separator" role="separator" />
               <button
                 role="menuitem"
+                disabled={!menuThread.messages.some((m) => m.role !== 'system')}
+                onClick={() => { exportChat(menuThread); setThreadMenu(null); }}
+              >
+                <Download size={14} />
+                <span>Export as Markdown</span>
+              </button>
+              <button
+                role="menuitem"
                 onClick={() => {
                   patchThread(menuThread.id, { archived: !menuThread.archived, pinned: menuThread.archived ? menuThread.pinned : false });
                   setThreadMenu(null);
@@ -1300,43 +1437,104 @@ export default function ChatWorkspace({
           )}
         </AnimatePresence>
       </aside>
-      <main className="chat-main">
-        <header className="chat-header">
-          <h2 className="chat-title" title={thread?.title}>
-            {thread?.title || 'New chat'}
-          </h2>
-          <div className="chat-header-actions">
-            {threadChanges.length > 0 && (
-              <button
-                type="button"
-                className="chat-header-changes"
-                title="Review all file changes in this chat"
-                onClick={() => setChangesView({ title: 'Changes in this chat', files: threadChanges })}
-              >
-                <FileDiff size={15} aria-hidden="true" />
-                <span>{threadChanges.length} {threadChanges.length === 1 ? 'file' : 'files'}</span>
-              </button>
-            )}
+      <main className={`chat-main ${railOpen ? 'rail-open' : ''} ${sideShown ? 'side-open' : ''}`}>
+        {titlebarSlot ? (
+          createPortal(<div className="chat-layout chat-titlebar-content">
+        <h2 className="chat-title" title={thread?.title}>
+          {thread?.title || 'New chat'}
+        </h2>
+        <div className="chat-header-actions">
+          {threadChanges.length > 0 && (
             <button
-              className="icon-button"
-              disabled={!visibleMessages.length}
-              aria-label="Export chat"
-              title="Export as Markdown"
-              onClick={exportChat}
+              type="button"
+              className="chat-header-changes"
+              title="Review all file changes in this chat"
+              onClick={() => setChangesView({ title: 'Changes in this chat', files: threadChanges })}
             >
-              <Download size={16} />
+              <FileDiff size={15} aria-hidden="true" />
+              <span>{threadChanges.length} {threadChanges.length === 1 ? 'file' : 'files'}</span>
             </button>
+          )}
+          <button
+            className={`icon-button ${railOpen ? 'active' : ''}`}
+            aria-label="Session details"
+            aria-pressed={railOpen}
+            title="Session details"
+            onClick={() => {
+              setRailOpen(!railOpen);
+              if (!railOpen) {
+                setFilesOpen(false);
+                onTerminalOpenChange?.(false);
+                onBrowserOpenChange?.(false);
+              }
+            }}
+          >
+            <PanelRight size={16} />
+          </button>
+        </div>
+          </div>, titlebarSlot)
+        ) : (
+          <header className="chat-header">
+        <h2 className="chat-title" title={thread?.title}>
+          {thread?.title || 'New chat'}
+        </h2>
+        <div className="chat-header-actions">
+          {threadChanges.length > 0 && (
             <button
-              className="icon-button"
-              disabled={!thread || pendingHere}
-              aria-label="Delete chat"
-              title="Delete chat"
-              onClick={() => thread && setDeleteId(thread.id)}
+              type="button"
+              className="chat-header-changes"
+              title="Review all file changes in this chat"
+              onClick={() => setChangesView({ title: 'Changes in this chat', files: threadChanges })}
             >
-              <Trash2 size={16} />
+              <FileDiff size={15} aria-hidden="true" />
+              <span>{threadChanges.length} {threadChanges.length === 1 ? 'file' : 'files'}</span>
             </button>
-          </div>
-        </header>
+          )}
+          <button
+            className={`icon-button ${railOpen ? 'active' : ''}`}
+            aria-label="Session details"
+            aria-pressed={railOpen}
+            title="Session details"
+            onClick={() => {
+              setRailOpen(!railOpen);
+              if (!railOpen) {
+                setFilesOpen(false);
+                onTerminalOpenChange?.(false);
+                onBrowserOpenChange?.(false);
+              }
+            }}
+          >
+            <PanelRight size={16} />
+          </button>
+        </div>
+          </header>
+        )}
+        {preferences && (
+          <ChatSide
+            project={filesProject}
+            preferences={preferences}
+            filesOpen={filesOpen}
+            terminalOpen={terminalOpen}
+            browserOpen={browserOpen}
+            openRequest={filesRequest}
+            onFilesOpenChange={setFilesOpen}
+            onTerminalOpenChange={(open) => onTerminalOpenChange?.(open)}
+            onBrowserOpenChange={(open) => onBrowserOpenChange?.(open)}
+            onSendToChat={async (prompt) => {
+              // The picked element's request lands in the composer, ready to edit and send.
+              const draft = thread?.draft?.trim();
+              edit({ draft: draft ? `${draft}\n\n${prompt}` : prompt });
+              composer.current?.focus();
+            }}
+          />
+        )}
+        {railOpen && (
+          <ChatRail
+            project={projects.find((p) => p.id === chosenProjectId)}
+            files={threadChanges}
+            onReview={() => setChangesView({ title: 'Changes in this chat', files: threadChanges })}
+          />
+        )}
         <div className="chat-body">
           <div
             ref={conversation}
@@ -1471,7 +1669,7 @@ export default function ChatWorkspace({
                       <div className="chat-avatar">{logo(15)}</div>
                       <div className="chat-message-body">
                         <div className="message-content">
-                          {!!message.activities?.length && <ChatActivity activities={message.activities} root={projectRoot} onOpenFile={onOpenFile && ((path) => onOpenFile(thread!.projectId, path))} />}
+                          {!!message.activities?.length && <ChatActivity activities={message.activities} root={projectRoot} onOpenFile={onOpenFile && ((path) => { if (!openInFiles(path)) onOpenFile(thread!.projectId, path); })} />}
                           <MarkdownMessage
                             content={message.content}
                             onError={reportMarkdownError}
@@ -1501,7 +1699,7 @@ export default function ChatWorkspace({
                     <div className="chat-avatar">{logo(15)}</div>
                     <div className="chat-message-body">
                       <div className="message-content">
-                        <ChatActivity activities={streamActivities} root={projectRoot} onOpenFile={onOpenFile && ((path) => onOpenFile(thread!.projectId, path))} />
+                        <ChatActivity activities={streamActivities} root={projectRoot} onOpenFile={onOpenFile && ((path) => { if (!openInFiles(path)) onOpenFile(thread!.projectId, path); })} />
                         {streamText ? (
                           <MarkdownMessage
                             content={streamText}
@@ -1580,46 +1778,6 @@ export default function ChatWorkspace({
               </button>
             </div>
           )}
-          <div className="chat-context-row">
-            <ChatSelect
-              label="Chat project"
-              heading="Project"
-              compact
-              title="Project"
-              className="chat-context-chip"
-              icon={<FolderOpen size={14} aria-hidden="true" />}
-              value={chosenProjectId}
-              disabled={pendingHere}
-              onChange={changeProject}
-              options={[
-                {
-                  value: '',
-                  label: 'No project',
-                  description: 'General chat without file access',
-                  icon: <MessageSquare size={14} />,
-                },
-                ...projects.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                  description: p.root,
-                  icon: <FolderOpen size={14} />,
-                })),
-              ]}
-            />
-            {attachable && (
-              <label className={`chat-attach chat-context-chip ${includeFile ? 'on' : ''}`} title={attachable.path}>
-                <input
-                  type="checkbox"
-                  aria-label={`Include ${attachable.path} with each request`}
-                  checked={includeFile}
-                  onChange={(event) => setIncludeFile(event.target.checked)}
-                />
-                <Paperclip size={12} aria-hidden="true" />
-                <span>{attachable.path.split('/').pop()}</span>
-                <em>{includeFile ? 'Attached' : 'Attach file'}</em>
-              </label>
-            )}
-          </div>
           <div className="chat-composer">
             {!!draftAttachments.length && <ChatAttachments files={draftAttachments} onRemove={(id) => edit({ draftAttachments: draftAttachments.filter((file) => file.id !== id) })} />}
             <input type="file" multiple className="chat-attachment-input" ref={uploadInput} aria-label="Choose files to attach" hidden
@@ -1629,6 +1787,10 @@ export default function ChatWorkspace({
                 void attachFiles(files);
               }} />
             <div className="chat-compose-line">
+            <button type="button" className="chat-voice-button" aria-label="Attach files" title="Attach images or code files · paste images or drop files here"
+              disabled={!loaded || uploading || !!pending} onClick={() => uploadInput.current?.click()}>
+              <Plus size={16} />
+            </button>
             <textarea
               ref={composer}
               aria-label="Message"
@@ -1665,42 +1827,57 @@ export default function ChatWorkspace({
               </button>
             ) : (
               <button
-                className="chat-send"
-                disabled={!loaded || uploading || (!thread?.draft.trim() && !draftAttachments.length) || busyElsewhere}
-                aria-label="Send message"
-                title={busyElsewhere ? 'Another chat is still responding' : 'Send message'}
-                onClick={() => send()}
+                className={`chat-voice-button ${listening ? 'active listening' : ''}`}
+                aria-label={listening ? 'Stop voice chat' : 'Start voice chat'}
+                title={listening ? 'Stop voice chat' : 'Start voice chat'}
+                onClick={startVoice}
               >
-                <CornerDownLeft size={16} />
+                <Mic size={15} />
               </button>
             )}
             </div>
           </div>
           <div className="chat-compose-toolbar">
               <div className="chat-compose-tools">
-                <button type="button" className="chat-voice-button" aria-label="Attach files" title="Attach images or code files · paste images or drop files here"
-                  disabled={!loaded || uploading || !!pending} onClick={() => uploadInput.current?.click()}>
-                  <Paperclip size={15} />
-                </button>
-                <button
-                  className={`chat-voice-button ${listening ? 'active listening' : ''}`}
-                  aria-label={listening ? 'Stop voice chat' : 'Start voice chat'}
-                  title={listening ? 'Stop voice chat' : 'Start voice chat'}
-                  onClick={startVoice}
-                >
-                  <Mic size={15} />
-                </button>
-                <button
-                  className={`chat-voice-button ${speakReplies ? 'active' : ''}`}
-                  aria-label={speakReplies ? 'Turn off spoken replies' : 'Turn on spoken replies'}
-                  title={speakReplies ? 'Turn off spoken replies' : 'Turn on spoken replies'}
-                  onClick={() => {
-                    setSpeakReplies(!speakReplies);
-                    if (speaking) api.voiceStop().then(() => setSpeaking(false));
-                  }}
-                >
-                  {speakReplies ? <Volume2 size={15} /> : <VolumeX size={15} />}
-                </button>
+                {/* Project and attached file sit under the box, left of the mode, like Claude's environment row. */}
+                <ChatSelect
+                  label="Chat project"
+                  heading="Project"
+                  compact
+                  title="Project"
+                  className="chat-context-chip"
+                  icon={<Folder size={14} aria-hidden="true" />}
+                  value={chosenProjectId}
+                  disabled={pendingHere}
+                  onChange={changeProject}
+                  options={[
+                    {
+                      value: '',
+                      label: 'No project',
+                      description: 'General chat without file access',
+                      icon: <MessageSquare size={14} />,
+                    },
+                    ...projects.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                      description: p.root,
+                      icon: <FolderOpen size={14} />,
+                    })),
+                  ]}
+                />
+                {attachable && (
+                  <label className={`chat-attach chat-context-chip ${includeFile ? 'on' : ''}`} title={attachable.path}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Include ${attachable.path} with each request`}
+                      checked={includeFile}
+                      onChange={(event) => setIncludeFile(event.target.checked)}
+                    />
+                    <Paperclip size={12} aria-hidden="true" />
+                    <span>{attachable.path.split('/').pop()}</span>
+                    <em>{includeFile ? 'Attached' : 'Attach file'}</em>
+                  </label>
+                )}
                 {chosenProvider !== 'ollama' && (
                   <ChatSelect
                     label="Chat permissions"
@@ -1748,16 +1925,6 @@ export default function ChatWorkspace({
                 )}
               </div>
               <div className="chat-agent-controls">
-                <button
-                  type="button"
-                  className={`chat-model-refresh ${checking ? 'spinning' : ''}`}
-                  aria-label="Refresh chat models"
-                  title={checking ? 'Loading models…' : 'Refresh models'}
-                  disabled={!!pending || checking}
-                  onClick={() => void connect()}
-                >
-                  <RefreshCw size={13} />
-                </button>
                 <ChatSelect
                   label="Chat provider"
                   heading="Provider"

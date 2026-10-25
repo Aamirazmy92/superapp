@@ -384,7 +384,7 @@
 :root:root .chat-layout .chat-thread-open {
   min-height: var(--row-h-sm);
   border-radius: var(--r-control);
-  font-size: var(--type-body);
+  font-size: var(--type-small);
   font-weight: var(--weight-regular);
 }
 :root:root .chat-layout .chat-header {
@@ -400,15 +400,15 @@
 }
 :root:root .chat-layout .chat-composer {
   min-height: var(--composer-h);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  border-radius: var(--r-card);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  border-radius: var(--r-composer);
 }
 :root:root .chat-layout .chat-context-chip,
 :root:root .chat-layout .chat-project-chip {
   height: var(--chip-h);
   padding: 0 var(--space-2);
   border-radius: var(--r-control);
-  font-size: var(--type-body);
+  font-size: var(--type-small);
 }
 :root:root .chat-layout .chat-starter {
   padding: var(--space-2) var(--space-3);
@@ -990,7 +990,7 @@
 :root:root:root .chat-layout .chat-thread.unread .chat-thread-open {
   padding-right: 30px;
   color: var(--text);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 .chat-rename-form {
   display: grid;

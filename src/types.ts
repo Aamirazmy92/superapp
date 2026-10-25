@@ -64,7 +64,6 @@ export type SavedChatState = {
     effort?: string;
     provider?: string;
     permission?: string;
-    speakReplies?: boolean;
     modelEfforts?: Record<string, string>;
   };
 };
@@ -257,6 +256,10 @@ export interface WorkspaceAPI {
   /** Opens a visible terminal running the plugin command named by its namespaced key. */
   pluginsRunCommand(projectId: string, key: string, workspaceName?: string): Promise<TerminalInfo>;
   onPluginsChanged(callback: () => void): () => void;
+  updateState(): Promise<UpdateState>;
+  updateCheck(): Promise<UpdateState>;
+  updateInstall(): Promise<void>;
+  onUpdateState(callback: (state: UpdateState) => void): () => void;
   getRunPresets(id: string): Promise<RunPreset[] | null>;
   saveRunPresets(id: string, presets: RunPreset[]): Promise<void>;
   /** null when chats have never been saved here. */
@@ -526,3 +529,15 @@ declare global {
     workspace?: WorkspaceAPI;
   }
 }
+
+export type UpdateState = {
+  status: 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'error';
+  /** Installed version. */
+  version: string;
+  /** Newer version found, when there is one. */
+  latest?: string;
+  percent?: number;
+  error?: string;
+  /** False in development and unpacked builds, which cannot update themselves. */
+  supported: boolean;
+};

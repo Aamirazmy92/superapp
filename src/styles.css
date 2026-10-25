@@ -101,7 +101,7 @@ p {
 }
 h2 {
   font-size: var(--font-xl);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 small {
   display: block;
@@ -146,7 +146,7 @@ small {
   border-radius: 6px;
   padding: 10px 16px;
   font-size: var(--font-base);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 .primary-button {
@@ -190,7 +190,7 @@ small {
   gap: 10px;
   padding-left: 20px;
   font-size: var(--font-xl);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.7px;
   color: #f3f3f3;
 }
@@ -262,7 +262,7 @@ small {
   color: #2d2d2d;
   font-size: var(--font-xs);
   line-height: 1;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
 }
 .notification-popover {
   position: absolute;
@@ -291,7 +291,7 @@ small {
   display: block;
   color: #e8e8e8;
   font-size: var(--font-base);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 .notification-popover-header span {
   display: block;
@@ -362,7 +362,7 @@ small {
 .notification-copy strong {
   color: #e6e6e6;
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 .notification-copy > span {
   margin-top: 4px;
@@ -401,7 +401,7 @@ small {
 .notification-empty strong {
   color: #c2c2c2;
   font-size: var(--font-sm);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .notification-empty span {
   max-width: 220px;
@@ -905,7 +905,7 @@ small {
   color: #e5e5e5;
   text-align: left;
   font-size: var(--font-base);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .agent-picker-option:hover:not(:disabled),
 .agent-picker-option:focus-visible:not(:disabled) {
@@ -1237,7 +1237,7 @@ small {
   margin: 2px 0 8px;
   color: #ebebeb;
   font-size: var(--font-xl);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
   line-height: 1.35;
 }
 .confirm-copy p {
@@ -2052,7 +2052,7 @@ body.terminal-reordering webview {
   margin: 0;
   color: #f2f3f6;
   font-size: 16px;
-  font-weight: 620;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.02em;
 }
 
@@ -2159,7 +2159,7 @@ body.terminal-reordering webview {
   text-align: left;
 }
 .quick-open-path strong {
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .quick-open-path small {
   color: var(--muted);
@@ -2197,7 +2197,7 @@ body.terminal-reordering webview {
 .message-content h3 {
   margin: 18px 0 8px;
   font-size: 1.05em;
-  font-weight: 650;
+  font-weight: var(--weight-medium);
 }
 .message-content a {
   color: #aebfff;
@@ -2327,7 +2327,7 @@ body.terminal-reordering webview {
 .agent-option-name {
   flex: 1;
   font-size: var(--font-sm);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .agent-option-name small {
   color: #959595;
@@ -2407,7 +2407,7 @@ body.terminal-reordering webview {
 }
 .agent-launch-footer strong {
   font-size: var(--font-sm);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .agent-launch-footer small {
   color: #949494;
@@ -2449,7 +2449,7 @@ body.terminal-reordering webview {
   align-items: center;
   justify-content: space-between;
   color: #999999;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   padding: 0 6px 14px;
 }
 .project-list {
@@ -2469,7 +2469,7 @@ body.terminal-reordering webview {
   padding: 0 6px 7px;
   color: #828282;
   font-size: var(--font-xs);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -2681,7 +2681,7 @@ body.terminal-reordering webview {
 .terminal-link-copy strong {
   color: inherit;
   font-size: var(--font-sm);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .terminal-link-copy small {
   color: #7e7e7e;
@@ -2950,7 +2950,7 @@ textarea:focus-visible {
   display: flex;
   justify-content: space-between;
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   margin: 0;
@@ -3238,7 +3238,7 @@ textarea:focus-visible {
 }
 .project-row.active {
   color: #eeeeef;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   background: #232325;
 }
 .project-row-wrap:has(.project-row.active) {
@@ -3351,7 +3351,7 @@ textarea:focus-visible {
 .new-pane-menu-header strong {
   color: #f0f0f2;
   font-size: var(--font-sm);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
 }
 .new-pane-menu-header span {
   margin-top: 3px;
@@ -3894,7 +3894,7 @@ textarea::placeholder {
   color: #858b98;
   background: #141519;
   font-size: 8px;
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.08em;
 }
 .mode-switch {
@@ -3912,7 +3912,7 @@ textarea::placeholder {
   border: 1px solid transparent;
   border-radius: 6px;
   color: #818794;
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 .mode-switch button:hover:not(.active) {
   color: #c4c8d1;
@@ -4000,7 +4000,7 @@ textarea::placeholder {
   min-height: 34px;
   padding: 0 8px 9px;
   color: #c5c8d0;
-  font-weight: 650;
+  font-weight: var(--weight-medium);
 }
 .projects-heading .icon-button,
 .sidebar-section-title .icon-button {
@@ -4095,7 +4095,7 @@ textarea::placeholder {
   color: #dce4ff;
 }
 .terminal-link-copy strong {
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 .terminal-link-copy small {
   color: #747a86;
@@ -4165,7 +4165,7 @@ textarea::placeholder {
 }
 .sidebar-section-title span {
   color: #9ca1ad;
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.075em;
 }
 .sidebar-section-title small {
@@ -4211,7 +4211,7 @@ textarea::placeholder {
 .breadcrumb {
   gap: 8px;
   color: #c5c9d1;
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 .breadcrumb svg {
   color: #8da6ef;

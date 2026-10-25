@@ -171,7 +171,8 @@ export function usePanelWidths({
   function movePanelResize(event: React.PointerEvent<HTMLDivElement>) {
     const drag = panelDragRef.current;
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const direction = drag.panel === 'dashboard' || drag.panel === 'browser' ? -1 : 1;
+    // The dashboard, browser and explorer sit on the right, so dragging left widens them.
+    const direction = drag.panel === 'dashboard' || drag.panel === 'browser' || drag.panel === 'explorer' ? -1 : 1;
     const raw = drag.startWidth + (event.clientX - drag.startX) * direction;
     drag.width = Math.round(Math.max(drag.minWidth, Math.min(drag.maxWidth, raw)));
     if (drag.frame) return;
@@ -199,7 +200,7 @@ export function usePanelWidths({
     if (width === undefined) return;
     event.preventDefault();
     const maxWidth = panelMaxWidth(panel, width);
-    const direction = panel === 'dashboard' || panel === 'browser' ? -1 : 1;
+    const direction = panel === 'dashboard' || panel === 'browser' || panel === 'explorer' ? -1 : 1;
     const step = event.shiftKey ? 48 : 16;
     const next =
       event.key === 'Home'

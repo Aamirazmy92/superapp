@@ -27,6 +27,7 @@ import {
   Pencil,
   Pin,
   Code2,
+  Menu,
   MessageSquare,
   Files,
   PanelLeft,
@@ -251,13 +252,53 @@ export default function App() {
   }
   useEffect(() => {
     const id = requestIdleCallback(() => {
-      void loadChat().catch(() => {});
+      // Mount chat hidden so its saved state and model list are ready before the first switch.
+      void loadChat().then(() => setChatVisited(true)).catch(() => {});
       void loadEditor().catch(() => {});
       void loadPlugins().catch(() => {});
     });
     return () => cancelIdleCallback(id);
   }, []);
   const [explorer, setExplorer] = useState(false);
+  // The chat Files pane opens from the title bar like Claude Code's; remembered across launches.
+  const [chatFilesOpen, setChatFilesOpen] = useState(() => {
+    try {
+      return localStorage.getItem('chat-files') === 'open';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-files', chatFilesOpen ? 'open' : 'closed');
+    } catch {}
+  }, [chatFilesOpen]);
+  // The chat draws its title and actions into the title bar, so the title bar hands it this slot.
+  const [chatSlot, setChatSlot] = useState<HTMLDivElement | null>(null);
+  const [chatTerminalOpen, setChatTerminalOpen] = useState(() => {
+    try {
+      return localStorage.getItem('chat-terminal') === 'open';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-terminal', chatTerminalOpen ? 'open' : 'closed');
+    } catch {}
+  }, [chatTerminalOpen]);
+  const [chatBrowserOpen, setChatBrowserOpen] = useState(() => {
+    try {
+      return localStorage.getItem('chat-browser') === 'open';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-browser', chatBrowserOpen ? 'open' : 'closed');
+    } catch {}
+  }, [chatBrowserOpen]);
   const [projectsPanel, setProjectsPanel] = useState(() => {
     try {
       return localStorage.getItem('code-projects-panel') !== 'minimised';
@@ -270,6 +311,19 @@ export default function App() {
       localStorage.setItem('code-projects-panel', projectsPanel ? 'open' : 'minimised');
     } catch {}
   }, [projectsPanel]);
+  // Chat's conversation list hides from the same title bar button, remembered separately.
+  const [chatSidebar, setChatSidebar] = useState(() => {
+    try {
+      return localStorage.getItem('chat-sidebar') !== 'minimised';
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('chat-sidebar', chatSidebar ? 'open' : 'minimised');
+    } catch {}
+  }, [chatSidebar]);
   const [boot, setBoot] = useState<Bootstrap | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
@@ -328,6 +382,23 @@ export default function App() {
   );
   const explorerHidden = useCollapse(() => explorerPanelRef.current, explorer);
   const projectsHidden = useCollapse(() => projectsPanelRef.current, projectsPanel);
+  // The title bar's leading cluster spans the code sidebar, so the title lines up with the content.
+  useEffect(() => {
+    const panel = projectsPanelRef.current;
+    if (!panel) return;
+    const explorerPanel = explorerPanelRef.current;
+    const publish = () => {
+      document.documentElement.style.setProperty('--code-sidebar-w', `${Math.round(panel.getBoundingClientRect().width)}px`);
+      // A dashboard stacked under the explorer takes the explorer's width.
+      if (explorerPanel)
+        document.documentElement.style.setProperty('--explorer-w', `${Math.round(explorerPanel.getBoundingClientRect().width)}px`);
+    };
+    const observer = new ResizeObserver(publish);
+    observer.observe(panel);
+    if (explorerPanel) observer.observe(explorerPanel);
+    publish();
+    return () => observer.disconnect();
+  }, []);
   const [workspaceRename, setWorkspaceRename] = useState<{
     projectId: string;
     name: string;
@@ -1656,9 +1727,13 @@ export default function App() {
       if (event.key.toLowerCase() === 'b') {
         if (event.target instanceof Element && event.target.closest('.terminal-pane')) return;
         event.preventDefault();
-        setMode('code');
-        if (event.shiftKey) setProjectsPanel((value) => !value);
-        else setExplorer((value) => !value);
+        // Ctrl Shift B toggles the sidebar of whichever mode is showing.
+        if (event.shiftKey && mode === 'chat') setChatSidebar((value) => !value);
+        else if (event.shiftKey) setProjectsPanel((value) => !value);
+        else {
+          setMode('code');
+          setExplorer((value) => !value);
+        }
       }
       if (event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -2022,9 +2097,40 @@ export default function App() {
     <MotionConfig reducedMotion={preferences.reduceMotion ? 'always' : 'never'}>
     <div className={`app mode-${mode}`}>
       <header className={`titlebar ${notificationsOpen ? 'notifications-open' : ''}`}>
-        <div className="brand">
-          <img className="brand-logo" src={veyoIcon} alt="Veyo" />
-        </div>
+        {/* Claude's leading cluster: menu, sidebar toggle, then the Code / Chat switch. It spans the
+            sidebar's width so the title after it lines up with the content. */}
+        <div className="titlebar-lead">
+        <button
+          className="titlebar-icon"
+          aria-label="Commands"
+          title="Commands (Ctrl K)"
+          aria-haspopup="dialog"
+          onClick={() => setPalette((open) => !open)}
+        >
+          <Menu size={16} />
+        </button>
+        {shownMode === 'code' ? (
+          <button
+            className={`titlebar-icon ${projectsPanel ? 'active' : ''}`}
+            aria-label="Projects sidebar"
+            title={projectsPanel ? 'Hide sidebar (Ctrl Shift B)' : 'Show sidebar (Ctrl Shift B)'}
+            aria-pressed={projectsPanel}
+            aria-controls="projects-sidebar"
+            onClick={() => setProjectsPanel((open) => !open)}
+          >
+            <PanelLeft size={16} />
+          </button>
+        ) : (
+          <button
+            className={`titlebar-icon ${chatSidebar ? 'active' : ''}`}
+            aria-label="Chats sidebar"
+            title={chatSidebar ? 'Hide sidebar (Ctrl Shift B)' : 'Show sidebar (Ctrl Shift B)'}
+            aria-pressed={chatSidebar}
+            onClick={() => setChatSidebar((open) => !open)}
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
         <nav className="mode-switch" aria-label="App mode" data-mode={mode}>
           <span className="mode-switch-pill" aria-hidden="true" />
           {(['code', 'chat'] as const).map((item) => (
@@ -2039,23 +2145,21 @@ export default function App() {
               }
               onClick={() => (item === 'chat' ? openChat() : setMode(item))}
             >
-              {item === 'code' ? <Code2 size={16} aria-hidden="true" /> : <MessageSquare size={16} aria-hidden="true" />}
+              {item === 'chat' ? <MessageSquare size={15} aria-hidden="true" /> : <Code2 size={15} aria-hidden="true" />}
             </button>
           ))}
         </nav>
+        </div>
+        {shownMode === 'chat' && <div className="chat-titlebar-slot" ref={setChatSlot} />}
+        {shownMode === 'code' && (
+          <div className="titlebar-title" title={project?.root}>
+            <span>{project?.name || 'Veyo'}</span>
+            {project && <span className="titlebar-title-sub">{workspaceName}</span>}
+          </div>
+        )}
         <div className="titlebar-actions">
           {shownMode === 'code' && (
             <div className="titlebar-workspace-actions" role="group" aria-label="Workspace actions">
-              <button
-                className={`titlebar-workspace-action workspace-views-trigger ${projectsPanel ? 'active' : ''}`}
-                aria-label="Projects sidebar"
-                title={projectsPanel ? 'Minimise sidebar (Ctrl Shift B)' : 'Show sidebar (Ctrl Shift B)'}
-                aria-pressed={projectsPanel}
-                aria-controls="projects-sidebar"
-                onClick={() => setProjectsPanel((open) => !open)}
-              >
-                <PanelLeft size={17} strokeWidth={1.6} />
-              </button>
               {!!visibleTerminals.length && (
                 <button
                   className="titlebar-workspace-action"
@@ -2095,6 +2199,37 @@ export default function App() {
               </button>
             </div>
           )}
+          {shownMode === 'chat' && (
+            <div className="titlebar-workspace-actions" role="group" aria-label="Chat panes">
+              <button
+                className={`titlebar-workspace-action workspace-views-trigger chat-pane-toggle ${chatTerminalOpen ? 'active' : ''}`}
+                aria-label="Chat terminal"
+                title={chatTerminalOpen ? 'Hide terminal' : 'Show terminal'}
+                aria-pressed={chatTerminalOpen}
+                onClick={() => setChatTerminalOpen((open) => !open)}
+              >
+                <SquareTerminal size={17} strokeWidth={1.6} />
+              </button>
+              <button
+                className={`titlebar-workspace-action workspace-views-trigger chat-pane-toggle ${chatBrowserOpen ? 'active' : ''}`}
+                aria-label="Chat browser"
+                title={chatBrowserOpen ? 'Hide browser' : 'Show browser'}
+                aria-pressed={chatBrowserOpen}
+                onClick={() => setChatBrowserOpen((open) => !open)}
+              >
+                <Globe size={17} strokeWidth={1.6} />
+              </button>
+              <button
+                className={`titlebar-workspace-action workspace-views-trigger chat-pane-toggle ${chatFilesOpen ? 'active' : ''}`}
+                aria-label="Project files"
+                title={chatFilesOpen ? 'Hide files' : 'Show files'}
+                aria-pressed={chatFilesOpen}
+                onClick={() => setChatFilesOpen((open) => !open)}
+              >
+                <FolderOpen size={17} strokeWidth={1.6} />
+              </button>
+            </div>
+          )}
           <div className="window-controls">
             <button aria-label="Minimize" onClick={() => api.windowAction('minimize')}>
               <Minus size={14} />
@@ -2120,6 +2255,15 @@ export default function App() {
             activeProject={activeProject}
             handoff={chatHandoff}
             chatDefaults={{ provider: preferences.chatProvider, permission: preferences.chatPermission }}
+            preferences={displayPreferences}
+            filesOpen={chatFilesOpen}
+            onFilesOpenChange={setChatFilesOpen}
+            terminalOpen={chatTerminalOpen}
+            onTerminalOpenChange={setChatTerminalOpen}
+            browserOpen={chatBrowserOpen}
+            onBrowserOpenChange={setChatBrowserOpen}
+            titlebarSlot={chatSlot}
+            sidebarOpen={chatSidebar}
             usage={planUsage.usage}
             usageLoading={planUsage.loading}
             usageError={planUsage.error}
@@ -2152,7 +2296,9 @@ export default function App() {
         )}
       </div>
       <div
-        className="app-body"
+        // With the explorer open, a docked dashboard stacks under it in the same column (as
+        // Claude stacks its side panes) instead of taking a fourth column of its own.
+        className={`app-body ${!explorerHidden && dashboardOpen && dashboardDocked ? 'stack-dock' : ''}`}
         ref={appBodyRef}
         style={{
           display: shownMode === 'code' ? undefined : 'none',
@@ -2419,21 +2565,16 @@ export default function App() {
               </button>
             ))}
           </nav>
+          {section !== 'files' && (
           <div className="sidebar-section-title">
             <div>
               <span>
-                {section === 'files'
-                  ? 'Project files'
-                  : section === 'git'
-                    ? 'Source control'
-                    : 'Search project'}
+                {section === 'git' ? 'Source control' : 'Search project'}
               </span>
               <small>
-                {section === 'files'
-                  ? 'Browse and open source files'
-                  : section === 'git'
-                    ? 'Review, stage and commit changes'
-                    : 'Find files or text in this project'}
+                {section === 'git'
+                  ? 'Review, stage and commit changes'
+                  : 'Find files or text in this project'}
               </small>
             </div>
             <button
@@ -2445,6 +2586,7 @@ export default function App() {
               <RefreshCw size={12} />
             </button>
           </div>
+          )}
           <div className="sidebar-content">
             {!project ? (
               <div className="sidebar-empty">
@@ -2466,6 +2608,7 @@ export default function App() {
                 onOpen={openFile}
                 onError={error}
                 onChanged={() => setRefresh((n) => n + 1)}
+                onClose={() => setExplorer(false)}
                 onRename={(previous, next) =>
                   update(project.id, (current) => {
                     const rename = (path: string) =>
@@ -2498,17 +2641,8 @@ export default function App() {
           </div>
         </aside>
         {!explorerHidden && panelSeparator('explorer', 'Resize explorer panel')}
+        {/* The project and workspace names sit in the title bar, like Claude's session title. */}
         <main className="workspace" ref={workspaceRef}>
-          {work?.layout !== 'terminal' && (
-            <div className="workspace-toolbar">
-              <div className="breadcrumb">
-                <FolderOpen size={14} />
-                <span>{project?.name || 'Workspace'}</span>
-                <span className="slash">/</span>
-                <span className="muted">{workspaceName}</span>
-              </div>
-            </div>
-          )}
           <div
             ref={workAreaRef}
             className={[

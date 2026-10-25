@@ -356,7 +356,7 @@
 
 .preferences-header h2 {
   font-size: 17px;
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.01em;
 }
 
@@ -406,7 +406,7 @@
 }
 
 .preferences-sidebar nav button[aria-current] {
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   color: var(--text);
   background: var(--selected);
 }
@@ -417,7 +417,7 @@
 
 .preferences-content h3 {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 .preferences .preferences-row {
@@ -651,7 +651,7 @@ body:has(.modal-backdrop) .titlebar {
 
 :root:root .new-pane-menu-header strong {
   font-size: var(--type-small);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   color: var(--muted);
 }
 

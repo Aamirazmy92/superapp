@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -39,6 +39,7 @@ export default function TerminalPane({
   canMove,
   onMoveKey,
   dragHandlers,
+  bare = false,
 }: {
   info: TerminalInfo;
   preferences: Preferences;
@@ -58,6 +59,8 @@ export default function TerminalPane({
   canMove: boolean;
   onMoveKey(key: TerminalMoveKey): void;
   dragHandlers: React.HTMLAttributes<HTMLElement>;
+  /** Without its own header, for hosts that supply one (the chat Terminal pane). */
+  bare?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<(() => void) | null>(null);
@@ -335,6 +338,7 @@ export default function TerminalPane({
           <rect className="terminal-beacon-trail" pathLength="1000" />
           <rect className="terminal-beacon-dot" pathLength="1000" />
         </svg>}
+      {!bare && (
       <header
         className="terminal-pane-header"
         data-movable={canMove ? 'true' : undefined}
@@ -406,8 +410,10 @@ export default function TerminalPane({
           </button>
         </div>
       </header>
+      )}
       <div
         className="terminal-host"
+        style={{ '--terminal-bg': terminalTheme(preferences.theme, preferences.pluginTheme).background } as CSSProperties}
         onDragEnter={(event) => {
           if (!canDrop(event)) return;
           event.preventDefault();

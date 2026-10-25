@@ -1,9 +1,9 @@
 ﻿/* Chat workspace. Scoped under .chat-layout so it wins over the older layered chat rules. */
 
 .chat-layout {
-  --chat-column: 768px;
-  --chat-bubble: #262626;
-  --chat-panel: #1d1d1d;
+  --chat-column: var(--content-max);
+  --chat-bubble: var(--input);
+  --chat-panel: var(--input);
   --chat-code-bg: #0f0f10;
 }
 
@@ -21,49 +21,48 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 8px 8px 10px;
+  padding: var(--space-2);
   overflow: hidden;
 }
 
 .chat-layout .chat-sidebar-top {
   display: grid;
-  gap: 6px;
-  padding-bottom: 8px;
+  gap: var(--row-gap);
+  padding-bottom: var(--space-4);
 }
 
 .chat-layout .chat-new-button {
   display: flex;
   align-items: center;
-  gap: 9px;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius);
+  gap: var(--space-2);
+  min-height: var(--row-h);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--r-control);
   color: var(--text);
-  background: var(--raised);
-  font-size: var(--type-body);
-  font-weight: 550;
+  background: var(--selected);
+  font-size: var(--type-small);
+  font-weight: var(--weight-regular);
   cursor: pointer;
-  transition:
-    background var(--dur-fast) var(--ease),
-    border-color var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease);
 }
 
 .chat-layout .chat-new-button:hover {
-  border-color: var(--edge);
-  background: var(--surface-hover);
+  background: var(--pressed);
 }
 
 .chat-layout .chat-search {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 32px;
+  gap: var(--space-2);
+  min-height: var(--row-h);
   margin: 0;
-  padding: 0 8px 0 10px;
-  border-radius: var(--radius);
-  color: var(--faint);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-control);
+  color: var(--muted);
+  background: var(--input);
 }
 
 .chat-layout .chat-search input {
@@ -71,7 +70,7 @@
   min-width: 0;
   padding: 0;
   color: var(--text);
-  font-size: var(--type-body);
+  font-size: var(--type-small);
 }
 
 .chat-layout .chat-search input::placeholder {
@@ -101,25 +100,24 @@
 }
 
 .chat-layout .chat-thread-group + .chat-thread-group {
-  margin-top: 6px;
+  margin-top: var(--section-gap);
 }
 
 .chat-layout .chat-thread-list-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 2px 4px 6px 10px;
-  color: var(--faint);
+  margin: 0 var(--space-1) var(--space-1) var(--space-2);
+  color: var(--muted);
   font-size: var(--type-micro);
-  font-weight: 550;
-  letter-spacing: 0.02em;
+  font-weight: var(--weight-regular);
 }
 
 .chat-layout .chat-group-header {
   position: relative;
   display: flex;
   align-items: center;
-  margin: 2px 0 2px;
+  margin: var(--row-gap) 0;
 }
 
 .chat-layout .chat-thread-group h3 {
@@ -132,17 +130,16 @@
 .chat-layout .chat-group-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   width: 100%;
-  min-height: 26px;
-  padding: 0 32px 0 6px;
+  min-height: var(--section-h);
+  padding: 0 var(--icon-btn) 0 var(--space-2);
   border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--faint);
+  border-radius: var(--r-control);
+  color: var(--muted);
   background: transparent;
   font-size: var(--type-micro);
-  font-weight: 550;
-  letter-spacing: 0.02em;
+  font-weight: var(--weight-regular);
   text-align: left;
   cursor: pointer;
   transition:
@@ -191,8 +188,8 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--faint);
+  border-radius: var(--r-control);
+  color: var(--muted);
   background: transparent;
   cursor: pointer;
   transition:
@@ -203,8 +200,8 @@
 
 .chat-layout .chat-group-new {
   position: absolute;
-  right: 4px;
-  opacity: 0;
+  right: var(--space-1);
+  opacity: 1;
 }
 
 .chat-layout .chat-group-header:hover .chat-group-new,
@@ -221,9 +218,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 32px;
-  border-radius: var(--radius);
+  min-height: var(--row-h);
+  border-radius: var(--r-control);
   transition: background var(--dur-fast) var(--ease);
+}
+
+.chat-layout .chat-thread + .chat-thread {
+  margin-top: var(--row-gap);
 }
 
 .chat-layout .chat-thread:hover {
@@ -231,7 +232,11 @@
 }
 
 .chat-layout .chat-thread.active {
-  background: var(--pressed);
+  background: var(--selected);
+}
+
+.chat-layout .chat-thread.active .chat-thread-open {
+  font-weight: var(--weight-medium);
 }
 
 .chat-layout .chat-thread-open {
@@ -240,12 +245,12 @@
   align-self: stretch;
   display: flex;
   align-items: center;
-  padding: 0 34px 0 10px;
+  padding: 0 var(--icon-btn) 0 var(--space-2);
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--r-control);
   color: var(--muted);
   background: transparent;
-  font-size: var(--type-body);
+  font-size: var(--type-small);
   text-align: left;
   cursor: pointer;
 }
@@ -365,7 +370,7 @@
   overflow: hidden;
   color: var(--text);
   font-size: var(--type-body);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -456,7 +461,7 @@
   margin: 0 0 8px;
   color: var(--text);
   font-size: 26px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.02em;
 }
 
@@ -521,7 +526,7 @@
 
 .chat-layout .chat-starter strong {
   font-size: var(--type-body);
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 
 .chat-layout .chat-starter span {
@@ -533,10 +538,11 @@
 .chat-layout .chat-messages {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
   width: min(var(--chat-column), 100%);
   margin: 0 auto;
-  padding: 28px 0 8px;
+  padding: var(--space-5) 0 var(--space-2);
+  line-height: var(--line-chat);
 }
 
 .chat-layout .chat-message {
@@ -569,8 +575,8 @@
 
 .chat-layout .chat-message.user .message-content {
   max-width: min(80%, 620px);
-  padding: 10px 16px;
-  border-radius: 20px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
   background: var(--chat-bubble);
 }
 
@@ -583,7 +589,7 @@
 .chat-layout .chat-message.assistant {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
-  gap: 14px;
+  gap: var(--space-3);
   align-items: start;
 }
 
@@ -600,7 +606,7 @@
 
 .chat-layout .chat-message-body {
   min-width: 0;
-  padding-top: 3px;
+  padding-top: var(--space-1);
 }
 
 .chat-layout .chat-message-actions {
@@ -698,7 +704,7 @@
 .chat-layout .message-content :is(h1, h2, h3, h4) {
   margin: 22px 0 8px;
   color: var(--text);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   line-height: 1.35;
   letter-spacing: -0.01em;
 }
@@ -716,7 +722,7 @@
 }
 
 .chat-layout .message-content strong {
-  font-weight: 650;
+  font-weight: var(--weight-medium);
 }
 
 .chat-layout .message-content a {
@@ -784,7 +790,7 @@
 .chat-layout .message-content th {
   color: var(--text-soft);
   background: rgba(255, 255, 255, 0.03);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 .chat-layout .message-content tr:last-child td {
@@ -1009,10 +1015,10 @@
 .chat-layout .chat-composer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 11px 10px 11px 16px;
-  border: 1px solid var(--hairline-strong);
-  border-radius: 14px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-composer);
   background: var(--chat-panel);
   box-shadow: none;
   transform: none;
@@ -1047,8 +1053,8 @@
   color: var(--text);
   background: transparent;
   font-family: inherit;
-  font-size: var(--type-title);
-  line-height: 1.5;
+  font-size: var(--type-body);
+  line-height: var(--line-chat);
 }
 
 .chat-layout .chat-composer textarea:focus-visible {
@@ -1144,12 +1150,12 @@
 .chat-layout .chat-select {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   max-width: 200px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--r-control);
   color: var(--muted);
   background: transparent;
   font-size: var(--type-body);
@@ -1371,7 +1377,7 @@
   padding: 4px 8px 3px;
   color: var(--faint);
   font-size: 10.5px;
-  font-weight: 550;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.02em;
 }
 
@@ -1607,7 +1613,7 @@
 .chat-changes-file.delete > svg { color: var(--danger); }
 .chat-changes-name { display: grid; flex: 1; min-width: 0; }
 .chat-changes-name :is(b, small) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.chat-changes-name b { font-size: var(--type-small); font-weight: 560; }
+.chat-changes-name b { font-size: var(--type-small); font-weight: var(--weight-medium); }
 .chat-changes-name small { color: var(--faint); font-size: var(--type-micro); }
 .chat-changes-detail { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .chat-changes-detail > header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--hairline); font-size: var(--type-small); text-align: left; }
@@ -1802,3 +1808,489 @@
 .chat-layout .chat-select.open .chat-select-effort {
   color: var(--muted);
 }
+
+/* Session details rail */
+/* Whichever side panel is open (details or files) sets --side-w; the conversation and the
+   composer are sized and centred in the space left of it. */
+.chat-layout .chat-main.rail-open { --side-w: 296px; }
+.chat-layout .chat-main:is(.rail-open, .side-open) > .chat-body { margin-right: var(--side-w); }
+.chat-layout .chat-main:is(.rail-open, .side-open) > .chat-compose-wrap {
+  width: min(var(--chat-column), calc(100% - var(--side-w) - 48px));
+  margin-right: var(--side-w);
+  margin-left: max(24px, calc((100% - var(--side-w) - var(--chat-column)) / 2));
+}
+.chat-layout .chat-rail { position: absolute; top: 50px; right: 0; bottom: 0; width: 296px; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; border-left: 1px solid var(--hairline); }
+.chat-layout .chat-rail-card { border: 1px solid var(--hairline-strong); border-radius: var(--r-card); }
+.chat-layout .chat-rail-card-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; padding: 10px 12px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--type-small); font-weight: var(--weight-semibold); cursor: pointer; }
+.chat-layout .chat-rail-card-head svg { color: var(--muted); transition: transform var(--t-hover); }
+.chat-layout .chat-rail-card-head svg.closed { transform: rotate(-90deg); }
+.chat-layout .chat-rail-card-body { display: grid; gap: 2px; padding: 0 12px 10px; }
+.chat-layout .chat-rail-row { display: flex; align-items: center; gap: 9px; min-height: 28px; color: var(--text-soft); font-size: var(--type-body); }
+.chat-layout .chat-rail-row > svg { flex: none; color: var(--muted); }
+.chat-layout .chat-rail-row > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chat-layout .chat-rail-row small { color: var(--muted); font-size: var(--type-small); }
+.chat-layout .chat-rail-row.changes .diff-stat { flex: none; }
+.chat-layout .chat-rail-row.changes small { flex: 1; }
+.chat-layout .chat-rail-button { height: 24px; padding: 0 9px; border: 1px solid var(--hairline-strong); border-radius: var(--r-control); background: var(--raised); color: var(--text); font: inherit; font-size: var(--type-small); cursor: pointer; }
+.chat-layout .chat-rail-button:hover { background: var(--surface-hover); }
+.chat-layout .chat-rail-empty { margin: 0; padding: 4px 0; color: var(--muted); font-size: var(--type-small); }
+@media (max-width: 860px) {
+  .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-body { margin-right: 0; }
+  .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-compose-wrap {
+    width: calc(100% - 32px);
+    margin: 0 auto 12px;
+  }
+  .chat-layout .chat-rail { background: var(--stage); z-index: 5; }
+}
+
+/* Side column: Terminal and Files panes at the right, like Claude Code's --- */
+/* The chat header stays beside the column rather than under it. */
+.chat-layout .chat-main.side-open > .chat-header { margin-right: var(--side-w); }
+.chat-layout .chat-side {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chat-layout .chat-side-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  background: var(--card);
+}
+.chat-layout .chat-side-slot { display: flex; flex: 1 1 0; min-height: 0; }
+.chat-layout .chat-side-slot > .chat-side-pane { flex: 1; }
+
+/* Drag handles: the column's left edge, between the panes, and between editor and tree. */
+.chat-layout .chat-side-handle { position: relative; flex: none; touch-action: none; }
+.chat-layout .chat-side-handle.horizontal { height: 8px; cursor: row-resize; }
+.chat-layout .chat-side-handle.vertical { align-self: stretch; width: 6px; cursor: col-resize; }
+.chat-layout .chat-side-handle.edge { position: absolute; top: 0; bottom: 0; left: -8px; z-index: 2; }
+.chat-layout .chat-side-handle::after {
+  position: absolute;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+  transition: background var(--dur-fast) var(--ease);
+}
+.chat-layout .chat-side-handle.horizontal::after { top: 3px; left: 35%; right: 35%; height: 2px; }
+.chat-layout .chat-side-handle.vertical::after { top: 8px; bottom: 8px; left: 2px; width: 2px; }
+.chat-layout .chat-side-handle:is(:hover, :focus-visible)::after { background: var(--pane-accent); }
+.chat-layout .chat-side-handle:focus-visible { outline: 0; }
+
+/* Top bar: open files as tabs (or the pane's name), its actions at the right. */
+.chat-layout .chat-files-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  height: var(--pane-head-h);
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border-bottom: 1px solid var(--card-border);
+}
+.chat-layout .chat-files-top > .chat-files-heading { padding-left: 4px; }
+.chat-layout .chat-terminal .chat-files-top > .chat-files-heading { flex: none; }
+.chat-layout .chat-terminal-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: var(--type-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-layout .chat-files-tabs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chat-layout .chat-files-tab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border-radius: var(--r-control);
+  color: var(--muted);
+}
+.chat-layout .chat-files-tab:hover { background: var(--hover); }
+.chat-layout .chat-files-tab.active { color: var(--text); background: var(--hover); }
+.chat-layout .chat-files-tab > button[role='tab'] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-body);
+  cursor: pointer;
+}
+.chat-layout .chat-files-tab > button[role='tab'] > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-layout .chat-files-tab-close {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--faint);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+}
+.chat-layout .chat-files-tab:is(:hover, .active, :focus-within) .chat-files-tab-close { opacity: 1; }
+.chat-layout .chat-files-tab-close:hover { color: var(--text); background: var(--pressed, var(--hover)); }
+.chat-layout .chat-files-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text); flex: none; }
+
+/* Body: the editor (or an empty state) on the left, the tree on the right. */
+.chat-layout .chat-files { flex: 1; }
+.chat-layout .chat-files-columns { display: flex; flex: 1; min-height: 0; }
+.chat-layout .chat-files-viewer { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.chat-layout .chat-files-columns > .chat-files-browser { padding-top: 8px; }
+.chat-layout .chat-files-columns > .chat-files-browser.sized { flex: none; border-left: 1px solid var(--hairline); }
+.chat-layout .chat-files-columns > .chat-side-handle.vertical { width: 0; }
+.chat-layout .chat-files-columns > .chat-side-handle.vertical::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+  content: '';
+}
+.chat-layout .chat-files-columns > .chat-side-handle.vertical::after { left: -1px; }
+.chat-layout .chat-files-placeholder {
+  display: grid;
+  flex: 1;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 24px;
+  color: var(--faint);
+  font-size: var(--type-small);
+  text-align: center;
+}
+.chat-layout .chat-files-placeholder strong { color: var(--text); font-size: var(--type-body); font-weight: var(--weight-medium); }
+.chat-layout .chat-files-viewer .chat-files-editor { border-top: 0; }
+
+/* Terminal pane body: the shared terminal surface without its own frame. */
+.chat-layout .chat-terminal-body { position: relative; display: flex; flex: 1; min-height: 0; }
+.chat-layout .chat-terminal-slot { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.chat-layout .chat-terminal-slot > * { flex: 1; min-width: 0; min-height: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 40px;
+  padding: 0 6px 0 12px;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-heading {
+  flex: 1;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-actions { display: flex; align-items: center; gap: 0; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-actions .icon-button {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 6px;
+  color: var(--text);
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-actions .icon-button:hover { color: var(--text); background: var(--hover); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-actions .icon-button.active { color: var(--text); background: var(--hover); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-actions .chat-files-toggle.active { color: var(--pane-accent); background: var(--pane-accent-bg); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-menu {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--menu-border, var(--hairline-strong));
+  border-radius: 10px;
+  background: var(--menu-bg, var(--raised));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--menu-text, var(--text));
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-body);
+  text-align: left;
+  cursor: pointer;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-menu button:is(:hover, :focus-visible) { outline: 0; background: var(--menu-hover, var(--hover)); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-menu svg { color: var(--muted); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-width: 0;
+  padding: 0 10px 6px 6px;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-file strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-file small {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: var(--type-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-browser { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-search,
+:is(.chat-layout, .workspace-sidebar) .chat-files-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin: 0 8px 6px;
+  padding: 0 10px;
+  height: 30px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--stage);
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-search:focus-within,
+:is(.chat-layout, .workspace-sidebar) .chat-files-create:focus-within {
+  border-color: var(--pane-accent);
+  box-shadow: 0 0 0 1px var(--pane-accent);
+}
+:is(.chat-layout, .workspace-sidebar) :is(.chat-files-search, .chat-files-create) input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-body);
+}
+:is(.chat-layout, .workspace-sidebar) :is(.chat-files-search, .chat-files-create) input::placeholder { color: var(--faint); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-tree,
+:is(.chat-layout, .workspace-sidebar) .chat-files-results { flex: 1; min-height: 0; overflow: auto; padding: 2px 4px 10px; }
+/* Compact rows: chevron for folders, a coloured mark for files, nothing else. */
+:is(.chat-layout .chat-files, .workspace-sidebar .chat-files-skin) :is(.tree-row, .chat-files-row) {
+  height: 24px;
+  min-height: 24px;
+  gap: 6px;
+  border: 0;
+  border-radius: 6px;
+  font-size: var(--type-body);
+}
+:is(.chat-layout .chat-files, .workspace-sidebar .chat-files-skin) .tree-row .tree-indent { width: 12px; }
+:is(.chat-layout .chat-files, .workspace-sidebar .chat-files-skin) .file-mark { flex: none; color: var(--muted); }
+:is(.chat-layout .chat-files, .workspace-sidebar .chat-files-skin) .file-mark svg { display: block; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-row,
+:is(.chat-layout, .workspace-sidebar) .chat-files-group-head,
+:is(.chat-layout, .workspace-sidebar) .chat-files-match {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px;
+  color: var(--text-soft, var(--text));
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+:is(.chat-layout, .workspace-sidebar) :is(.chat-files-row, .chat-files-group-head, .chat-files-match):hover { background: var(--hover); }
+:is(.chat-layout, .workspace-sidebar) :is(.chat-files-row, .chat-files-group-head) > span { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.chat-layout, .workspace-sidebar) :is(.chat-files-row, .chat-files-group-head) > small {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: var(--type-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-group-head > em { flex: none; color: var(--faint); font-size: var(--type-small); font-style: normal; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-match { padding-left: 28px; font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--type-small); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-match > small { flex: none; width: 34px; color: var(--faint); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-match > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-hint,
+:is(.chat-layout, .workspace-sidebar) .chat-files-empty { margin: 0; padding: 8px 12px; color: var(--faint); font-size: var(--type-small); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor { display: flex; flex: 1; flex-direction: column; min-height: 0; border-top: 1px solid var(--hairline); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .monaco-container { flex: 1; min-height: 0; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-toolbar { height: auto; min-height: 34px; padding: 2px 8px; flex-wrap: wrap; min-width: 0; }
+/* The tab already names the file, so the toolbar is just the actions, on one row. */
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-toolbar .editor-file-path { display: none; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-toolbar { flex-wrap: nowrap; justify-content: flex-end; overflow: hidden; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-toolbar .editor-actions { flex: none; }
+.chat-layout .chat-files-viewer { overflow: hidden; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-toolbar .editor-actions { margin-left: auto; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-editor .editor-status { flex-wrap: wrap; height: auto; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-leave {
+  display: grid;
+  gap: 8px;
+  flex: none;
+  margin: 0 8px 6px;
+  padding: 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--stage);
+  font-size: var(--type-small);
+}
+:is(.chat-layout, .workspace-sidebar) .chat-files-leave > div { display: flex; gap: 6px; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-error,
+:is(.chat-layout, .workspace-sidebar) .chat-files-notice { flex: none; margin: 0; padding: 4px 12px 8px; font-size: var(--type-small); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-error { color: var(--danger); }
+:is(.chat-layout, .workspace-sidebar) .chat-files-notice { color: var(--running); }
+@media (max-width: 860px) {
+  .chat-layout .chat-main.side-open > .chat-header { margin-right: 0; }
+  .chat-layout .chat-side { left: 8px; width: auto !important; z-index: 6; }
+}
+
+/* The blue used for the active pane toggle, the view toggle and focused fields. */
+:root { --pane-accent: #6ea8fe; --pane-accent-bg: rgba(110, 168, 254, 0.16); }
+:root[data-theme='light'] { --pane-accent: #2558a5; --pane-accent-bg: rgba(37, 88, 165, 0.12); }
+:root:root .titlebar .titlebar-workspace-action.chat-pane-toggle.active {
+  color: var(--pane-accent);
+  background: var(--pane-accent-bg);
+}
+
+/* The filter field draws its own frame; the input inside stays bare. */
+:root:root :is(.chat-layout, .workspace-sidebar) :is(.chat-files-search, .chat-files-create) input,
+:root:root :is(.chat-layout, .workspace-sidebar) :is(.chat-files-search, .chat-files-create) input:focus,
+:root:root :is(.chat-layout, .workspace-sidebar) :is(.chat-files-search, .chat-files-create) input:focus-visible {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* File-type icons (Material Icon Theme) wherever a file is listed: explorer, tabs, quick open. */
+.file-mark { display: block; flex: none; width: 16px; height: 16px; object-fit: contain; }
+
+/* The explorer's tree matches the chat Files pane: compact rows, chevron-only folders. */
+:root:root .file-tree .tree-row {
+  height: 24px;
+  min-height: 24px;
+  gap: 6px;
+  border: 0;
+  border-radius: 6px;
+  font-size: var(--type-body);
+}
+:root:root .file-tree .tree-row .tree-indent { width: 12px; }
+:is(.chat-layout, .workspace-sidebar) .chat-files-menu-gap { display: block; width: 14px; height: 14px; flex: none; }
+/* In the explorer the header and filter sit flush with the sidebar's edges. */
+.workspace-sidebar .chat-files-skin { display: flex; flex-direction: column; min-height: 0; flex: 1; margin: 0 -4px; }
+/* The tabs show unsaved changes; the pane drops the editor's status bar. */
+.chat-layout .chat-files-viewer .editor-status { display: none; }
+
+/* The chat runs to the top of the window, like Claude: the title bar becomes transparent
+   over it and carries the chat's title and actions in the same row. No separator line. */
+:root:root .app.mode-chat { position: relative; }
+:root:root .app.mode-chat > .titlebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.chat-titlebar-slot {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+  /* ChatWorkspace sets the real left padding so the title lines up with the conversation. */
+  padding-left: 12px;
+  padding-right: 8px;
+}
+.chat-layout.chat-titlebar-content { display: contents; padding: 0; background: none; }
+.chat-titlebar-slot .chat-title { flex: 0 1 auto; max-width: 46%; font-size: var(--type-body); }
+.chat-titlebar-slot .chat-header-actions { margin-left: auto; }
+
+/* Under the title row: the sidebar and the conversation clear it; the panes sit below it. */
+:root:root .chat-layout .chat-sidebar { padding-top: 54px; }
+:root:root .chat-layout .chat-main {
+  padding-top: 46px;
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.chat-layout .chat-side { top: 54px; }
+.chat-layout .chat-rail { top: 54px; }
+
+/* Resize handles carry no coloured line: the cursor says it can be dragged. */
+.chat-layout .chat-side-handle:is(:hover, :focus-visible)::after { background: transparent; }
+.chat-layout .chat-side-handle:focus-visible::after { background: var(--hairline-strong); }
+
+/* The conversations sidebar's drag handle sits on its right edge. */
+.chat-layout .chat-sidebar { position: relative; flex: none; min-width: 200px; max-width: 480px; }
+.chat-layout .chat-sidebar-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.chat-layout .chat-sidebar-handle:focus-visible { outline: 0; background: var(--hairline-strong); }
+
+/* With the side column open, the chat surface runs to the window's right and bottom edges, so the
+   panes sit an even 8px inside the window with no second edge line beside them. */
+:root:root .chat-layout:has(> .chat-main.side-open) { padding-right: 0; }
+:root:root .chat-layout .chat-main.side-open {
+  border-right: 0;
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* The side editor is narrow; Monaco's overview ruler only adds a dark strip beside the code. */
+.chat-layout .chat-files-editor .monaco-editor .decorationsOverviewRuler { display: none !important; }
+.chat-layout .chat-files-editor .monaco-editor .scrollbar.vertical { border-left: 0 !important; box-shadow: none !important; }
+.chat-layout .chat-files-editor .monaco-editor .scrollbar > .shadow { display: none !important; }

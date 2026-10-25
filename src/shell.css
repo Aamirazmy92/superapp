@@ -1,0 +1,842 @@
+/* Shell ------------------------------------------------------------------------------
+   The Claude desktop layout, measured from the reference screenshots in docs/reference.
+   Loaded last; the :root chain matches the deepest chain in the older sheets so these win.
+
+   Layout: the sidebar runs the full window height with the title bar's leading cluster
+   on top of it, a 1px divider separates it from the main surface, and the main surface
+   runs flush to the window edges (no inset card). */
+
+:root:root:root:root {
+  --shell-titlebar-h: 36px;
+  --shell-sidebar-w: 216px;
+  --sidebar-w: var(--shell-sidebar-w);
+  --shell-row-h: 26px; /* search, New, nav rows */
+  --shell-thread-h: 30px; /* conversation rows */
+  --shell-r: 6px; /* rows, fields, small buttons */
+  --shell-r-card: 10px; /* cards and the composer */
+  --shell-r-menu: 8px;
+  --shell-r-modal: 16px;
+}
+
+/* Dark: sampled from the screenshots. */
+:root:root:root:root:not([data-theme='light']) {
+  --chrome: #111111; /* sidebar */
+  --stage: #151515; /* main surface and title bar */
+  --card: #1a1a19; /* side panes */
+  --input: #20201f; /* composer, menus, dialogs */
+  --divider: #292929;
+  --card-border: #2d2d2d;
+  --hairline: #292929;
+  --hairline-strong: #373736;
+  --text: #e8e7e3;
+  --text-soft: #c3c2b8;
+  --muted: #8a8984;
+  --faint: #767570;
+  --link: #6aa0e0;
+  --shell-field: #1d1d1d;
+  --shell-field-border: #343434;
+  --shell-hover: #1d1d1d;
+  --shell-active: #343434;
+  --shell-menu-border: #373736;
+  --shell-menu-hover: #2c2c2b;
+  --shell-modal-border: #4d4d4c;
+  --shell-modal-active: #313130;
+  --shell-chip-hover: #252525;
+  --shell-pane-border: #2b2b2b;
+  --shell-pane-field: #262625;
+  --shell-pane-field-border: #3c3c3b;
+  --shell-seg: #1d1d1d;
+  --shell-seg-active: #343434;
+  --shell-icon: #c3c2b7;
+  --shell-window-icon: #969696;
+  --pane-accent: #5b9be6;
+  --pane-accent-bg: #032042;
+}
+
+:root:root:root:root[data-theme='light'] {
+  --divider: #e3e2dd;
+  --shell-field: #ffffff;
+  --shell-field-border: #dcdbd6;
+  --shell-hover: rgba(0, 0, 0, 0.045);
+  --shell-active: #e4e3df;
+  --shell-menu-border: #dcdbd6;
+  --shell-menu-hover: #efeeea;
+  --shell-modal-border: #d6d5d0;
+  --shell-modal-active: #ecebe7;
+  --shell-chip-hover: #ecebe6;
+  --shell-pane-border: #e3e2dd;
+  --shell-pane-field: #f6f5f2;
+  --shell-pane-field-border: #dcdbd6;
+  --shell-seg: #ecebe6;
+  --shell-seg-active: #ffffff;
+  --shell-icon: #3d3d3a;
+  --shell-window-icon: #5f5e5a;
+}
+
+/* Title bar ----------------------------------------------------------------------------
+   Transparent and laid over the content in both modes, so the sidebar shows through
+   behind the leading cluster and the divider runs to the top of the window. */
+:root:root:root:root .app { position: relative; }
+:root:root:root:root .app > .titlebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  height: var(--shell-titlebar-h);
+  min-height: var(--shell-titlebar-h);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root:root:root:root .titlebar-lead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding-left: 12px;
+  -webkit-app-region: drag;
+}
+:root:root:root:root .app.mode-code .titlebar-lead {
+  min-width: var(--code-sidebar-w, 0px);
+}
+:root:root:root:root .titlebar-lead > button,
+:root:root:root:root .titlebar-lead .mode-switch {
+  -webkit-app-region: no-drag;
+}
+:root:root:root:root .titlebar .titlebar-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--shell-r);
+  color: var(--shell-icon);
+  background: transparent;
+}
+:root:root:root:root .titlebar .titlebar-icon:hover {
+  color: var(--text);
+  background: var(--shell-hover);
+}
+:root:root:root:root .titlebar .titlebar-icon svg { width: 16px; height: 16px; }
+
+/* Chat / Code: a small segmented pair of icon buttons. */
+:root:root:root:root .titlebar .mode-switch {
+  position: relative;
+  display: flex;
+  gap: 0;
+  height: 28px;
+  margin-left: 4px;
+  padding: 1px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--shell-seg);
+  box-shadow: none;
+}
+:root:root:root:root .titlebar .mode-switch .mode-switch-pill { display: none; }
+:root:root:root:root .titlebar .mode-switch button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--shell-r);
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+}
+:root:root:root:root .titlebar .mode-switch button:hover:not(.active) {
+  color: var(--text);
+  background: transparent;
+}
+:root:root:root:root .titlebar .mode-switch button.active,
+:root:root:root:root .titlebar .mode-switch button.active:hover {
+  color: var(--text);
+  background: var(--shell-seg-active);
+}
+:root:root:root:root .titlebar .mode-switch button svg { width: 15px; height: 15px; }
+
+/* Title: muted, 20px past the divider. */
+:root:root:root:root .titlebar .titlebar-title {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 20px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+  white-space: nowrap;
+}
+:root:root:root:root .titlebar .titlebar-title > span:first-child { color: var(--muted); }
+:root:root:root:root .titlebar .titlebar-title .titlebar-title-sub {
+  color: var(--faint);
+  font-size: var(--type-body);
+}
+:root:root:root:root .titlebar .titlebar-title .titlebar-title-sub::before {
+  content: '/';
+  margin-right: 6px;
+  color: var(--faint);
+}
+:root:root:root:root .chat-titlebar-slot .chat-title {
+  color: var(--muted);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+
+/* Trailing actions: 16px glyphs, 28px buttons; window controls 46px wide. */
+:root:root:root:root .titlebar .titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  margin-left: auto;
+}
+:root:root:root:root .titlebar .titlebar-workspace-actions { gap: 2px; }
+:root:root:root:root .titlebar .titlebar-workspace-action,
+:root:root:root:root .titlebar .chat-header-actions :is(button, .icon-button) {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: var(--shell-r);
+  color: var(--shell-icon);
+  background: transparent;
+}
+:root:root:root:root .titlebar .titlebar-workspace-action:hover:not(:disabled),
+:root:root:root:root .titlebar .chat-header-actions :is(button, .icon-button):hover:not(:disabled) {
+  color: var(--text);
+  background: var(--shell-hover);
+}
+:root:root:root:root .titlebar :is(.titlebar-workspace-action, .chat-header-actions button) svg {
+  width: 16px;
+  height: 16px;
+}
+:root:root:root:root .titlebar .titlebar-workspace-action.active,
+:root:root:root:root .titlebar .titlebar-workspace-action.chat-pane-toggle.active {
+  color: var(--pane-accent);
+  background: var(--pane-accent-bg);
+}
+:root:root:root:root .titlebar .window-controls { display: flex; height: 100%; }
+:root:root:root:root .titlebar .window-controls button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  min-width: 46px;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--shell-window-icon);
+  background: transparent;
+}
+:root:root:root:root .titlebar .window-controls button:hover { color: var(--text); background: var(--shell-hover); }
+:root:root:root:root .titlebar .window-controls button[aria-label='Close app']:hover { color: #fff; background: #c42b1c; }
+
+/* Under the title bar ---------------------------------------------------------------- */
+:root:root:root:root .app-body,
+:root:root:root:root .chat-layout {
+  gap: 0;
+  padding: 0;
+  background: var(--stage);
+}
+:root:root:root:root .app-body > :not(.projects-sidebar):not(.panel-separator-projects) {
+  margin-top: var(--shell-titlebar-h);
+}
+
+/* Main surfaces: flush, no card frame. */
+:root:root:root:root .app-body > .workspace,
+:root:root:root:root .chat-layout .chat-main {
+  border: 0;
+  border-radius: 0;
+  background: var(--stage);
+  box-shadow: none;
+}
+:root:root:root:root .chat-layout .chat-main { padding-top: var(--shell-titlebar-h); }
+
+/* Sidebars (code projects and chat conversations) ---------------------------------- */
+:root:root:root:root :is(.app-body > .projects-sidebar, .chat-layout .chat-sidebar) {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--shell-titlebar-h) + 7px) 8px 0;
+  border: 0;
+  border-right: 1px solid var(--divider);
+  border-radius: 0;
+  background: var(--chrome);
+  box-shadow: none;
+  font-size: var(--type-body);
+}
+:root:root:root:root .app-body > .projects-sidebar:not([style*='width']) {
+  width: var(--shell-sidebar-w);
+  flex-basis: var(--shell-sidebar-w);
+}
+/* The resize handle is the divider itself: no extra gutter, a wider invisible grab area. */
+:root:root:root:root .app-body > .panel-separator-projects {
+  flex: 0 0 0;
+  width: 0;
+  margin: 0;
+  overflow: visible;
+}
+:root:root:root:root .app-body > .panel-separator-projects::before {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+:root:root:root:root .app-body > .panel-separator-projects::after { display: none; }
+
+/* Search field: 26px, inset 2px inside the rows. */
+:root:root:root:root .chat-layout .chat-sidebar-top {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 2px;
+}
+:root:root:root:root .chat-layout .chat-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--shell-row-h);
+  min-height: var(--shell-row-h);
+  margin: 0 2px;
+  padding: 0 8px;
+  border: 1px solid var(--shell-field-border);
+  border-radius: var(--shell-r);
+  color: var(--muted);
+  background: var(--shell-field);
+}
+:root:root:root:root .chat-layout .chat-search input {
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: var(--type-body);
+}
+:root:root:root:root .chat-layout .chat-search input::placeholder { color: var(--muted); }
+:root:root:root:root .chat-layout .chat-search svg { flex: none; width: 14px; height: 14px; }
+
+/* Nav rows: New chat; code mode's quick actions. */
+:root:root:root:root .chat-layout .chat-new-button,
+:root:root:root:root .app-body > .projects-sidebar .sidebar-actions button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--shell-row-h);
+  min-height: var(--shell-row-h);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--shell-r);
+  color: var(--text-soft);
+  background: transparent;
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .chat-layout .chat-new-button { color: var(--text); background: var(--shell-active); }
+:root:root:root:root .app-body > .projects-sidebar .sidebar-actions button:hover:not(:disabled),
+:root:root:root:root .chat-layout .chat-new-button:hover {
+  color: var(--text);
+  background: var(--shell-active);
+}
+:root:root:root:root .app-body > .projects-sidebar .sidebar-actions button.active {
+  color: var(--text);
+  background: var(--shell-active);
+}
+:root:root:root:root :is(.chat-layout .chat-new-button, .app-body > .projects-sidebar .sidebar-actions button) svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--shell-icon);
+}
+:root:root:root:root .app-body > .projects-sidebar .sidebar-actions {
+  display: grid;
+  gap: 0.5px;
+  margin: 0;
+  padding: 0 0 2px;
+  border: 0;
+}
+:root:root:root:root .app-body > .projects-sidebar .sidebar-actions kbd {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: var(--type-micro);
+}
+
+/* Section labels ("Code", "superapp"): 13px muted with a + at the right. */
+:root:root:root:root .chat-layout .chat-thread-list-head,
+:root:root:root:root .app-body > .projects-sidebar .projects-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  min-height: 28px;
+  margin: 14px 0 0;
+  padding: 0 4px 0 10px;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--type-small);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0;
+}
+:root:root:root:root .chat-layout .chat-group-header {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  min-height: 28px;
+  margin: 10px 0 0;
+  padding: 0 4px 0 10px;
+}
+:root:root:root:root .chat-layout .chat-thread-group:first-of-type .chat-group-header { margin-top: 0; }
+:root:root:root:root .chat-layout .chat-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: var(--type-small);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .chat-layout .chat-group-toggle:hover { color: var(--text-soft); }
+:root:root:root:root :is(.chat-layout .chat-group-new, .app-body > .projects-sidebar .projects-heading .icon-button) {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: var(--shell-r);
+  color: var(--muted);
+  background: transparent;
+}
+:root:root:root:root :is(.chat-layout .chat-group-new, .app-body > .projects-sidebar .projects-heading .icon-button):hover {
+  color: var(--text);
+  background: var(--shell-hover);
+}
+:root:root:root:root :is(.chat-layout .chat-group-new, .app-body > .projects-sidebar .projects-heading .icon-button) svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Conversation and project rows: 30px, 14px text in the soft colour. */
+:root:root:root:root .chat-layout .chat-thread {
+  min-height: var(--shell-thread-h);
+  height: var(--shell-thread-h);
+  margin: 0;
+  border-radius: var(--shell-r);
+  background: transparent;
+}
+:root:root:root:root .chat-layout .chat-thread-open {
+  height: 100%;
+  min-height: 0;
+  padding: 0 10px;
+  color: var(--text-soft);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .chat-layout .chat-thread:hover { background: var(--shell-hover); }
+:root:root:root:root .chat-layout .chat-thread:hover .chat-thread-open { color: var(--text); }
+:root:root:root:root .chat-layout .chat-thread.active { background: var(--shell-active); }
+:root:root:root:root .chat-layout .chat-thread.active .chat-thread-open {
+  color: var(--text);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .app-body > .projects-sidebar :is(.project-row-wrap, .workspace-row-wrap) {
+  min-height: var(--shell-thread-h);
+  border-radius: var(--shell-r);
+}
+:root:root:root:root .app-body > .projects-sidebar :is(.project-row, .workspace-row) {
+  height: var(--shell-thread-h);
+  min-height: var(--shell-thread-h);
+  padding: 0 10px;
+  border-radius: var(--shell-r);
+  color: var(--text-soft);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .app-body > .projects-sidebar .project-row-wrap:hover,
+:root:root:root:root .app-body > .projects-sidebar .workspace-row-wrap:hover {
+  background: var(--shell-hover);
+}
+:root:root:root:root .app-body > .projects-sidebar .project-row-wrap:has(.project-row.active) {
+  background: transparent;
+}
+:root:root:root:root .app-body > .projects-sidebar .project-row.active { color: var(--text); background: transparent; }
+:root:root:root:root .app-body > .projects-sidebar .workspace-row.active,
+:root:root:root:root .app-body > .projects-sidebar .workspace-row-wrap:has(.workspace-row.active) {
+  color: var(--text);
+  background: var(--shell-active);
+}
+:root:root:root:root .app-body > .projects-sidebar .project-list { margin-top: 0; }
+
+/* Footer: a full-width rule, then a 43px row. */
+:root:root:root:root .chat-layout .chat-sidebar-footer {
+  display: flex;
+  align-items: center;
+  height: 43px;
+  margin: auto -8px 0;
+  padding: 0 8px;
+  border-top: 1px solid var(--divider);
+}
+:root:root:root:root .app-body > .projects-sidebar .sidebar-settings {
+  margin: auto -8px 0;
+  width: calc(100% + 16px);
+  height: 43px;
+  min-height: 43px;
+  padding: 0 18px;
+  border: 0;
+  border-top: 1px solid var(--divider);
+  border-radius: 0;
+}
+:root:root:root:root :is(.chat-sidebar-footer, .app-body > .projects-sidebar) .sidebar-settings {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-soft);
+  background: transparent;
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .chat-layout .chat-sidebar-footer .sidebar-settings {
+  width: 100%;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--shell-r);
+}
+:root:root:root:root :is(.chat-sidebar-footer, .app-body > .projects-sidebar) .sidebar-settings:hover {
+  color: var(--text);
+  background: var(--shell-hover);
+}
+:root:root:root:root :is(.chat-sidebar-footer, .app-body > .projects-sidebar) .sidebar-settings svg {
+  width: 15px;
+  height: 15px;
+  color: var(--shell-icon);
+}
+
+/* Composer --------------------------------------------------------------------------
+   44px tall, 10px corners, a 1px line; the project / mode / model row sits under it. */
+:root:root:root:root .chat-layout { --chat-column: 768px; }
+:root:root:root:root .chat-layout .chat-compose-wrap { margin-bottom: 10px; }
+:root:root:root:root .chat-layout .chat-composer,
+:root:root:root:root .home .home-composer {
+  min-height: 44px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--shell-r-card);
+  background: var(--input);
+  box-shadow: none;
+}
+:root:root:root:root .chat-layout .chat-composer { gap: 0; padding: 0; }
+:root:root:root:root .chat-layout .chat-composer:focus-within { border-color: #4a4a48; }
+:root:root:root:root[data-theme='light'] .chat-layout .chat-composer:focus-within { border-color: #c4c3be; }
+:root:root:root:root .chat-layout .chat-compose-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 8px 0 10px;
+}
+:root:root:root:root .chat-layout .chat-compose-line textarea {
+  box-sizing: content-box;
+  min-height: 22px;
+  max-height: 240px;
+  margin: 10px 0;
+  padding: 0;
+  overflow-y: auto;
+  color: var(--text);
+  font-size: var(--type-body);
+  line-height: 22px;
+}
+:root:root:root:root .chat-layout .chat-compose-line textarea::placeholder { color: var(--muted); }
+:root:root:root:root .chat-layout .chat-compose-line .chat-voice-button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--shell-r);
+  color: #a4a39a;
+  background: transparent;
+}
+:root:root:root:root[data-theme='light'] .chat-layout .chat-compose-line .chat-voice-button { color: var(--muted); }
+:root:root:root:root .chat-layout .chat-compose-line .chat-voice-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--shell-chip-hover);
+}
+:root:root:root:root .chat-layout .chat-compose-line .chat-voice-button svg { width: 15px; height: 15px; }
+
+/* The row under the composer: plain text chips that pick up a fill on hover. */
+:root:root:root:root .chat-layout .chat-compose-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+  margin-top: 11px;
+  padding: 0 8px;
+}
+:root:root:root:root .chat-layout :is(.chat-compose-tools, .chat-agent-controls) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+}
+/* One line, as in Claude: the left group gives way first when the column is narrow. */
+:root:root:root:root .chat-layout .chat-compose-tools { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+:root:root:root:root .chat-layout .chat-agent-controls { flex: none; margin-left: auto; }
+:root:root:root:root .chat-layout .chat-main:is(.side-open, .rail-open) .chat-attach em { display: none; }
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select, .chat-context-chip, .chat-attach) {
+  flex: none;
+  max-width: 220px;
+  white-space: nowrap;
+}
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select, .chat-context-chip, .chat-attach) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--shell-r);
+  color: var(--text-soft);
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select, .chat-context-chip, .chat-attach):hover:not(:disabled),
+:root:root:root:root .chat-layout .chat-compose-toolbar .chat-select.open {
+  color: var(--text);
+  background: var(--shell-chip-hover);
+}
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select, .chat-context-chip, .chat-attach) svg {
+  width: 14px;
+  height: 14px;
+}
+:root:root:root:root .chat-layout .chat-compose-toolbar .chat-select-chevron { display: none; }
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select-effort, .chat-attach em) {
+  color: var(--muted);
+  font-size: var(--type-small);
+  font-style: normal;
+}
+
+/* Menus --------------------------------------------------------------------------------
+   Item rows and colours already follow Claude (the --menu-* palette in density.css); the
+   frame is 8px corners with a 1px line, drawn on the surface behind each menu. */
+:root:root:root:root :is(.context-menu, .notification-popover, .workspace-views-menu, .new-pane-menu) > .motion-surface {
+  border-color: var(--menu-border);
+  border-radius: var(--shell-r-menu);
+  background: var(--menu-bg);
+}
+:root:root:root:root :is(.context-menu, .notification-popover, .workspace-views-menu, .new-pane-menu) {
+  border-radius: var(--shell-r-menu);
+}
+:root:root:root:root .chat-select-menu.compact .chat-select-list,
+:root:root:root:root .chat-select-sub {
+  border-radius: var(--shell-r-menu);
+}
+:root:root:root:root .context-menu > :is(button, [role='menuitem']) {
+  min-height: 26px;
+  border-radius: 4px;
+  color: var(--menu-text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .context-menu > :is(button, [role='menuitem']):hover:not(:disabled) { background: var(--menu-hover); }
+:root:root:root:root .context-menu > :is(button, [role='menuitem']) svg { width: 14px; height: 14px; }
+
+/* Side panes (terminal, files, browser) ---------------------------------------------- */
+:root:root:root:root .chat-layout .chat-side { top: calc(var(--shell-titlebar-h) + 4px); }
+:root:root:root:root .chat-layout .chat-rail { top: calc(var(--shell-titlebar-h) + 4px); }
+:root:root:root:root .chat-layout .chat-side :is(.chat-side-pane, .chat-pane) {
+  border: 1px solid var(--shell-pane-border);
+  border-radius: var(--shell-r-menu);
+  background: var(--card);
+}
+
+/* Dialogs ------------------------------------------------------------------------------
+   The command palette and Quick Open: 16px corners, 36px rows with 8px corners, and the
+   list scrolls inside the window rather than running off its bottom edge. */
+:root:root:root:root .modal-backdrop:has(> .command-modal) .motion-surface-dialog,
+:root:root:root:root .modal-backdrop > .command-modal {
+  border-radius: var(--shell-r-modal);
+}
+:root:root:root:root .modal-backdrop:has(> .command-modal) .motion-surface-dialog {
+  border-color: var(--shell-modal-border);
+  background: var(--input);
+}
+:root:root:root:root .modal-backdrop > .command-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 12vh - 46px - 32px);
+}
+:root:root:root:root .modal-backdrop > .command-modal .command-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 10px 10px;
+}
+:root:root:root:root .modal-backdrop > .command-modal .command-list button {
+  min-height: 36px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+}
+:root:root:root:root .modal-backdrop > .command-modal .command-list button.command-selected {
+  background: var(--shell-modal-active);
+}
+:root:root:root:root .modal-backdrop > .command-modal .command-list button kbd {
+  color: var(--faint);
+  font-size: var(--type-small);
+}
+
+/* Code mode's side panes ---------------------------------------------------------------
+   Browser, explorer and dashboard are cards like Claude's side panes: 8px corners, a 1px
+   line, 8px apart and 8px from the window edges. The resize handles are invisible strips
+   in those gaps rather than gutters of their own. */
+:root:root:root:root .app-body { padding-right: 8px; }
+:root:root:root:root .app-body > .workspace { margin-right: 0; }
+:root:root:root:root .work-area > .preview-panel.workspace-browser,
+:root:root:root:root .app-body > .workspace-sidebar {
+  margin: 4px 0 8px 8px;
+  border: 1px solid var(--shell-pane-border);
+  border-radius: var(--shell-r-menu);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: none;
+}
+:root:root:root:root .app-body > .workspace-sidebar { margin-top: calc(var(--shell-titlebar-h) + 4px); }
+:root:root:root:root .app-body > .dashboard-drawer.docked { margin-top: calc(var(--shell-titlebar-h) + 4px); margin-bottom: 8px; }
+:root:root:root:root .app-body > .dashboard-drawer.docked > .agent-dashboard {
+  top: 0;
+  bottom: 0;
+  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) - 8px);
+  border: 1px solid var(--shell-pane-border);
+  border-radius: var(--shell-r-menu);
+  background: var(--card);
+  box-shadow: none;
+}
+:root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer) {
+  position: relative;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  overflow: visible;
+}
+:root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer, .panel-separator-dashboard)::before {
+  content: '';
+  position: absolute;
+  inset: 0 -8px 0 -2px;
+}
+:root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer, .panel-separator-dashboard)::after { display: none; }
+:root:root:root:root .dashboard-drawer.docked > .panel-separator-dashboard { width: 0; }
+
+/* Explorer and dashboard together: one column, explorer above, dashboard below. */
+:root:root:root:root .app-body.stack-dock > .workspace-sidebar {
+  align-self: flex-start;
+  height: calc((100% - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
+}
+:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: var(--explorer-w) !important;
+  height: calc((100% - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
+  margin: 0;
+}
+:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked > .agent-dashboard { width: 100%; }
+:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked > .panel-separator-dashboard { display: none; }
+/* The explorer card clears the title bar like the other panes (this beats the generic
+   under-the-title-bar offset above). */
+:root:root:root:root .app-body > .workspace-sidebar.sidebar { margin-top: calc(var(--shell-titlebar-h) + 4px); }
+
+/* A narrow dashboard (stacked, or dragged small) shows its four counts as a 2 × 2 grid. */
+:root:root:root:root .agent-dashboard { container-type: inline-size; }
+@container (max-width: 360px) {
+  :root:root:root:root .agent-dashboard-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root:root:root:root .agent-dashboard-filters button:nth-child(odd) { box-shadow: none; }
+  :root:root:root:root .agent-dashboard-filters button:nth-child(n + 3) { box-shadow: inset 0 1px 0 var(--hairline); }
+  :root:root:root:root .agent-dashboard-filters button:nth-child(4) { box-shadow: inset 1px 1px 0 var(--hairline); }
+}
+
+/* The editor's status line stays one line in a narrow column; the details give way first. */
+:root:root:root:root .editor-status { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+:root:root:root:root .editor-status > div { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+:root:root:root:root .editor-status > div:first-child { flex: 0 1 auto; text-overflow: ellipsis; }
+
+/* Code home in a narrow column ---------------------------------------------------------
+   (workspaceSetup.css has these breakpoints, but density.css's tile and bar sizes beat them.) */
+@container (max-width: 560px) {
+  :root:root:root:root .home-agent-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  /* Summary on its own line; Save and Launch share the line under it. */
+  :root:root:root:root .home .home-composer { flex-wrap: wrap; row-gap: 6px; padding: 8px; }
+  :root:root:root:root .home .home-composer-marks { padding-left: 4px; }
+  :root:root:root:root .home .home-composer-text { flex: 1 1 calc(100% - 60px); }
+  :root:root:root:root .home :is(.home-save-open, .home-launch-button) { flex: 1 1 120px; width: auto; justify-content: center; }
+}
+@container (max-width: 340px) {
+  :root:root:root:root .home-agent-tiles { grid-template-columns: minmax(0, 1fr); }
+}
+/* A tile's name gives way to its session stepper instead of running under it. */
+:root:root:root:root .home-agent-tiles .home-tile:has(.home-stepper) .home-tile-select { padding-right: 64px; }
+:root:root:root:root .home-agent-tiles .home-tile-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Chat side column: the browser pane on top, Terminal and Files stacked under it. */
+:root:root:root:root .chat-layout .chat-side-stack {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+:root:root:root:root .chat-layout .chat-browser-slot > .preview-panel.workspace-browser {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--shell-pane-border);
+  border-radius: var(--shell-r-menu);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: none;
+}
+
+/* Narrow windows and wide side columns -------------------------------------------------
+   The chat shrinks with the window instead of growing to fit its content (which pushed
+   the side column past the window's right edge). The side column gives way so the
+   conversation keeps at least 324px, and the conversation and composer make room for
+   the column's real width rather than its saved one. */
+:root:root:root:root .chat-mode-container > .chat-layout { min-width: 0; }
+:root:root:root:root .chat-layout .chat-main > .chat-body { min-width: 0; }
+@media (min-width: 861px) {
+  :root:root:root:root .chat-layout .chat-main { --side-room: min(var(--side-w, 0px), calc(100% - 324px)); }
+  :root:root:root:root .chat-layout .chat-side:not(.maximized) { max-width: calc(100% - 340px); }
+  :root:root:root:root .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-body { margin-right: var(--side-room); }
+  :root:root:root:root .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-compose-wrap {
+    width: min(var(--chat-column), calc(100% - var(--side-room) - 48px));
+    margin-right: var(--side-room);
+    margin-left: max(24px, calc((100% - var(--side-room) - var(--chat-column)) / 2));
+  }
+}

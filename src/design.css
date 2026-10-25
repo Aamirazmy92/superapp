@@ -213,7 +213,7 @@ kbd {
   color: var(--on-primary) !important;
   background: var(--primary);
   box-shadow: none;
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.01em;
 }
 
@@ -253,7 +253,7 @@ kbd {
   color: #fff;
   background: #e5484d;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 .danger-button:hover:not(:disabled) {
@@ -305,7 +305,7 @@ kbd {
   background: var(--raised);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--text);
-  font-weight: 650;
+  font-weight: var(--weight-medium);
   line-height: 1;
 }
 
@@ -369,7 +369,7 @@ button:disabled .agent-monogram,
   padding-left: 16px;
   color: var(--text);
   font-size: var(--type-title);
-  font-weight: 620;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.03em;
 }
 
@@ -395,7 +395,7 @@ button:disabled .agent-monogram,
   color: var(--faint);
   background: transparent;
   font-size: var(--type-micro);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   letter-spacing: 0.02em;
   text-transform: lowercase;
 }
@@ -460,7 +460,7 @@ button:disabled .agent-monogram,
   color: var(--on-primary);
   background: var(--primary);
   font-size: 8.5px;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
   line-height: 11px;
 }
 
@@ -571,7 +571,7 @@ body.row-resizing webview { pointer-events: none; }
   padding: 0 4px 6px 10px;
   color: var(--text);
   font-size: var(--type-body);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.01em;
 }
 
@@ -894,14 +894,14 @@ body.row-resizing webview { pointer-events: none; }
   padding: 0 12px 0 20px;
   color: var(--text);
   font-size: var(--type-body);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 .breadcrumb {
   gap: 7px;
   color: var(--text);
   font-size: var(--type-body);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
 }
 
 .breadcrumb svg {
@@ -1213,7 +1213,7 @@ body.row-resizing webview { pointer-events: none; }
 .terminal-pane.active .terminal-host,
 .terminal-host .xterm,
 .terminal-host .xterm-viewport {
-  background: var(--well) !important;
+  background: var(--terminal-bg, var(--well)) !important;
 }
 
 .terminal-host {
@@ -1261,7 +1261,7 @@ body.row-resizing webview { pointer-events: none; }
 .welcome h1,
 .chat-welcome h1 {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.03em;
 }
 
@@ -1660,7 +1660,7 @@ body.row-resizing webview { pointer-events: none; }
 .confirm-copy h2 {
   color: var(--text);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.02em;
 }
 
@@ -1691,7 +1691,7 @@ body.row-resizing webview { pointer-events: none; }
   margin: 0 0 6px;
   color: var(--text);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   line-height: 1.35;
   letter-spacing: -0.02em;
   text-align: left;
@@ -1829,7 +1829,7 @@ body.row-resizing webview { pointer-events: none; }
 
 .preferences-header h2 {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.03em;
 }
 
@@ -2464,7 +2464,7 @@ a {
   padding: 12px 14px 4px;
   color: var(--muted);
   font-size: var(--type-micro);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 .browser-history-day ul { margin: 0; padding: 0; list-style: none; }
 .browser-history-entry { display: flex; align-items: center; gap: 4px; padding: 0 6px 0 14px; }
@@ -2694,3 +2694,28 @@ a {
 :root:root .titlebar .mode-switch[data-mode='chat'] .mode-switch-pill {
   transform: translateX(calc(100% + 2px));
 }
+/* Light theme: the knob is a white chip, not the dark one. */
+:root:root[data-theme='light'] .titlebar .mode-switch {
+  background: rgba(0, 0, 0, 0.05);
+}
+:root:root[data-theme='light'] .titlebar .mode-switch .mode-switch-pill {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+
+/* The Code explorer pops out on the right as a card, like the chat Files pane.
+   It stays where it is in the markup; flex order moves it after the editor. */
+:root:root .app-body > .projects-sidebar { order: 0; }
+:root:root .app-body > .panel-separator-projects { order: 1; }
+:root:root .app-body > .workspace { order: 2; }
+:root:root .app-body > .panel-separator-explorer { order: 3; }
+:root:root .app-body > .workspace-sidebar {
+  order: 4;
+  margin: var(--pane-gap) 0;
+  padding: 0 var(--space-1) var(--space-2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  background: var(--card);
+  overflow: hidden;
+}
+:root:root .app-body > .dashboard-drawer { order: 5; }

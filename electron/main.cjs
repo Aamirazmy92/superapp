@@ -23,6 +23,13 @@ function terminalDrops() {
     fetch: (url, options) => session.fromPartition('persist:veyo-browser').fetch(url, options),
   });
 }
+const { createUpdater } = require('./updater.cjs');
+const appUpdater = createUpdater({
+  app,
+  send: (state) => {
+    if (win && !win.webContents.isDestroyed()) win.webContents.send('update:state', state);
+  },
+});
 const { createPluginService } = require('./plugins/index.cjs');
 const { publicCatalogSource } = require('./plugins/public.cjs');
 let pluginService;
@@ -1260,8 +1267,8 @@ app
     );
     session.defaultSession.setPermissionCheckHandler(() => false);
     win = new BrowserWindow({
-      width: 1277,
-      height: 753,
+      width: 1275,
+      height: 719,
       minWidth: 760,
       minHeight: 560,
       frame: false,
@@ -1386,6 +1393,9 @@ app
       else closeApproved = false;
     });
     registerIPC();
+    handle('update:state', () => appUpdater.state());
+    handle('update:check', () => appUpdater.check());
+    handle('update:install', () => appUpdater.install());
     // `scripts/dev.mjs` may bind Vite to any available localhost port. Use
     // the URL it passed through instead of assuming the old default port;
     // otherwise `npm run dev` silently opens the stale production bundle.
@@ -1395,6 +1405,9 @@ app
     }
     else await win.loadFile(path.join(__dirname, '../dist/index.html'));
     win.show();
+    // Quiet check shortly after launch, then every few hours while the app stays open.
+    setTimeout(() => void appUpdater.check(), 15000);
+    setInterval(() => void appUpdater.check(), 4 * 60 * 60 * 1000).unref();
   })
   .catch((error) => {
     dialog.showErrorBox('Veyo could not start', error.message);

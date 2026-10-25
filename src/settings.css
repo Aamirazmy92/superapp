@@ -46,7 +46,7 @@
 .preferences-header h2 {
   margin: 0;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   letter-spacing: -0.5px;
 }
 .preferences-header p {
@@ -137,7 +137,7 @@
 .preferences-content h3 {
   font-size: 18px;
   margin: 0 0 6px;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 .preferences-description {
   color: #9b9fa6;
@@ -356,7 +356,7 @@
 }
 .preferences-theme-setting > strong {
   display: block;
-  font-weight: 550;
+  font-weight: var(--weight-medium);
 }
 .preferences-theme-setting > small {
   display: block;
@@ -410,7 +410,7 @@
 .preferences-theme-swatch i:nth-child(2) { width: 78%; opacity: .65; }
 .preferences-theme-swatch i:last-child { width: 43%; }
 .preferences-theme-label { display: block; padding: 10px 5px 5px; }
-.preferences-theme-label strong { display: block; font-weight: 550; }
+.preferences-theme-label strong { display: block; font-weight: var(--weight-medium); }
 .preferences-theme-label small { display: block; margin-top: 3px; color: var(--muted); font-size: var(--type-micro); }
 @media (max-width: 700px) {
   .preferences-themes { grid-template-columns: 1fr; }
@@ -475,7 +475,7 @@
 :root .preferences .preferences-sidebar nav button[aria-current] {
   background: var(--raised);
   color: var(--text);
-  font-weight: 560;
+  font-weight: var(--weight-medium);
   box-shadow: inset 0 0 0 1px var(--hairline-strong);
 }
 :root .preferences .preferences-sidebar nav button svg { color: var(--muted); }

@@ -54,7 +54,7 @@
   padding: 0 8px;
   border-radius: 6px;
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   background: var(--hover);
   transition: background-color var(--dur-fast) var(--ease);
 }

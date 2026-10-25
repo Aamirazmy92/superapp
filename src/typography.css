@@ -73,11 +73,18 @@
     .chat-provider-note *,
     .chat-local-note,
     .chat-thread-empty,
-    .chat-group-header,
-    .chat-group-header *,
-    .chat-thread-list-head,
-    .chat-thread-list-head *,
     .chat-starter span,
+    .chat-thread-open,
+    .chat-thread-open *,
+    .chat-new-button,
+    .chat-new-button *,
+    .chat-search,
+    .chat-search *,
+    .chat-sidebar-footer .sidebar-settings,
+    .chat-sidebar-footer .sidebar-settings *,
+    .chat-files-heading,
+    .chat-files-tab,
+    .chat-files-tab *,
     .chat-header-model,
     .command-footer,
     .command-footer *,
@@ -90,9 +97,22 @@
   font-size: var(--type-small);
 }
 
-/* Micro: badges. */
+/* Micro (12px): badges, sidebar section headings, and the status row under the composer. */
 :root:root:root:root :is(.app, .modal-backdrop)
-  :is(.alpha, .home-chip small, .sidebar-actions small, .notification-unread-dot) {
+  :is(
+    .alpha,
+    .home-chip small,
+    .sidebar-actions small,
+    .notification-unread-dot,
+    .chat-group-header,
+    .chat-group-header *,
+    .chat-thread-list-head,
+    .chat-thread-list-head *,
+    .chat-compose-tools,
+    .chat-compose-tools *,
+    .chat-agent-controls,
+    .chat-agent-controls *
+  ) {
   font-size: var(--type-micro);
 }
 

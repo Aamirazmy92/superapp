@@ -7,20 +7,22 @@
    themes, which are more specific, keep their own palettes and share everything
    else (type, spacing, radii, sizes). */
 :root {
-  /* Typography. Weights stay at 600 or below. */
+  /* Typography. Four steps: 12 meta and section labels, 13 secondary UI, 14 body and chat, 16 titles.
+     Weights stay at 500 or below: 400 for most text, 500 for titles and selected items. */
   --font-ui: 'Figtree Variable', Figtree, 'Segoe UI Variable Text', system-ui, sans-serif;
   --font-sans: var(--font-ui);
   --type-display: 22px; /* page heading */
-  --type-title: 15px; /* dialog and section titles */
+  --type-title: 16px; /* dialog and section titles */
   --type-body: 14px; /* nav, chips, buttons, menu items, inputs */
-  --type-small: 13px; /* meta: labels, hints, footers */
-  --type-micro: 12px; /* tiny badges */
-  --type-caption: 10px; /* uppercase captions */
+  --type-small: 13px; /* secondary UI: sidebar items, hints, footers */
+  --type-micro: 12px; /* meta and captions: section labels, status rows, badges */
+  --type-caption: 12px; /* captions */
   --type-lead: 16px; /* large inline text, 15-16px before */
-  --line-ui: 1.4;
+  --line-ui: 1.3; /* single-line UI items */
+  --line-chat: 1.5; /* chat and reading text */
   --weight-regular: 400;
   --weight-medium: 500;
-  --weight-semibold: 600;
+  --weight-semibold: 500; /* no heavy bold: titles and selected items are medium */
 
   /* Spacing, a 4px scale. */
   --space-1: 4px;
@@ -28,21 +30,26 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
+  --pane-gap: 8px; /* every pane and card to the window edge and to each other */
+  --row-gap: 2px; /* between list rows */
+  --section-gap: 16px; /* between sidebar sections */
 
   /* Radii. */
-  --r-control: 7px; /* chips, nav rows, menu items, icon buttons */
-  --r-card: 12px; /* cards, inputs, composer */
-  --r-menu: 10px; /* popup menus */
+  --r-control: 8px; /* chips, list rows, menu items, icon buttons */
+  --r-card: 12px; /* cards, panes, message bubbles */
+  --r-composer: 16px; /* the composer */
+  --r-menu: 12px; /* popup menus */
   --r-cell: 3px; /* heatmap cells, tiny squares */
 
   /* Sizes. */
-  --sidebar-w: 236px;
-  --row-h: 30px; /* sidebar nav rows */
-  --row-h-sm: 30px; /* list items, menu items, sidebar search */
+  --sidebar-w: 240px;
+  --row-h: 32px; /* sidebar rows */
+  --row-h-sm: 32px; /* list items, menu items, sidebar search */
   --section-h: 24px; /* section label rows */
   --icon: 18px;
   --icon-sm: 16px;
-  --icon-btn: 28px; /* top-bar icon button hit area */
+  --icon-btn: 32px; /* top-bar icon button hit area */
+  --pane-head-h: 36px; /* header of a side pane */
   --btn-h: 32px;
   --chip-h: 28px;
   --bar-h: 28px; /* usage bar */
@@ -50,7 +57,7 @@
   --seg-h: 30px; /* segmented control */
   --tile-h: 32px; /* agent tiles */
   --composer-h: 42px;
-  --content-max: 770px;
+  --content-max: 720px; /* the centred chat column */
 
   /* Interaction. Colour changes only; no scaling. */
   --t-hover: 120ms ease;
@@ -78,6 +85,47 @@
   --on-primary: #1b1b1a;
   --focus: #5b9bf0;
   --link: #5b9bf0;
+}
+
+/* Dark surfaces step up one notch at a time: window and sidebar < chat < card < input.
+   These sit above the older palette blocks (claude.css), so they are the values that apply. */
+:root:root:not([data-theme='light']) {
+  --chrome: #111111; /* window and sidebar */
+  --stage: #151515; /* the chat surface */
+  --card: #1a1a19; /* panes and cards */
+  --input: #20201f; /* composer and fields */
+  --card-border: #2c2c2c;
+  --hairline: #262625;
+  --hairline-strong: #2c2c2c;
+  --hover: rgba(255, 255, 255, 0.05);
+  --selected: #2b2b2a; /* the selected row */
+  --pressed: #2f2f2e;
+  /* Off-white text; secondary text at about 60% of it. */
+  --text: #ececea;
+  --text-soft: #c9c9c6;
+  --muted: #969693;
+  --faint: #75756f;
+}
+:root:root[data-theme='light'] {
+  --card: #ffffff;
+  --input: #ffffff;
+  --card-border: #dcdbd6;
+}
+/* Icon buttons rest at pure white on dark so they stay visible. */
+:root:root:not([data-theme='light']) .icon-button,
+:root:root:not([data-theme='light']) .icon-button:hover:not(:disabled) {
+  color: #ffffff;
+}
+/* Titlebar and workspace-view toggles; the active chat pane toggle keeps its accent colour. */
+:root:root:not([data-theme='light']) :is(.titlebar-workspace-action, .workspace-views-trigger):not(.chat-pane-toggle.active) {
+  color: #ffffff;
+}
+:root:root:root:not([data-theme='light']) .titlebar .mode-switch button {
+  color: #ffffff;
+}
+:root:root:not([data-theme='light']) .secondary-button,
+:root:root:not([data-theme='light']) .secondary-button:hover:not(:disabled) {
+  color: var(--text);
 }
 
 /* Dark's tiles and selected rows: the inner tile surface. */

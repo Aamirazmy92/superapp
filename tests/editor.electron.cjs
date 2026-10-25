@@ -82,9 +82,15 @@ const { _electron } = require('playwright');
       await tree.getByRole('treeitem', { name: 'node_modules', exact: true }).count(),
       0,
     );
-    await page.getByLabel('Show excluded folders').check();
+    // The explorer's actions live in the header's more menu.
+    const explorerMenu = async (name, role = 'menuitem') => {
+      await page.getByRole('button', { name: 'More file actions' }).click();
+      await page.getByRole('menuitem' + (role === 'checkbox' ? 'checkbox' : ''), { name }).click();
+    };
+    await explorerMenu('Show excluded folders', 'checkbox');
     await tree.getByRole('treeitem', { name: 'node_modules', exact: true }).waitFor();
-    await page.getByLabel('Show excluded folders').uncheck();
+    await explorerMenu('Show excluded folders', 'checkbox');
+    await tree.getByRole('treeitem', { name: 'node_modules', exact: true }).waitFor({ state: 'hidden' });
     await tree.getByRole('treeitem', { name: 'src', exact: true }).focus();
     await page.keyboard.press('ArrowRight');
     await tree.getByRole('treeitem', { name: 'alpha.ts', exact: true }).waitFor();
@@ -248,12 +254,12 @@ const { _electron } = require('playwright');
     await page.keyboard.press('Control+s');
     await saved();
     assert.match(await fs.readFile(path.join(root, 'source', 'alpha.ts'), 'utf8'), /rename draft/);
-    await page.getByRole('button', { name: 'Collapse all folders' }).click();
+    await explorerMenu('Collapse folders');
     await tree
       .getByRole('treeitem', { name: 'alpha.ts', exact: true })
       .waitFor({ state: 'hidden' });
     assert.equal(await tree.locator('[role="treeitem"][tabindex="0"]').count(), 1);
-    await page.getByRole('button', { name: 'New file', exact: true }).click();
+    await explorerMenu('New file');
     const create = page.getByRole('dialog', { name: 'New file', exact: true });
     assert.equal(await create.getByLabel('File or folder path').inputValue(), 'source/');
     await create.getByLabel('File or folder path').fill('source/new.ts');

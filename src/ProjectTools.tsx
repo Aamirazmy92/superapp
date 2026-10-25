@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { AnchoredPopover } from './AnchoredPopover';
 import {
@@ -12,6 +12,11 @@ import {
   ChevronsDownUp,
   Pencil,
   Trash2,
+  Check,
+  EllipsisVertical,
+  ListTree,
+  RefreshCw,
+  X,
 } from './icons';
 import FileTree, { FileIcon } from './FileTree';
 import Modal from './Modal';
@@ -29,6 +34,7 @@ export default function ProjectTools({
   onRename,
   onTrash,
   onError,
+  onClose,
 }: {
   project: Project;
   section: 'files' | 'search' | 'git';
@@ -41,6 +47,8 @@ export default function ProjectTools({
   onRename(previous: string, next: string): void;
   onTrash(path: string): void;
   onError(error: unknown): void;
+  /** Hides the explorer; the header's close button is shown only when given. */
+  onClose?(): void;
 }) {
   const api = window.workspace!;
   const [operation, setOperation] = useState<'file' | 'folder' | 'manage' | 'delete' | null>(null);
@@ -61,6 +69,25 @@ export default function ProjectTools({
   const [notice, setNotice] = useState('');
   const [showIgnored, setShowIgnored] = useState(false);
   const [collapse, setCollapse] = useState(0);
+  // The Files header: a filter (a leading ? searches inside files), a tree or flat list, and a menu.
+  const [filter, setFilter] = useState('');
+  const [view, setView] = useState<'tree' | 'list'>(() => {
+    try {
+      return localStorage.getItem('explorer-view') === 'list' ? 'list' : 'tree';
+    } catch {
+      return 'tree';
+    }
+  });
+  const [listing, setListing] = useState<{ entries: Entry[]; truncated: boolean } | null>(null);
+  const [headMenu, setHeadMenu] = useState(false);
+  const filterInput = useRef<HTMLInputElement>(null);
+  const headMenuButton = useRef<HTMLButtonElement>(null);
+  const headMenuList = useRef<HTMLDivElement>(null);
+  const filterText = filter.trim();
+  const filterContent = filterText.startsWith('?');
+  // In the Files section the filter drives the same search as Find files.
+  const activeQuery = section === 'files' ? (filterContent ? filterText.slice(1).trim() : filterText) : query;
+  const activeContent = section === 'files' ? filterContent : content;
   const dirty =
     target &&
     files.some(
@@ -74,21 +101,21 @@ export default function ProjectTools({
     setSearchFiles([]);
     setTruncated(false);
     setFailure('');
-    if (section !== 'search' || !query.trim()) {
+    if ((section !== 'search' && section !== 'files') || !activeQuery.trim()) {
       setSearching(false);
       return;
     }
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
-        if (content) {
-          const result = await api.searchContent(project.id, query, sensitive);
+        if (activeContent) {
+          const result = await api.searchContent(project.id, activeQuery, sensitive);
           if (!canceled) {
             setMatches(result.matches);
             setTruncated(result.truncated);
           }
         } else {
-          const result = await api.searchFiles(project.id, query);
+          const result = await api.searchFiles(project.id, activeQuery);
           if (!canceled) {
             setSearchFiles(result);
             setTruncated(result.length === 150);
@@ -104,7 +131,56 @@ export default function ProjectTools({
       canceled = true;
       clearTimeout(timer);
     };
-  }, [project.id, query, content, sensitive, refresh, section]);
+  }, [project.id, activeQuery, activeContent, sensitive, refresh, section]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorer-view', view);
+    } catch {}
+  }, [view]);
+  // The flat list: every file, walked breadth-first and capped.
+  useEffect(() => {
+    if (view !== 'list' || section !== 'files') return;
+    let current = true;
+    (async () => {
+      const entries: Entry[] = [];
+      const queue = [''];
+      let truncated = false;
+      while (queue.length && current) {
+        const dir = queue.shift()!;
+        let children: Entry[] = [];
+        try {
+          children = await api.listFiles(project.id, dir, showIgnored);
+        } catch {
+          continue;
+        }
+        for (const entry of children) {
+          if (entry.directory) queue.push(entry.path);
+          else entries.push(entry);
+        }
+        if (entries.length >= 2000) {
+          truncated = true;
+          break;
+        }
+      }
+      if (!current) return;
+      entries.sort((a, b) => a.path.localeCompare(b.path, undefined, { sensitivity: 'base' }));
+      setListing({ entries: entries.slice(0, 2000), truncated });
+    })();
+    return () => {
+      current = false;
+    };
+  }, [view, section, project.id, refresh, showIgnored]);
+  useEffect(() => {
+    if (!headMenu) return;
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!headMenuList.current?.contains(target) && !headMenuButton.current?.contains(target))
+        setHeadMenu(false);
+    };
+    document.addEventListener('pointerdown', dismiss, true);
+    requestAnimationFrame(() => headMenuList.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus());
+    return () => document.removeEventListener('pointerdown', dismiss, true);
+  }, [headMenu]);
   useEffect(() => {
     if (!menu) return;
     const dismiss = (event: MouseEvent) => {
@@ -198,51 +274,195 @@ export default function ProjectTools({
   return (
     <>
       {section === 'files' && (
-        <>
-          <div className="tool-actions">
-            <button className="text-button" onClick={() => openOperation('file')}>
-              <FilePlus2 size={14} />
-              New file
-            </button>
-            <button className="text-button" onClick={() => openOperation('folder')}>
-              <FolderPlus size={14} />
-              New folder
-            </button>
-          </div>
-          <div className="tree-controls">
-            <label title="Include dependency folders and build output in the explorer">
-              <input
-                type="checkbox"
-                checked={showIgnored}
-                onChange={(event) => setShowIgnored(event.target.checked)}
+        <div className="chat-files-skin">
+          <header className="chat-files-head">
+            <strong className="chat-files-heading">Files</strong>
+            <div className="chat-files-actions">
+              <button
+                className="icon-button"
+                aria-label="Search files"
+                title="Search files"
+                onClick={() => filterInput.current?.focus()}
+              >
+                <Search size={15} />
+              </button>
+              <button
+                className={`icon-button chat-files-toggle ${view === 'tree' ? 'active' : ''}`}
+                aria-label="Tree view"
+                aria-pressed={view === 'tree'}
+                title={view === 'tree' ? 'Show as a list' : 'Show as a tree'}
+                onClick={() => setView(view === 'tree' ? 'list' : 'tree')}
+              >
+                <ListTree size={15} />
+              </button>
+              <button
+                ref={headMenuButton}
+                className={`icon-button ${headMenu ? 'active' : ''}`}
+                aria-label="More file actions"
+                aria-haspopup="menu"
+                aria-expanded={headMenu}
+                title="More"
+                onClick={() => setHeadMenu(!headMenu)}
+              >
+                <EllipsisVertical size={15} />
+              </button>
+              {onClose && (
+                <button className="icon-button" aria-label="Hide files" title="Hide files" onClick={onClose}>
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            {headMenu && (
+              <div ref={headMenuList} className="chat-files-menu" role="menu" aria-label="File actions">
+                {[
+                  { label: 'New file', icon: <FilePlus2 size={14} />, run: () => openOperation('file') },
+                  { label: 'New folder', icon: <FolderPlus size={14} />, run: () => openOperation('folder') },
+                  {
+                    label: 'Show excluded folders',
+                    icon: showIgnored ? <Check size={14} /> : <span className="chat-files-menu-gap" />,
+                    checked: showIgnored,
+                    run: () => setShowIgnored(!showIgnored),
+                  },
+                  { label: 'Collapse folders', icon: <ChevronsDownUp size={14} />, run: () => setCollapse((value) => value + 1) },
+                  { label: 'Refresh', icon: <RefreshCw size={14} />, run: onChanged },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                    aria-checked={item.checked}
+                    title={item.label === 'Show excluded folders' ? 'Include dependency folders and build output in the explorer' : undefined}
+                    onClick={() => {
+                      setHeadMenu(false);
+                      item.run();
+                    }}
+                    onKeyDown={(event) => {
+                      const items = [...(headMenuList.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') || [])];
+                      const index = items.indexOf(event.currentTarget);
+                      if (event.key === 'ArrowDown') items[(index + 1) % items.length]?.focus();
+                      else if (event.key === 'ArrowUp') items[(index - 1 + items.length) % items.length]?.focus();
+                      else if (event.key === 'Escape') {
+                        event.stopPropagation();
+                        setHeadMenu(false);
+                        headMenuButton.current?.focus();
+                      } else return;
+                      event.preventDefault();
+                    }}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </header>
+          <label className="chat-files-search">
+            <Search size={14} aria-hidden="true" />
+            <input
+              ref={filterInput}
+              type="text"
+              value={filter}
+              placeholder="Filter, or ? to search in files"
+              aria-label="Filter files"
+              spellCheck={false}
+              onChange={(event) => setFilter(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' && filter) {
+                  event.stopPropagation();
+                  setFilter('');
+                }
+              }}
+            />
+          </label>
+          {failure && (
+            <p className="tool-error" role="alert">
+              {failure}
+            </p>
+          )}
+          {filterText ? (
+            <div className="chat-files-results" role="list" aria-label={filterContent ? 'Matches in files' : 'Matching files'}>
+              {filterContent && !activeQuery ? (
+                <p className="chat-files-hint">Type after ? to search inside files.</p>
+              ) : searching ? (
+                <p className="chat-files-hint" role="status">Searching…</p>
+              ) : filterContent ? (
+                matches.length ? (
+                  <>
+                    {[...matches.reduce((groups, match) => groups.set(match.path, [...(groups.get(match.path) || []), match]), new Map<string, ContentMatch[]>())].map(([path, group]) => (
+                      <div key={path} role="listitem" className="chat-files-group">
+                        <button className="tree-row chat-files-group-head" title={path} onClick={() => onOpen(path, group[0].line, group[0].column)}>
+                          <FileIcon name={path} />
+                          <span>{path.split('/').pop()}</span>
+                          <small>{path.split('/').slice(0, -1).join('/')}</small>
+                          <em>{group.length}</em>
+                        </button>
+                        {group.slice(0, 20).map((match) => (
+                          <button
+                            key={`${match.line}:${match.column}`}
+                            className="tree-row chat-files-match"
+                            title={`${path}:${match.line}`}
+                            onClick={() => onOpen(path, match.line, match.column)}
+                          >
+                            <small>{match.line}</small>
+                            <span>{match.text.trim()}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                    {truncated && <p className="chat-files-hint">Showing the first matches only.</p>}
+                  </>
+                ) : (
+                  <p className="chat-files-hint">No matches in files.</p>
+                )
+              ) : searchFiles.length ? (
+                searchFiles.map((entry) => (
+                  <button key={entry.path} className="tree-row chat-files-row" title={entry.path} onClick={() => onOpen(entry.path)}>
+                    <FileIcon name={entry.name} />
+                    <span>{entry.name}</span>
+                    <small>{entry.path.split('/').slice(0, -1).join('/')}</small>
+                  </button>
+                ))
+              ) : (
+                <p className="chat-files-hint">No files match.</p>
+              )}
+            </div>
+          ) : view === 'list' ? (
+            <div className="chat-files-results" role="listbox" aria-label="All files">
+              {!listing ? (
+                <p className="chat-files-hint" role="status">Listing files…</p>
+              ) : (
+                <>
+                  {listing.entries.map((entry) => (
+                    <button key={entry.path} className="tree-row chat-files-row" role="option" aria-selected={entry.path === active} title={entry.path} onClick={() => onOpen(entry.path)}>
+                      <FileIcon name={entry.name} />
+                      <span>{entry.name}</span>
+                      <small>{entry.path.split('/').slice(0, -1).join('/')}</small>
+                    </button>
+                  ))}
+                  {listing.truncated && <p className="chat-files-hint">Showing the first 2000 files.</p>}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="chat-files-tree">
+              <FileTree
+                projectId={project.id}
+                active={active}
+                onOpen={onOpen}
+                refresh={refresh}
+                showIgnored={showIgnored}
+                collapse={collapse}
+                folderIcons={false}
+                dirtyPaths={files
+                  .filter((file) => file.saved !== file.content)
+                  .map((file) => file.path)}
+                onError={onError}
+                onManage={(entry, anchor) =>
+                  anchor ? setMenu((current) => (current?.entry.path === entry.path ? null : { entry, anchor })) : openOperation('manage', entry)
+                }
               />
-              Show excluded folders
-            </label>
-            <button
-              className="icon-button"
-              aria-label="Collapse all folders"
-              title="Collapse all folders"
-              onClick={() => setCollapse((value) => value + 1)}
-            >
-              <ChevronsDownUp size={14} />
-            </button>
-          </div>
-          <FileTree
-            projectId={project.id}
-            active={active}
-            onOpen={onOpen}
-            refresh={refresh}
-            showIgnored={showIgnored}
-            collapse={collapse}
-            dirtyPaths={files
-              .filter((file) => file.saved !== file.content)
-              .map((file) => file.path)}
-            onError={onError}
-            onManage={(entry, anchor) =>
-              anchor ? setMenu((current) => (current?.entry.path === entry.path ? null : { entry, anchor })) : openOperation('manage', entry)
-            }
-          />
-        </>
+            </div>
+          )}
+        </div>
       )}
       {section === 'search' && (
         <>

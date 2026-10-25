@@ -101,3 +101,7 @@ Filesystem operations reject paths and links leaving a selected project. A termi
 3. Per-task Git worktrees, language servers, debugging, and signed installers.
 
 The first release does not provide cloud sync, collaboration, autonomous tasks, process recovery after a full app exit, or full VS Code extension support.
+
+## Third-party assets
+
+The chat Files pane uses file icons from [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme) (MIT, licence in `licenses/material-icon-theme.txt`). The SVGs are bundled from the `material-icon-theme` dev dependency. After updating that package, run `node scripts/gen-file-icons.mjs` to regenerate `src/fileIcons.generated.json`.

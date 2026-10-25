@@ -49,6 +49,7 @@ import {
   Loader2 as LuLoader2,
   LoaderCircle as LuLoaderCircle,
   Maximize2 as LuMaximize2,
+  Menu as LuMenu,
   MessageSquare as LuMessageSquare,
   Mic as LuMic,
   Minimize2 as LuMinimize2,
@@ -58,6 +59,8 @@ import {
   MousePointerClick as LuMousePointerClick,
   PanelBottom as LuPanelBottom,
   PanelLeft as LuPanelLeft,
+  PanelRight as LuPanelRight,
+  Laptop as LuLaptop,
   PanelsTopLeft as LuPanelsTopLeft,
   Paperclip as LuPaperclip,
   Pencil as LuPencil,
@@ -90,6 +93,8 @@ import {
   Zap as LuZap,
   Settings as LuSettings,
   UserCog as LuUserCog,
+  ListTree as LuListTree,
+  EllipsisVertical as LuEllipsisVertical,
 } from 'lucide-react';
 
 // The app's icon set: Lucide's thin, rounded 1.5px line icons, which sit closest to Claude's
@@ -171,6 +176,7 @@ export const ListFilter = adapt(LuListFilter as unknown as LucideGlyph, 'ListFil
 export const Loader2 = adapt(LuLoader2 as unknown as LucideGlyph, 'Loader2');
 export const LoaderCircle = adapt(LuLoaderCircle as unknown as LucideGlyph, 'LoaderCircle');
 export const Maximize2 = adapt(LuMaximize2 as unknown as LucideGlyph, 'Maximize2');
+export const Menu = adapt(LuMenu as unknown as LucideGlyph, 'Menu');
 export const MessageSquare = adapt(LuMessageSquare as unknown as LucideGlyph, 'MessageSquare');
 export const Mic = adapt(LuMic as unknown as LucideGlyph, 'Mic');
 export const Minimize2 = adapt(LuMinimize2 as unknown as LucideGlyph, 'Minimize2');
@@ -180,6 +186,8 @@ export const MoreHorizontal = adapt(LuMoreHorizontal as unknown as LucideGlyph, 
 export const MousePointerClick = adapt(LuMousePointerClick as unknown as LucideGlyph, 'MousePointerClick');
 export const PanelBottom = adapt(LuPanelBottom as unknown as LucideGlyph, 'PanelBottom');
 export const PanelLeft = adapt(LuPanelLeft as unknown as LucideGlyph, 'PanelLeft');
+export const PanelRight = adapt(LuPanelRight as unknown as LucideGlyph, 'PanelRight');
+export const Laptop = adapt(LuLaptop as unknown as LucideGlyph, 'Laptop');
 export const PanelsTopLeft = adapt(LuPanelsTopLeft as unknown as LucideGlyph, 'PanelsTopLeft');
 export const Paperclip = adapt(LuPaperclip as unknown as LucideGlyph, 'Paperclip');
 export const Pencil = adapt(LuPencil as unknown as LucideGlyph, 'Pencil');
@@ -210,6 +218,8 @@ export const VolumeX = adapt(LuVolumeX as unknown as LucideGlyph, 'VolumeX');
 export const WrapText = adapt(LuWrapText as unknown as LucideGlyph, 'WrapText');
 export const X = adapt(LuX as unknown as LucideGlyph, 'X');
 export const Zap = adapt(LuZap as unknown as LucideGlyph, 'Zap');
+export const ListTree = adapt(LuListTree as unknown as LucideGlyph, 'ListTree');
+export const EllipsisVertical = adapt(LuEllipsisVertical as unknown as LucideGlyph, 'EllipsisVertical');
 // A plugin that needs an account or setup before it works.
 export const UserSetup = adapt(LuUserCog as unknown as LucideGlyph, 'UserSetup');
 // The gear used by the Settings buttons.

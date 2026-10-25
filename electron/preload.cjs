@@ -91,6 +91,14 @@ contextBridge.exposeInMainWorld('workspace', {
     ipcRenderer.on('plugins:changed', listener);
     return () => ipcRenderer.removeListener('plugins:changed', listener);
   },
+  updateState: invoke('update:state'),
+  updateCheck: invoke('update:check'),
+  updateInstall: invoke('update:install'),
+  onUpdateState: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('update:state', listener);
+    return () => ipcRenderer.removeListener('update:state', listener);
+  },
   getRunPresets: invoke('run-presets:get'),
   saveRunPresets: invoke('run-presets:save'),
   getChatState: invoke('chat-state:get'),

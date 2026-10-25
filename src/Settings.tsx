@@ -32,7 +32,7 @@ import { motion, useIsPresent } from 'motion/react';
 import { Backdrop, MotionDialog } from './motion';
 import { Switch } from './Switch';
 import ChatSelect from './ChatSelect';
-import type { PluginContributions } from './types';
+import type { PluginContributions, UpdateState } from './types';
 
 export type SettingsCommand = {
   label: string;
@@ -59,6 +59,29 @@ const numbers = (list: number[], suffix: string): Choice<number>[] =>
   list.map((n) => [n, n.toLocaleString() + suffix]);
 const fonts: Choice<string>[] = fontFamilies.map((name) => [name, name]);
 
+function useUpdateState() {
+  const [update, setUpdate] = useState<UpdateState | null>(null);
+  useEffect(() => {
+    const api = window.workspace;
+    if (!api) return;
+    void api.updateState().then(setUpdate, () => {});
+    return api.onUpdateState(setUpdate);
+  }, []);
+  return update;
+}
+
+function updateSummary(u: UpdateState) {
+  if (!u.supported) return 'Updates are available in the installed app.';
+  switch (u.status) {
+    case 'checking': return 'Checking for updates…';
+    case 'downloading': return `Downloading ${u.latest ?? 'update'}… ${u.percent ?? 0}%`;
+    case 'ready': return `Veyo ${u.latest} is ready to install.`;
+    case 'current': return 'You are on the latest version.';
+    case 'error': return `Could not check for updates: ${u.error ?? 'unknown error'}`;
+    default: return 'Veyo checks for updates automatically.';
+  }
+}
+
 export default function Settings({
   value,
   onChange,
@@ -80,6 +103,7 @@ export default function Settings({
   pluginThemes?: PluginContributions['themes'];
 }) {
   const [section, setSection] = useState<string>('appearance');
+  const update = useUpdateState();
   const [query, setQuery] = useState('');
   const [reset, setReset] = useState(false);
   const content = useRef<HTMLElement>(null);
@@ -578,6 +602,24 @@ export default function Settings({
                       <strong>Version</strong>
                       <span>{version}</span>
                     </div>
+                  )}
+                  {update && row(
+                    'Updates',
+                    updateSummary(update),
+                    update.status === 'ready' ? (
+                      <button type="button" className="secondary-button" onClick={() => void window.workspace?.updateInstall()}>
+                        Restart to update
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={!update.supported || update.status === 'checking' || update.status === 'downloading'}
+                        onClick={() => void window.workspace?.updateCheck()}
+                      >
+                        Check for updates
+                      </button>
+                    ),
                   )}
                 </div>
                 {matches('local data storage privacy projects drafts') && (

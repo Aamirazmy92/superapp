@@ -80,7 +80,7 @@ import {
   settleAgentTurn,
   type AgentTurn as AgentTurnState,
 } from './agentTurn';
-import { AnimatePresence, MotionConfig, motion, useMotionValue } from 'motion/react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
   Backdrop,
   MotionDialog,
@@ -89,6 +89,8 @@ import {
   motionReduced,
   surfaceMotion,
   useCollapse,
+  useStackMotion,
+  useWidthMotion,
   usePressSprings,
   useViewSwitch,
 } from './motion';
@@ -153,24 +155,23 @@ export default function App() {
   const workspaceRef = useRef<HTMLElement>(null);
   const workAreaRef = useRef<HTMLDivElement>(null);
   const projectsPanelRef = useRef<HTMLElement>(null);
-  const explorerPanelRef = useRef<HTMLElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+  const dockStackRef = useRef<HTMLDivElement>(null);
+  // Narrow windows show the dashboard over the work area instead of in the dock.
   const dashboardDocked = window.innerWidth > 1080;
-  const dashboardDrawerMotionWidth = useMotionValue(0);
   const {
     panelWidths,
-    dashboardDrawerWidth,
+    explorerWidth,
+    dashboardWidth,
     browserContainerWidth,
     browserPanelWidth,
-    browserPanelMinWidth,
     browserPanelSize,
     panelSeparator,
   } = usePanelWidths({
     projectsPanelRef,
-    explorerPanelRef,
+    dockRef,
     workspaceRef,
     workAreaRef,
-    dashboardDrawerMotionWidth,
-    onDashboardResizeStart: () => settleDashboardLayout(),
   });
   useEffect(
     () => () => {
@@ -189,51 +190,6 @@ export default function App() {
   } | null>(null);
   const [mode, setMode] = useState<'code' | 'chat'>('code');
   const [dashboardOpen, setDashboardOpen] = useState(false);
-  const previousDashboardOpen = useRef(dashboardOpen);
-  // While the docked dashboard animates, terminals are laid out for the width
-  // the work area will end at, so the grid and terminal text change once, up
-  // front, and only the pane edges move during the animation.
-  const [dashboardLayoutTarget, setDashboardLayoutTarget] = useState<{
-    open: boolean;
-    workAreaWidth: number;
-  } | null>(null);
-  // Briefly puts the drawer at its final width so `measure` sees the settled
-  // layout, then restores it before the browser paints.
-  function withSettledDashboardLayout<T>(open: boolean, measure: () => T): T | undefined {
-    const drawer = appBodyRef.current?.querySelector<HTMLElement>('.dashboard-drawer.docked');
-    if (!drawer) return undefined;
-    const width = drawer.style.width;
-    drawer.style.width = open ? `${dashboardDrawerWidth}px` : '0px';
-    try {
-      return measure();
-    } finally {
-      drawer.style.width = width;
-    }
-  }
-  useLayoutEffect(() => {
-    if (previousDashboardOpen.current === dashboardOpen) return;
-    previousDashboardOpen.current = dashboardOpen;
-    if (!dashboardDocked || motionReduced()) return;
-    document.body.classList.add('dashboard-layout-transitioning');
-    const workAreaWidth = withSettledDashboardLayout(
-      dashboardOpen,
-      () => workAreaRef.current?.getBoundingClientRect().width,
-    );
-    if (workAreaWidth) setDashboardLayoutTarget({ open: dashboardOpen, workAreaWidth });
-  }, [dashboardOpen, dashboardDocked]);
-  useLayoutEffect(() => {
-    if (!dashboardLayoutTarget) return;
-    // The grid has re-rendered for the target width; let terminals fit to it.
-    withSettledDashboardLayout(dashboardLayoutTarget.open, () =>
-      window.dispatchEvent(new Event('dashboard-layout-preview')),
-    );
-  }, [dashboardLayoutTarget]);
-  const settleDashboardLayout = () => {
-    if (!document.body.classList.contains('dashboard-layout-transitioning')) return;
-    document.body.classList.remove('dashboard-layout-transitioning');
-    setDashboardLayoutTarget(null);
-    window.dispatchEvent(new Event('dashboard-layout-settled'));
-  };
   const [chatVisited, setChatVisited] = useState(false);
   const [chatHandoff, setChatHandoff] = useState<{
     id: string;
@@ -420,36 +376,31 @@ export default function App() {
   const shownMode = useViewSwitch(mode, ['code', 'chat'] as const, (view) =>
     view === 'chat' ? chatModeRef.current : appBodyRef.current,
   );
-  const explorerHidden = useCollapse(() => explorerPanelRef.current, explorer);
   const projectsHidden = useCollapse(() => projectsPanelRef.current, projectsPanel);
-  // With the explorer open the dashboard stacks under it. While it leaves it stays in that
-  // stack, so the explorer can grow into the space as the dashboard shrinks, rather than
-  // both jumping to their lone layouts at once.
-  const [dashboardLeaving, setDashboardLeaving] = useState(false);
-  useLayoutEffect(() => {
-    if (dashboardOpen) setDashboardLeaving(false);
-    else if (explorer && dashboardDocked && !motionReduced()) setDashboardLeaving(true);
-  }, [dashboardOpen]);
-  const stackDock = explorer && !explorerHidden && dashboardOpen && dashboardDocked;
-  const stackLeaving = explorer && !explorerHidden && !dashboardOpen && dashboardLeaving && dashboardDocked;
-  // While the explorer slides away the dashboard stays in the stack but grows to the size of
-  // the column it is about to take, with that room reserved as it grows (see .stack-expanding).
-  // When the slide ends the layout swaps to the real column, which is then identical.
-  const stackExpanding = !explorer && !explorerHidden && dashboardOpen && dashboardDocked && !motionReduced();
+  // The dock is one column on the right: the explorer on top, the dashboard under it. The
+  // column slides in with its first pane and out with its last; panes that come and go while
+  // it is open share its height (see useStackMotion), so neither ever changes shape or place.
+  const dockPanesNow = { explorer, dashboard: dashboardOpen && dashboardDocked };
+  const dockOpen = dockPanesNow.explorer || dockPanesNow.dashboard;
+  // While the column slides out it keeps showing the panes it held.
+  const lastDockPanes = useRef(dockPanesNow);
+  if (dockOpen) lastDockPanes.current = dockPanesNow;
+  const dockPanes = dockOpen ? dockPanesNow : lastDockPanes.current;
+  const dockHidden = useCollapse(() => dockRef.current, dockOpen, { anchor: 'end' });
+  useStackMotion(dockStackRef, `${+dockPanes.explorer}${+dockPanes.dashboard}`);
+  // The dashboard needs more room than the explorer, so the dock widens while it is there.
+  const dockPanel = dockPanes.dashboard ? 'dashboard' : 'explorer';
+  const dockWidth = dockPanel === 'dashboard' ? dashboardWidth : explorerWidth;
+  useWidthMotion(dockRef, dockWidth);
   // The title bar's leading cluster spans the code sidebar, so the title lines up with the content.
   useEffect(() => {
     const panel = projectsPanelRef.current;
     if (!panel) return;
-    const explorerPanel = explorerPanelRef.current;
     const publish = () => {
       document.documentElement.style.setProperty('--code-sidebar-w', `${Math.round(panel.getBoundingClientRect().width)}px`);
-      // A dashboard stacked under the explorer takes the explorer's width.
-      if (explorerPanel)
-        document.documentElement.style.setProperty('--explorer-w', `${Math.round(explorerPanel.getBoundingClientRect().width)}px`);
     };
     const observer = new ResizeObserver(publish);
     observer.observe(panel);
-    if (explorerPanel) observer.observe(explorerPanel);
     publish();
     return () => observer.disconnect();
   }, []);
@@ -547,7 +498,7 @@ export default function App() {
         : visibleTerminals;
   const terminalAreaWidth = Math.max(
     0,
-    (dashboardLayoutTarget?.workAreaWidth ?? browserContainerWidth) -
+    browserContainerWidth -
       (browserOpen && !browserFullscreen ? browserPanelWidth + 6 : 0),
   );
   // The browser is shown when opened and hidden once it has slid away.
@@ -617,6 +568,22 @@ export default function App() {
   const agentActivity = useRef(new Map<string, number>());
   const agentTurns = useRef(new Map<string, AgentTurn>());
   const [dashboardNow, setDashboardNow] = useState(() => Date.now());
+  // Opening the dashboard must not re-render the app while it slides in (a re-render here
+  // costs a few frames), so the times it shows and its lingering while it closes are worked
+  // out during render rather than set from effects.
+  const dashboardShown = mode === 'code' && dashboardOpen;
+  const dashboardMoment = useRef({ shown: dashboardShown, at: 0 });
+  if (dashboardMoment.current.shown !== dashboardShown)
+    dashboardMoment.current = { shown: dashboardShown, at: Date.now() };
+  const dashboardClock = dashboardShown ? Math.max(dashboardNow, dashboardMoment.current.at) : dashboardNow;
+  // A closing dashboard keeps its content while its pane shrinks or slides away.
+  const dashboardRendered = dashboardOpen || Date.now() - dashboardMoment.current.at < 300;
+  const [, setDashboardGone] = useState(0);
+  useEffect(() => {
+    if (dashboardOpen) return;
+    const timer = setTimeout(() => setDashboardGone((count) => count + 1), 320);
+    return () => clearTimeout(timer);
+  }, [dashboardOpen]);
   // Plan usage moves while a Claude or Codex reply runs and settles after it finishes.
   const usageAgents = Object.values(workspaces)
     .flatMap((current) => current.terminals)
@@ -813,7 +780,6 @@ export default function App() {
   );
   useEffect(() => {
     if (mode !== 'code' || !dashboardOpen) return;
-    setDashboardNow(Date.now());
     const timer = setInterval(() => setDashboardNow(Date.now()), 5000);
     return () => clearInterval(timer);
   }, [mode, dashboardOpen]);
@@ -2153,6 +2119,24 @@ export default function App() {
       </div>
     );
   }
+  const agentDashboard = (
+    <AgentDashboard
+      projects={projects}
+      activeProject={activeProject}
+      terminals={Object.values(workspaces).flatMap((current) => current.terminals)}
+      activity={agentActivity.current}
+      turns={agentTurns.current}
+      now={dashboardClock}
+      usage={planUsage.usage}
+      usageLoading={planUsage.loading}
+      usageError={planUsage.error}
+      onRefreshUsage={planUsage.refresh}
+      onOpen={openDashboardAgent}
+      onNewAgent={() => setAgentLauncher(true)}
+      onOpenProject={openProject}
+      onClose={() => setDashboardOpen(false)}
+    />
+  );
   return (
     <MotionConfig reducedMotion={preferences.reduceMotion ? 'always' : 'never'}>
     <div className={`app mode-${mode}`}>
@@ -2357,9 +2341,7 @@ export default function App() {
         )}
       </div>
       <div
-        // With the explorer open, a docked dashboard stacks under it in the same column (as
-        // Claude stacks its side panes) instead of taking a fourth column of its own.
-        className={`app-body ${stackDock || stackLeaving || stackExpanding ? 'stack-dock' : ''} ${stackLeaving ? 'stack-leaving' : ''} ${stackExpanding ? 'stack-expanding' : ''}`}
+        className="app-body"
         ref={appBodyRef}
         style={{
           display: shownMode === 'code' ? undefined : 'none',
@@ -2596,112 +2578,6 @@ export default function App() {
           </button>
         </aside>
         {!projectsHidden && panelSeparator('projects', 'Resize projects panel')}
-        <aside
-          className="sidebar workspace-sidebar"
-          ref={explorerPanelRef}
-          style={{
-            display: explorerHidden ? 'none' : undefined,
-            width: panelWidths.explorer,
-            flexBasis: panelWidths.explorer,
-          }}
-        >
-          <nav className="sidebar-nav" aria-label="Workspace files">
-            {(
-              [
-                { id: 'files', label: 'Explorer', icon: Files },
-                { id: 'search', label: 'Find files', icon: Search },
-                { id: 'git', label: 'Changes', icon: GitBranch },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.id}
-                className={section === item.id ? 'active' : ''}
-                onClick={() => setSection(item.id)}
-              >
-                <item.icon size={15} />
-                <span className="sidebar-nav-label">{item.label}</span>
-                {item.id === 'git' && git.files.length > 0 && (
-                  <span className="count">{git.files.length}</span>
-                )}
-              </button>
-            ))}
-          </nav>
-          {section !== 'files' && (
-          <div className="sidebar-section-title">
-            <div>
-              <span>
-                {section === 'git' ? 'Source control' : 'Search project'}
-              </span>
-              <small>
-                {section === 'git'
-                  ? 'Review, stage and commit changes'
-                  : 'Find files or text in this project'}
-              </small>
-            </div>
-            <button
-              className="icon-button"
-              title="Refresh files and Git"
-              aria-label="Refresh files"
-              onClick={() => setRefresh((n) => n + 1)}
-            >
-              <RefreshCw size={12} />
-            </button>
-          </div>
-          )}
-          <div className="sidebar-content">
-            {!project ? (
-              <div className="sidebar-empty">
-                <FolderOpen size={24} />
-                <p>Open a folder to explore your project.</p>
-                <button className="text-button" onClick={openProject}>
-                  Open folder <ArrowRight size={13} />
-                </button>
-              </div>
-            ) : (
-              <ProjectTools
-                key={project.id}
-                project={project}
-                section={section}
-                refresh={refresh}
-                files={work?.files || []}
-                active={file?.path}
-                git={git}
-                onOpen={openFile}
-                onError={error}
-                onChanged={() => setRefresh((n) => n + 1)}
-                onClose={() => setExplorer(false)}
-                onRename={(previous, next) =>
-                  update(project.id, (current) => {
-                    const rename = (path: string) =>
-                      path === previous || path.startsWith(`${previous}/`)
-                        ? next + path.slice(previous.length)
-                        : path;
-                    return {
-                      ...current,
-                      activeFile: current.activeFile ? rename(current.activeFile) : undefined,
-                      files: current.files.map((item) => ({ ...item, path: rename(item.path) })),
-                    };
-                  })
-                }
-                onTrash={(path) =>
-                  update(project.id, (current) => {
-                    const files = current.files.filter(
-                      (item) => item.path !== path && !item.path.startsWith(`${path}/`),
-                    );
-                    return {
-                      ...current,
-                      files,
-                      activeFile: files.some((item) => item.path === current.activeFile)
-                        ? current.activeFile
-                        : files.at(-1)?.path,
-                    };
-                  })
-                }
-              />
-            )}
-          </div>
-        </aside>
-        {!explorerHidden && panelSeparator('explorer', 'Resize explorer panel')}
         {/* The project and workspace names sit in the title bar, like Claude's session title. */}
         <main className="workspace" ref={workspaceRef}>
           <div
@@ -2925,61 +2801,134 @@ export default function App() {
             )}
           </div>
         </main>
-        <AnimatePresence
-          onExitComplete={() => {
-            setDashboardLeaving(false);
-            settleDashboardLayout();
-          }}
+        {!dockHidden && panelSeparator(dockPanel, 'Resize side panel')}
+        <div
+          className="side-dock"
+          ref={dockRef}
+          style={{ display: dockHidden ? 'none' : undefined, width: dockWidth, flexBasis: dockWidth }}
         >
-          {dashboardOpen && (
+          <div className="side-dock-stack" ref={dockStackRef}>
+            <div className="side-dock-pane" data-stack-item style={dockPanes.explorer ? undefined : { display: 'none' }}>
+              <aside className="sidebar workspace-sidebar">
+                <nav className="sidebar-nav" aria-label="Workspace files">
+                  {(
+                    [
+                      { id: 'files', label: 'Explorer', icon: Files },
+                      { id: 'search', label: 'Find files', icon: Search },
+                      { id: 'git', label: 'Changes', icon: GitBranch },
+                    ] as const
+                  ).map((item) => (
+                    <button
+                      key={item.id}
+                      className={section === item.id ? 'active' : ''}
+                      onClick={() => setSection(item.id)}
+                    >
+                      <item.icon size={15} />
+                      <span className="sidebar-nav-label">{item.label}</span>
+                      {item.id === 'git' && git.files.length > 0 && (
+                        <span className="count">{git.files.length}</span>
+                      )}
+                    </button>
+                  ))}
+                </nav>
+                {section !== 'files' && (
+                <div className="sidebar-section-title">
+                  <div>
+                    <span>
+                      {section === 'git' ? 'Source control' : 'Search project'}
+                    </span>
+                    <small>
+                      {section === 'git'
+                        ? 'Review, stage and commit changes'
+                        : 'Find files or text in this project'}
+                    </small>
+                  </div>
+                  <button
+                    className="icon-button"
+                    title="Refresh files and Git"
+                    aria-label="Refresh files"
+                    onClick={() => setRefresh((n) => n + 1)}
+                  >
+                    <RefreshCw size={12} />
+                  </button>
+                </div>
+                )}
+                <div className="sidebar-content">
+                  {!project ? (
+                    <div className="sidebar-empty">
+                      <FolderOpen size={24} />
+                      <p>Open a folder to explore your project.</p>
+                      <button className="text-button" onClick={openProject}>
+                        Open folder <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <ProjectTools
+                      key={project.id}
+                      project={project}
+                      section={section}
+                      refresh={refresh}
+                      files={work?.files || []}
+                      active={file?.path}
+                      git={git}
+                      onOpen={openFile}
+                      onError={error}
+                      onChanged={() => setRefresh((n) => n + 1)}
+                      onClose={() => setExplorer(false)}
+                      onRename={(previous, next) =>
+                        update(project.id, (current) => {
+                          const rename = (path: string) =>
+                            path === previous || path.startsWith(`${previous}/`)
+                              ? next + path.slice(previous.length)
+                              : path;
+                          return {
+                            ...current,
+                            activeFile: current.activeFile ? rename(current.activeFile) : undefined,
+                            files: current.files.map((item) => ({ ...item, path: rename(item.path) })),
+                          };
+                        })
+                      }
+                      onTrash={(path) =>
+                        update(project.id, (current) => {
+                          const files = current.files.filter(
+                            (item) => item.path !== path && !item.path.startsWith(`${path}/`),
+                          );
+                          return {
+                            ...current,
+                            files,
+                            activeFile: files.some((item) => item.path === current.activeFile)
+                              ? current.activeFile
+                              : files.at(-1)?.path,
+                          };
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              </aside>
+            </div>
+            <div className="side-dock-gap" data-stack-item style={dockPanes.explorer && dockPanes.dashboard ? undefined : { display: 'none' }} />
+            <div className="side-dock-pane" data-stack-item style={dockPanes.dashboard ? undefined : { display: 'none' }}>
+              {dashboardRendered && dashboardDocked && !dockHidden && agentDashboard}
+            </div>
+          </div>
+        </div>
+        {/* A narrow window has no room for the dock's dashboard, so it floats over the work area. */}
+        <AnimatePresence>
+          {dashboardOpen && !dashboardDocked && (
             <motion.div
-              key="agent-dashboard-drawer"
-              className={`dashboard-drawer ${dashboardDocked ? 'docked' : 'overlay'}`}
-              initial={
-                motionReduced()
-                  ? false
-                  : dashboardDocked
-                    ? { width: 0, opacity: 0 }
-                    : { opacity: 0, x: 20 }
-              }
-              animate={
-                dashboardDocked
-                  ? { width: dashboardDrawerWidth, opacity: 1 }
-                  : { opacity: 1, x: 0 }
-              }
-              style={dashboardDocked ? { width: dashboardDrawerMotionWidth } : undefined}
+              key="agent-dashboard-overlay"
+              className="dashboard-drawer overlay"
+              initial={motionReduced() ? false : { opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
               exit={
-                dashboardDocked
-                  ? stackDock
-                    ? { height: 0, opacity: 0, pointerEvents: 'none' }
-                    : { width: 0, opacity: 0, pointerEvents: 'none' }
-                  : motionReduced()
-                    ? { opacity: 0, x: 0, pointerEvents: 'none' }
-                    : { opacity: 0, x: 20, pointerEvents: 'none' }
+                motionReduced()
+                  ? { opacity: 0, x: 0, pointerEvents: 'none' }
+                  : { opacity: 0, x: 20, pointerEvents: 'none' }
               }
-              transition={{
-                duration: motionReduced() ? 0 : 0.22,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              onAnimationComplete={settleDashboardLayout}
+              transition={{ duration: motionReduced() ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
             >
-              {panelSeparator('dashboard', 'Resize dashboard panel')}
-              <AgentDashboard
-                projects={projects}
-                activeProject={activeProject}
-                terminals={Object.values(workspaces).flatMap((current) => current.terminals)}
-                activity={agentActivity.current}
-                turns={agentTurns.current}
-                now={dashboardNow}
-                usage={planUsage.usage}
-                usageLoading={planUsage.loading}
-                usageError={planUsage.error}
-                onRefreshUsage={planUsage.refresh}
-                onOpen={openDashboardAgent}
-                onNewAgent={() => setAgentLauncher(true)}
-                onOpenProject={openProject}
-                onClose={() => setDashboardOpen(false)}
-              />
+              {agentDashboard}
             </motion.div>
           )}
         </AnimatePresence>

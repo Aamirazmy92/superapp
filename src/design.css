@@ -512,7 +512,6 @@ button:disabled .agent-monogram,
 }
 
 .app-body > .projects-sidebar { min-width: 160px; }
-.app-body > .workspace-sidebar { min-width: 170px; }
 
 .panel-separator {
   position: relative;
@@ -544,9 +543,6 @@ body.row-resizing * { cursor: row-resize !important; }
 body.panel-resizing webview,
 body.row-resizing webview { pointer-events: none; }
 
-@media (max-width: 1080px) {
-  .panel-separator-dashboard { display: none; }
-}
 
 .workspace,
 .chat-main {
@@ -2703,19 +2699,3 @@ a {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
 }
 
-/* The Code explorer pops out on the right as a card, like the chat Files pane.
-   It stays where it is in the markup; flex order moves it after the editor. */
-:root:root .app-body > .projects-sidebar { order: 0; }
-:root:root .app-body > .panel-separator-projects { order: 1; }
-:root:root .app-body > .workspace { order: 2; }
-:root:root .app-body > .panel-separator-explorer { order: 3; }
-:root:root .app-body > .workspace-sidebar {
-  order: 4;
-  margin: var(--pane-gap) 0;
-  padding: 0 var(--space-1) var(--space-2);
-  border: 1px solid var(--card-border);
-  border-radius: var(--r-card);
-  background: var(--card);
-  overflow: hidden;
-}
-:root:root .app-body > .dashboard-drawer { order: 5; }

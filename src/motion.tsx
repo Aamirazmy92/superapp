@@ -419,14 +419,31 @@ export function useViewSwitch<T extends string>(
  */
 const easeOutCss = `cubic-bezier(${easeOut.join(', ')})`;
 
+/* Panels slide and stacked panes resize over the same time and curve. */
+const panelMs = 220;
+
+/*
+ * While any panel animates, terminals keep their size and refit once, when the last motion
+ * settles (see TerminalPane). Each motion takes a hold and releases it when it ends.
+ */
+let layoutHolds = 0;
+export function holdPanelLayout() {
+  layoutHolds++;
+  document.body.classList.add('dashboard-layout-transitioning');
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--layoutHolds) return;
+    document.body.classList.remove('dashboard-layout-transitioning');
+    window.dispatchEvent(new Event('dashboard-layout-settled'));
+  };
+}
+
 type SlideState = { offset: number; opacity: number };
 type Slide = {
   animation: Animation;
   restingMargin: number;
-  // Whether this slide added the terminal hold and so must release it.
-  ownsHold: boolean;
-  // Set when a new slide takes over, which then releases the hold instead.
-  handedOff: boolean;
 };
 
 /** Which edge a docked panel sits against: its resize separator is on the other side. */
@@ -458,15 +475,9 @@ function slidePanel(
   restingMargin: number,
   from: SlideState,
   to: SlideState,
-  previous: Slide | null,
   onFinish?: () => void,
 ): Slide {
-  const body = document.body;
-  const ownsHold = previous
-    ? previous.ownsHold
-    : !body.classList.contains('dashboard-layout-transitioning');
-  if (previous) previous.handedOff = true;
-  body.classList.add('dashboard-layout-transitioning');
+  const release = holdPanelLayout();
   const clip = (offset: number) =>
     anchor === 'start' ? `inset(0 ${offset}px 0 0)` : `inset(0 0 0 ${offset}px)`;
   const animation = panel.animate(
@@ -478,9 +489,9 @@ function slidePanel(
       clipPath: [clip(from.offset), clip(to.offset)],
       opacity: [from.opacity, to.opacity],
     },
-    { duration: 220, easing: easeOutCss },
+    { duration: panelMs, easing: easeOutCss },
   );
-  const slide: Slide = { animation, restingMargin, ownsHold, handedOff: false };
+  const slide: Slide = { animation, restingMargin };
   let finished = false;
   const done = (completed: boolean) => {
     if (finished) return;
@@ -488,9 +499,7 @@ function slidePanel(
     // Runs before the next frame, so a closed panel never flashes back in
     // between the animation ending and React hiding it.
     if (completed) onFinish?.();
-    if (!slide.ownsHold || slide.handedOff) return;
-    body.classList.remove('dashboard-layout-transitioning');
-    window.dispatchEvent(new Event('dashboard-layout-settled'));
+    release();
   };
   animation.addEventListener('finish', () => done(true));
   animation.addEventListener('cancel', () => done(false));
@@ -529,7 +538,7 @@ export function useCollapse(
     slide.current = null;
     if (!running) {
       const restingMargin = parseFloat(getComputedStyle(panel)[innerMargin(anchor)]) || 0;
-      return { restingMargin, state: null, running };
+      return { restingMargin, state: null };
     }
     const style = getComputedStyle(panel);
     const state = {
@@ -537,14 +546,14 @@ export function useCollapse(
       opacity: parseFloat(style.opacity),
     };
     running.animation.cancel();
-    return { restingMargin: running.restingMargin, state, running };
+    return { restingMargin: running.restingMargin, state };
   }
   function slideDistance(panel: HTMLElement) {
     const separator = panelSeparator(panel, anchor);
     return panel.getBoundingClientRect().width + (separator?.getBoundingClientRect().width ?? 0);
   }
   function reveal(panel: HTMLElement) {
-    const { restingMargin, state, running } = stopSlide(panel);
+    const { restingMargin, state } = stopSlide(panel);
     // The panel is now laid out where it will end, so fit terminals to that.
     previewLayout(() => () => {});
     slide.current = slidePanel(
@@ -553,7 +562,6 @@ export function useCollapse(
       restingMargin,
       state ?? { offset: slideDistance(panel), opacity: 0 },
       { offset: 0, opacity: 1 },
-      running,
     );
   }
   useLayoutEffect(() => {
@@ -583,7 +591,7 @@ export function useCollapse(
     }
     revealPending.current = false;
     const separator = panelSeparator(panel, anchor);
-    const { restingMargin, state, running } = stopSlide(panel);
+    const { restingMargin, state } = stopSlide(panel);
     const distance = slideDistance(panel);
     previewLayout(() => {
       const panelDisplay = panel.style.display;
@@ -601,7 +609,6 @@ export function useCollapse(
       restingMargin,
       state ?? { offset: 0, opacity: 1 },
       { offset: distance, opacity: 0 },
-      running,
       () => {
         slide.current = null;
         panel.style.display = 'none';
@@ -618,6 +625,130 @@ export function useCollapse(
   }, [hidden]);
   useEffect(() => () => slide.current?.animation.cancel(), []);
   return hidden;
+}
+
+/**
+ * Eases a shown panel between widths when `width` changes, for example when a wider pane joins
+ * the dock. A width set by dragging is already on screen when it is committed, so it does not
+ * animate; nor does a hidden panel.
+ */
+export function useWidthMotion(element: RefObject<HTMLElement | null>, width: number) {
+  const previous = useRef(width);
+  // Read before React applies the new width, so a change mid-motion starts from where it is.
+  const before = useRef<number | null>(null);
+  if (width !== previous.current && before.current === null)
+    before.current = element.current?.getBoundingClientRect().width ?? 0;
+  const running = useRef<{ animation: Animation; release: () => void } | null>(null);
+  function stop() {
+    const current = running.current;
+    running.current = null;
+    current?.animation.cancel();
+    current?.release();
+  }
+  useLayoutEffect(() => {
+    if (width === previous.current) return;
+    previous.current = width;
+    const start = before.current;
+    before.current = null;
+    stop();
+    const panel = element.current;
+    if (!panel || !start || Math.abs(start - width) < 1 || motionReduced()) return;
+    const animation = panel.animate(
+      { width: [`${start}px`, `${width}px`], flexBasis: [`${start}px`, `${width}px`] },
+      { duration: panelMs, easing: easeOutCss },
+    );
+    const current = { animation, release: holdPanelLayout() };
+    running.current = current;
+    animation.finished.then(
+      () => {
+        if (running.current !== current) return;
+        running.current = null;
+        current.release();
+      },
+      () => {},
+    );
+  }, [width]);
+  useEffect(() => stop, []);
+}
+
+// Heights of a stack's panes; a hidden pane (or a hidden stack) measures 0.
+function measureStack(container: HTMLElement | null) {
+  const sizes = new Map<HTMLElement, number>();
+  if (!container) return sizes;
+  for (const child of container.children)
+    if (child instanceof HTMLElement && child.hasAttribute('data-stack-item'))
+      sizes.set(child, child.getBoundingClientRect().height);
+  return sizes;
+}
+
+/**
+ * Animates panes stacked in a flex column as they open and close. The panes are the
+ * container's children marked `data-stack-item`, shown or hidden with display: none. One that
+ * opens grows from nothing and one that closes shrinks away while the others give up or take
+ * the room, so nothing in the column jumps. A closing pane stays shown (`data-stack-leaving`)
+ * until it has shrunk away. `arrangement` names which panes are open; the motion runs when it
+ * changes, but not as the whole column appears or leaves, which slides in or out as one.
+ */
+export function useStackMotion(container: RefObject<HTMLElement | null>, arrangement: string) {
+  const previous = useRef(arrangement);
+  // Read before React applies the new arrangement, so mid-motion sizes are where panes are now.
+  const before = useRef<Map<HTMLElement, number> | null>(null);
+  if (arrangement !== previous.current && !before.current) before.current = measureStack(container.current);
+  const running = useRef<{ animations: Animation[]; leaving: HTMLElement[]; release: () => void } | null>(null);
+  function stop() {
+    const current = running.current;
+    running.current = null;
+    if (!current) return;
+    current.animations.forEach((animation) => animation.cancel());
+    current.leaving.forEach((pane) => pane.removeAttribute('data-stack-leaving'));
+    current.release();
+  }
+  useLayoutEffect(() => {
+    if (arrangement === previous.current) return;
+    previous.current = arrangement;
+    const from = before.current;
+    before.current = null;
+    stop();
+    if (!from || motionReduced()) return;
+    const to = measureStack(container.current);
+    const total = (sizes: Map<HTMLElement, number>) => [...sizes.values()].reduce((sum, size) => sum + size, 0);
+    if (!total(from) || !total(to)) return;
+    const animations: Animation[] = [];
+    const leaving: HTMLElement[] = [];
+    for (const [pane, end] of to) {
+      const start = from.get(pane) ?? 0;
+      if (!start && !end) continue;
+      if (!end) {
+        pane.setAttribute('data-stack-leaving', '');
+        leaving.push(pane);
+      }
+      animations.push(
+        pane.animate(
+          {
+            flexGrow: [0, 0],
+            flexShrink: [0, 0],
+            flexBasis: [`${start}px`, `${end}px`],
+            minHeight: ['0px', '0px'],
+            ...(!start ? { opacity: [0, 1] } : !end ? { opacity: [1, 0] } : null),
+          },
+          { duration: panelMs, easing: easeOutCss },
+        ),
+      );
+    }
+    if (!animations.length) return;
+    const current = { animations, leaving, release: holdPanelLayout() };
+    running.current = current;
+    Promise.all(animations.map((animation) => animation.finished)).then(
+      () => {
+        if (running.current !== current) return;
+        running.current = null;
+        leaving.forEach((pane) => pane.removeAttribute('data-stack-leaving'));
+        current.release();
+      },
+      () => {},
+    );
+  }, [arrangement]);
+  useEffect(() => stop, []);
 }
 
 const pressable = 'button, [role="button"]';

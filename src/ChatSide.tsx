@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Maximize2, Minimize2, Plus, X } from './icons';
+import { useCollapse, useStackMotion } from './motion';
 import ChatFiles, { ChatFilesEmpty } from './ChatFiles';
 import WorkspaceBrowser from './WorkspaceBrowser';
 import { displayTerminalTitle } from './sessionTitle';
@@ -62,7 +63,14 @@ export default function ChatSide({
   const column = useRef<HTMLDivElement>(null);
   const stack = useRef<HTMLDivElement>(null);
   const shown = filesOpen || terminalOpen || browserOpen;
-  const both = filesOpen && terminalOpen && !maximized;
+  // The column slides in with its first pane and out with its last, showing the panes it
+  // held until it has gone.
+  const hidden = useCollapse(() => column.current, shown, { anchor: 'end' });
+  const panesNow = { files: filesOpen, terminal: terminalOpen, browser: browserOpen };
+  const lastPanes = useRef(panesNow);
+  if (shown) lastPanes.current = panesNow;
+  const panes = shown ? panesNow : lastPanes.current;
+  const both = panes.files && panes.terminal && !maximized;
   // Files and the browser stay mounted once opened, so open tabs, unsaved edits and
   // loaded pages survive closing them.
   const [filesVisited, setFilesVisited] = useState(filesOpen);
@@ -162,16 +170,19 @@ export default function ChatSide({
       'row',
     );
   }
-  const terminalShown = terminalOpen && (!maximized || maximized === 'terminal');
-  const filesShown = filesOpen && (!maximized || maximized === 'files');
-  const browserShown = browserOpen && (!maximized || maximized === 'browser');
+  const terminalShown = panes.terminal && (!maximized || maximized === 'terminal');
+  const filesShown = panes.files && (!maximized || maximized === 'files');
+  const browserShown = panes.browser && (!maximized || maximized === 'browser');
   const stackShown = terminalShown || filesShown;
+  // Panes opening or closing beside others grow and shrink in place.
+  useStackMotion(column, `${+browserShown}${+stackShown}`);
+  useStackMotion(stack, `${+terminalShown}${+filesShown}`);
 
   return (
     <div
       ref={column}
       className={`chat-side ${maximized ? 'maximized' : ''}`}
-      style={shown ? { width: maximized ? 'calc(100% - 16px)' : layout.width } : { display: 'none' }}
+      style={{ display: hidden ? 'none' : undefined, width: maximized ? 'calc(100% - 16px)' : layout.width }}
       aria-label="Side panes"
     >
       <div
@@ -193,9 +204,10 @@ export default function ChatSide({
           }));
         }}
       />
-      {browserVisited && (
+      {(browserVisited || browserOpen) && (
         <div
           className="chat-side-slot chat-browser-slot"
+          data-stack-item
           style={
             !browserShown
               ? { display: 'none' }
@@ -212,9 +224,11 @@ export default function ChatSide({
           />
         </div>
       )}
-      {browserShown && stackShown && (
-        <div
+      {/* Handles stay mounted while hidden, so the gap they make can open and close smoothly. */}
+      <div
           className="chat-side-handle horizontal"
+          data-stack-item
+          style={browserShown && stackShown ? undefined : { display: 'none' }}
           role="separator"
           aria-orientation="horizontal"
           aria-label="Resize browser"
@@ -234,28 +248,40 @@ export default function ChatSide({
             }));
           }}
         />
-      )}
-      <div ref={stack} className="chat-side-stack" style={stackShown ? undefined : { display: 'none' }}>
-      {project && (
-        <ChatTerminal
-          project={project}
-          preferences={preferences}
-          open={terminalOpen}
-          style={
-            !terminalShown
-              ? { display: 'none' }
-              : both
-                ? { flex: `0 0 calc(${layout.split * 100}% - 4px)` }
-                : { flex: '1 1 auto' }
-          }
-          expanded={maximized === 'terminal'}
-          onToggleExpand={() => setMaximized(maximized === 'terminal' ? null : 'terminal')}
-          onClose={() => onTerminalOpenChange(false)}
-        />
-      )}
-      {both && (
-        <div
+      <div
+        ref={stack}
+        className="chat-side-stack"
+        data-stack-item
+        style={stackShown ? undefined : { display: 'none' }}
+      >
+      <div
+        className="chat-side-slot"
+        data-stack-item
+        style={
+          !terminalShown
+            ? { display: 'none' }
+            : both
+              ? { flex: `0 0 calc(${layout.split * 100}% - 4px)` }
+              : { flex: '1 1 auto' }
+        }
+      >
+        {project ? (
+          <ChatTerminal
+            project={project}
+            preferences={preferences}
+            open={terminalOpen}
+            expanded={maximized === 'terminal'}
+            onToggleExpand={() => setMaximized(maximized === 'terminal' ? null : 'terminal')}
+            onClose={() => onTerminalOpenChange(false)}
+          />
+        ) : (
+          <ChatTerminalEmpty onClose={() => onTerminalOpenChange(false)} />
+        )}
+      </div>
+      <div
           className="chat-side-handle horizontal"
+          data-stack-item
+          style={both ? undefined : { display: 'none' }}
           role="separator"
           aria-orientation="horizontal"
           aria-label="Resize terminal and files"
@@ -275,9 +301,8 @@ export default function ChatSide({
             }));
           }}
         />
-      )}
-      {filesVisited && (
-        <div className="chat-side-slot" style={filesShown ? undefined : { display: 'none' }}>
+      {(filesVisited || filesOpen) && (
+        <div className="chat-side-slot" data-stack-item style={filesShown ? undefined : { display: 'none' }}>
           {project ? (
             <ChatFiles
               projectId={project.id}
@@ -298,6 +323,23 @@ export default function ChatSide({
   );
 }
 
+// Terminals start in the chat's project folder, so a chat without one has nowhere to run them.
+function ChatTerminalEmpty({ onClose }: { onClose(): void }) {
+  return (
+    <section className="chat-terminal chat-side-pane" aria-label="Terminal">
+      <header className="chat-files-top">
+        <strong className="chat-files-heading">Terminal</strong>
+        <div className="chat-files-actions">
+          <button className="icon-button" aria-label="Hide terminal" title="Hide terminal" onClick={onClose}>
+            <X size={15} />
+          </button>
+        </div>
+      </header>
+      <p className="chat-files-empty">Choose a project for this chat to open a terminal in it.</p>
+    </section>
+  );
+}
+
 type TerminalState = { terminals: TerminalInfo[]; active: string | null };
 
 /**
@@ -308,7 +350,6 @@ function ChatTerminal({
   project,
   preferences,
   open,
-  style,
   expanded,
   onToggleExpand,
   onClose,
@@ -316,7 +357,6 @@ function ChatTerminal({
   project: Project;
   preferences: Preferences;
   open: boolean;
-  style: React.CSSProperties;
   expanded: boolean;
   onToggleExpand(): void;
   onClose(): void;
@@ -359,7 +399,7 @@ function ChatTerminal({
   const title = (info: TerminalInfo) => displayTerminalTitle(info.sessionTitle, info.label, info.agentId);
 
   return (
-    <section className="chat-terminal chat-side-pane" aria-label="Terminal" style={style}>
+    <section className="chat-terminal chat-side-pane" aria-label="Terminal">
       <header className="chat-files-top">
         <strong className="chat-files-heading">Terminal</strong>
         {state.terminals.length > 1 ? (

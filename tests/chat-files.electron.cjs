@@ -204,14 +204,16 @@ const { _electron } = require('playwright');
 
     // Expand gives one pane the whole column; restore brings both back.
     await files.getByRole('button', { name: 'Expand files' }).click();
-    assert.equal(await terminal.isVisible(), false);
+    // The other pane shrinks away rather than vanishing.
+    await terminal.waitFor({ state: 'hidden' });
     await files.getByRole('button', { name: 'Restore files' }).click();
     await terminal.waitFor({ state: 'visible' });
 
     // The session details close the column, and the column closes the details.
     await details.click();
     await page.locator('aside.chat-rail').waitFor();
-    assert.equal(await side.isVisible(), false);
+    // The column slides away.
+    await side.waitFor({ state: 'hidden' });
     assert.equal(await terminalToggle.getAttribute('aria-pressed'), 'false');
     await filesToggle.click();
     await files.waitFor({ state: 'visible' });

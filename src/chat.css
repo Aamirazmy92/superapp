@@ -1900,6 +1900,8 @@
 }
 .chat-layout .chat-files-top > .chat-files-heading { padding-left: 4px; }
 .chat-layout .chat-terminal .chat-files-top > .chat-files-heading { flex: none; }
+/* The actions keep to the right edge even with no terminal title beside the heading. */
+.chat-layout .chat-terminal .chat-files-top > .chat-files-actions { margin-left: auto; }
 .chat-layout .chat-terminal-title {
   flex: 1;
   min-width: 0;

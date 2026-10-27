@@ -716,32 +716,72 @@
 }
 
 /* Code mode's side panes ---------------------------------------------------------------
-   Browser, explorer and dashboard are cards like Claude's side panes: 8px corners, a 1px
-   line, 8px apart and 8px from the window edges. The resize handles are invisible strips
-   in those gaps rather than gutters of their own. */
+   Browser and dock are cards like Claude's side panes: 8px corners, a 1px line, 8px apart and
+   8px from the window edges. The resize handles are invisible strips in those gaps rather than
+   gutters of their own. */
 :root:root:root:root .app-body { padding-right: 8px; }
 :root:root:root:root .app-body > .workspace { margin-right: 0; }
 :root:root:root:root .work-area > .preview-panel.workspace-browser,
-:root:root:root:root .app-body > .workspace-sidebar {
-  margin: 4px 0 8px 8px;
+:root:root:root:root .side-dock .workspace-sidebar,
+:root:root:root:root .side-dock .agent-dashboard {
   border: 1px solid var(--shell-pane-border);
   border-radius: var(--shell-r-menu);
   overflow: hidden;
   background: var(--card);
   box-shadow: none;
 }
-:root:root:root:root .app-body > .workspace-sidebar { margin-top: calc(var(--shell-titlebar-h) + 4px); }
-:root:root:root:root .app-body > .dashboard-drawer.docked { margin-top: calc(var(--shell-titlebar-h) + 4px); margin-bottom: 8px; }
-:root:root:root:root .app-body > .dashboard-drawer.docked > .agent-dashboard {
-  top: 0;
-  bottom: 0;
-  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) - 8px);
-  border: 1px solid var(--shell-pane-border);
-  border-radius: var(--shell-r-menu);
-  background: var(--card);
-  box-shadow: none;
+:root:root:root:root .work-area > .preview-panel.workspace-browser { margin: 4px 0 8px 8px; }
+
+/* The dock: one column on the right holding the explorer and, under it, the dashboard. Its
+   panes share its height; one that comes or goes grows or shrinks in place (useStackMotion),
+   and the column itself slides in and out whole (useCollapse). */
+:root:root:root:root .app-body > .side-dock.side-dock {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: calc(var(--shell-titlebar-h) + 4px) 0 8px 8px;
 }
-:root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer) {
+:root:root:root:root .side-dock-stack {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+:root:root:root:root .side-dock-pane {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+:root:root:root:root .side-dock-gap { flex: 0 0 8px; }
+:root:root:root:root .side-dock .workspace-sidebar {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0 var(--space-1) var(--space-2);
+}
+:root:root:root:root .side-dock .agent-dashboard {
+  position: relative;
+  inset: auto;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text);
+}
+/* A closing pane stays shown while it shrinks away (useStackMotion). */
+[data-stack-leaving] { display: flex !important; }
+
+:root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer, .panel-separator-dashboard) {
   position: relative;
   flex: 0 0 0;
   width: 0;
@@ -755,65 +795,6 @@
   inset: 0 -8px 0 -2px;
 }
 :root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer, .panel-separator-dashboard)::after { display: none; }
-:root:root:root:root .dashboard-drawer.docked > .panel-separator-dashboard { width: 0; }
-/* The card sits 14px inside the drawer (6px of drawer gap plus the 8px the card is narrowed
-   by), so centre the grab zone on the card's left border rather than the drawer's edge. */
-:root:root:root:root .dashboard-drawer.docked > .panel-separator-dashboard::before { inset: 0 -19px 0 9px; }
-
-/* The explorer's height is stated, not stretched, so it can animate when the dashboard under it
-   comes or goes. */
-@media (min-width: 1081px) {
-  :root:root:root:root .app-body > .workspace-sidebar {
-    align-self: flex-start;
-    height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
-    transition: height 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-}
-
-/* Explorer and dashboard together: one column, explorer above, dashboard below. */
-:root:root:root:root .app-body.stack-dock > .workspace-sidebar {
-  align-self: flex-start;
-  height: calc((100% - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
-}
-/* While the dashboard leaves, the explorer grows back to full height over it. The dashboard keeps
-   its card at the stacked height and is revealed from the bottom as the drawer shrinks. */
-:root:root:root:root .app-body.stack-dock.stack-leaving > .workspace-sidebar {
-  height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
-}
-/* The explorer is closing: the dashboard grows from the stack into the column it will occupy, and
-   the room for that column is reserved over the same time. When the slide ends these rules drop
-   away and the real column takes over at the same size. (The transitions live here, so they run
-   on the way in but not on the swap.) */
-:root:root:root:root .app-body.stack-expanding {
-  padding-right: calc(8px + var(--dashboard-width, clamp(340px, 28vw, 400px)) + 6px);
-  transition: padding-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-:root:root:root:root .app-body.stack-dock.stack-expanding > .dashboard-drawer.docked {
-  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) + 6px) !important;
-  height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
-  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1), height 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-:root:root:root:root .app-body.stack-dock.stack-expanding > .dashboard-drawer.docked > .agent-dashboard {
-  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) - 8px);
-  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-:root:root:root:root .app-body.stack-leaving > .dashboard-drawer.docked > .agent-dashboard {
-  top: auto;
-  height: calc((100vh - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
-}
-:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: var(--explorer-w) !important;
-  height: calc((100% - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
-  margin: 0;
-}
-:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked > .agent-dashboard { width: 100%; }
-:root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked > .panel-separator-dashboard { display: none; }
-/* The explorer card clears the title bar like the other panes (this beats the generic
-   under-the-title-bar offset above). */
-:root:root:root:root .app-body > .workspace-sidebar.sidebar { margin-top: calc(var(--shell-titlebar-h) + 4px); }
 
 /* A narrow dashboard (stacked, or dragged small) shows its four counts as a 2 × 2 grid. */
 :root:root:root:root .agent-dashboard { container-type: inline-size; }
@@ -877,15 +858,27 @@
 :root:root:root:root .chat-mode-container > .chat-layout { min-width: 0; }
 :root:root:root:root .chat-layout .chat-main > .chat-body { min-width: 0; }
 @media (min-width: 861px) {
-  :root:root:root:root .chat-layout .chat-main { --side-room: min(var(--side-w, 0px), calc(100% - 324px)); }
+  :root:root:root:root .chat-layout .chat-main { --side-room: min(var(--side-w), calc(100% - 324px)); }
   :root:root:root:root .chat-layout .chat-side:not(.maximized) { max-width: calc(100% - 340px); }
-  :root:root:root:root .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-body { margin-right: var(--side-room); }
-  :root:root:root:root .chat-layout .chat-main:is(.rail-open, .side-open) > .chat-compose-wrap {
+  /* Always set, so the room eases back to nothing as a column closes instead of dropping. */
+  :root:root:root:root .chat-layout .chat-main > .chat-body { margin-right: var(--side-room); }
+  :root:root:root:root .chat-layout .chat-main > .chat-compose-wrap {
     width: min(var(--chat-column), calc(100% - var(--side-room) - 48px));
     margin-right: var(--side-room);
     margin-left: max(24px, calc((100% - var(--side-room) - var(--chat-column)) / 2));
   }
 }
+/* The room the conversation leaves for a side column eases with the column's slide (same
+   time and curve as useCollapse), so the text moves with the column's edge. A drag follows
+   the pointer directly. */
+@property --side-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+:root:root:root:root .chat-layout .chat-main { transition: --side-w 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+:root:root:root:root body.panel-resizing .chat-layout .chat-main,
+:root:root:root:root.reduce-motion .chat-layout .chat-main { transition: none; }
 
 /* Chat follows code mode ---------------------------------------------------------------
    Same rows, labels, cards and chips as the code sidebar and home page: plain 26px nav rows,

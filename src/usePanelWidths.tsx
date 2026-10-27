@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import type { MotionValue } from 'motion/react';
 
+// The explorer and the docked dashboard share the dock, the right-hand column. It is as wide as
+// the explorer, or as the dashboard while that is in it, and dragging it resizes that panel.
 export type ResizablePanel = 'projects' | 'explorer' | 'dashboard' | 'browser';
 const panelLimits: Record<ResizablePanel, { min: number; max: number }> = {
   projects: { min: 160, max: 440 },
@@ -27,24 +28,28 @@ function readPanelWidths(): Partial<Record<ResizablePanel, number>> {
   }
 }
 
+// Widths until the user drags them.
+function defaultExplorerWidth() {
+  return window.innerWidth <= 760 ? 180 : window.innerWidth <= 1100 ? 220 : 248;
+}
+function defaultDashboardWidth() {
+  return Math.round(Math.max(340, Math.min(400, window.innerWidth * 0.28)));
+}
+
 /**
- * Widths of the resizable side panels (projects, explorer, dashboard drawer and
- * embedded browser), remembered on this device, plus their drag separators.
+ * Widths of the resizable side panels (projects, the dock and the embedded
+ * browser), remembered on this device, plus their drag separators.
  */
 export function usePanelWidths({
   projectsPanelRef,
-  explorerPanelRef,
+  dockRef,
   workspaceRef,
   workAreaRef,
-  dashboardDrawerMotionWidth,
-  onDashboardResizeStart,
 }: {
   projectsPanelRef: RefObject<HTMLElement | null>;
-  explorerPanelRef: RefObject<HTMLElement | null>;
+  dockRef: RefObject<HTMLElement | null>;
   workspaceRef: RefObject<HTMLElement | null>;
   workAreaRef: RefObject<HTMLDivElement | null>;
-  dashboardDrawerMotionWidth: MotionValue<number>;
-  onDashboardResizeStart(): void;
 }) {
   const panelDragRef = useRef<{
     panel: ResizablePanel;
@@ -58,10 +63,8 @@ export function usePanelWidths({
     separator: HTMLElement;
   } | null>(null);
   const [panelWidths, setPanelWidths] = useState(readPanelWidths);
-  const dashboardPanelWidth = Math.round(
-    panelWidths.dashboard ?? Math.max(340, Math.min(400, window.innerWidth * 0.28)),
-  );
-  const dashboardDrawerWidth = dashboardPanelWidth + 6;
+  const explorerWidth = panelWidths.explorer ?? defaultExplorerWidth();
+  const dashboardWidth = panelWidths.dashboard ?? defaultDashboardWidth();
   useEffect(() => {
     localStorage.setItem(panelWidthKey, JSON.stringify(panelWidths));
   }, [panelWidths]);
@@ -111,8 +114,7 @@ export function usePanelWidths({
   }, []);
   function panelElement(panel: ResizablePanel): HTMLElement | null {
     if (panel === 'projects') return projectsPanelRef.current;
-    if (panel === 'explorer') return explorerPanelRef.current;
-    if (panel === 'dashboard') return document.getElementById('agent-dashboard');
+    if (panel === 'explorer' || panel === 'dashboard') return dockRef.current;
     return workAreaRef.current?.querySelector('.workspace-browser') ?? null;
   }
   // A panel grabbed mid-reveal jumps to its final width first, so resizing
@@ -148,8 +150,6 @@ export function usePanelWidths({
     if (event.button !== 0) return;
     const width = settledPanelWidth(panel);
     if (width === undefined) return;
-    // Grabbing the drawer mid-animation stops that animation, so settle now.
-    if (panel === 'dashboard') onDashboardResizeStart();
     panelDragRef.current = {
       panel,
       pointerId: event.pointerId,
@@ -168,16 +168,6 @@ export function usePanelWidths({
   // Dragging writes widths straight to the DOM once per frame and commits to
   // state on release, so the app does not re-render on every pointer move.
   function applyPanelWidth(panel: ResizablePanel, width: number) {
-    if (panel === 'dashboard') {
-      const appBody = workspaceRef.current?.closest<HTMLElement>('.app-body');
-      appBody?.style.setProperty('--dashboard-width', `${width}px`);
-      // Keep the drawer's motion value in step with the DOM; otherwise the
-      // animation still holds the old width and snaps back to it on release.
-      dashboardDrawerMotionWidth.jump(width + 6);
-      const drawer = appBody?.querySelector<HTMLElement>('.dashboard-drawer.docked');
-      if (drawer) drawer.style.width = `${width + 6}px`;
-      return;
-    }
     const element = panelElement(panel);
     if (!element) return;
     element.style.width = `${width}px`;
@@ -186,8 +176,8 @@ export function usePanelWidths({
   function movePanelResize(event: React.PointerEvent<HTMLDivElement>) {
     const drag = panelDragRef.current;
     if (!drag || event.pointerId !== drag.pointerId) return;
-    // The dashboard, browser and explorer sit on the right, so dragging left widens them.
-    const direction = drag.panel === 'dashboard' || drag.panel === 'browser' || drag.panel === 'explorer' ? -1 : 1;
+    // The dock and browser sit on the right, so dragging left widens them.
+    const direction = drag.panel === 'projects' ? 1 : -1;
     const raw = drag.startWidth + (event.clientX - drag.startX) * direction;
     drag.width = Math.round(Math.max(drag.minWidth, Math.min(drag.maxWidth, raw)));
     if (drag.frame) return;
@@ -215,7 +205,7 @@ export function usePanelWidths({
     if (width === undefined) return;
     event.preventDefault();
     const maxWidth = panelMaxWidth(panel, width);
-    const direction = panel === 'dashboard' || panel === 'browser' || panel === 'explorer' ? -1 : 1;
+    const direction = panel === 'projects' ? 1 : -1;
     const step = event.shiftKey ? 48 : 16;
     const next =
       event.key === 'Home'
@@ -230,9 +220,9 @@ export function usePanelWidths({
       panel === 'projects'
         ? window.innerWidth <= 760 ? 170 : window.innerWidth <= 1100 ? 214 : 244
         : panel === 'explorer'
-          ? window.innerWidth <= 760 ? 180 : window.innerWidth <= 1100 ? 220 : 248
+          ? explorerWidth
           : panel === 'dashboard'
-            ? Math.max(340, Math.min(400, window.innerWidth * 0.28))
+            ? dashboardWidth
             : browserPanelWidth;
     return (
       <div
@@ -259,7 +249,8 @@ export function usePanelWidths({
   }
   return {
     panelWidths,
-    dashboardDrawerWidth,
+    explorerWidth,
+    dashboardWidth,
     browserContainerWidth,
     browserPanelWidth,
     browserPanelMinWidth,

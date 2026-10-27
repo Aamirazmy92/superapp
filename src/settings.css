@@ -588,3 +588,11 @@
   :root .preferences .preferences-title { font-size: 20px; margin-bottom: 10px; }
   .preferences-nav-break { display: none; }
 }
+/* While searching, a section with nothing that matches disappears with its heading. */
+.preferences-content[data-searching] section:not(:has(.preferences-row, .preferences-theme-setting, .preferences-command, .preferences-copy)) {
+  display: none;
+}
+.preferences-search-empty {
+  color: #9b9fa6;
+  margin-top: 8px;
+}

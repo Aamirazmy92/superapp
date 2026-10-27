@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Bell,
   Zap,
+  Download,
 } from './icons';
 import {
   defaults,
@@ -26,13 +27,15 @@ import {
   type Preferences,
 } from './preferences';
 import { themes, type ThemeName } from './themes';
+import { matchesSearch } from './settingsSearch';
 import { version } from '../package.json';
 import './settings.css';
 import { motion, useIsPresent } from 'motion/react';
 import { Backdrop, MotionDialog } from './motion';
 import { Switch } from './Switch';
 import ChatSelect from './ChatSelect';
-import type { PluginContributions, UpdateState } from './types';
+import type { PluginContributions } from './types';
+import { checkedAgo, updateSummary, useUpdateState } from './Updates';
 
 export type SettingsCommand = {
   label: string;
@@ -51,36 +54,30 @@ const sections = [
   { id: 'plugins', label: 'Plugins', icon: Zap },
   { id: 'commands', label: 'Commands', icon: Command },
   { id: 'shortcuts', label: 'Keyboard shortcuts', icon: Keyboard },
+  { id: 'updates', label: 'Updates', icon: Download },
   { id: 'about', label: 'About & data', icon: Info },
 ] as const;
+/** What each section is also called, so its settings turn up under those names. */
+const sectionWords: Record<string, string> = Object.fromEntries(
+  [
+    ['appearance', 'theme colors look display'],
+    ['general', 'startup'],
+    ['editor', 'code text'],
+    ['terminal', 'shell console command line'],
+    ['chat', 'agent ai assistant'],
+    ['notifications', 'alerts'],
+    ['plugins', 'extensions'],
+    ['commands', 'palette'],
+    ['shortcuts', 'keyboard hotkeys keybindings keys'],
+    ['updates', 'upgrade new version release download install restart check'],
+    ['about', 'version data privacy storage'],
+  ].map(([id, extra]) => [id, `${sections.find((item) => item.id === id)?.label ?? ''} ${extra}`]),
+);
 type Choice<T> = readonly [value: T, label: string];
 type SwitchKey = { [K in keyof Preferences]: Preferences[K] extends boolean ? K : never }[keyof Preferences];
 const numbers = (list: number[], suffix: string): Choice<number>[] =>
   list.map((n) => [n, n.toLocaleString() + suffix]);
 const fonts: Choice<string>[] = fontFamilies.map((name) => [name, name]);
-
-function useUpdateState() {
-  const [update, setUpdate] = useState<UpdateState | null>(null);
-  useEffect(() => {
-    const api = window.workspace;
-    if (!api) return;
-    void api.updateState().then(setUpdate, () => {});
-    return api.onUpdateState(setUpdate);
-  }, []);
-  return update;
-}
-
-function updateSummary(u: UpdateState) {
-  if (!u.supported) return 'Updates are available in the installed app.';
-  switch (u.status) {
-    case 'checking': return 'Checking for updates…';
-    case 'downloading': return `Downloading ${u.latest ?? 'update'}… ${u.percent ?? 0}%`;
-    case 'ready': return `Veyo ${u.latest} is ready to install.`;
-    case 'current': return 'You are on the latest version.';
-    case 'error': return `Could not check for updates: ${u.error ?? 'unknown error'}`;
-    default: return 'Veyo checks for updates automatically.';
-  }
-}
 
 export default function Settings({
   value,
@@ -89,6 +86,7 @@ export default function Settings({
   onClose,
   commands = [],
   onOpenPlugins,
+  onInstallUpdate,
   pluginThemes = [],
   shells = [],
 }: {
@@ -99,6 +97,8 @@ export default function Settings({
   onClose(): void;
   commands?: SettingsCommand[];
   onOpenPlugins?(): void;
+  /** Saves open work and restarts into a downloaded update. */
+  onInstallUpdate?(): void;
   /** Themes from enabled plugins. */
   pluginThemes?: PluginContributions['themes'];
 }) {
@@ -107,10 +107,20 @@ export default function Settings({
   const [query, setQuery] = useState('');
   const [reset, setReset] = useState(false);
   const content = useRef<HTMLElement>(null);
+  const [noResults, setNoResults] = useState(false);
   // Each category opens at its top, not at the previous one's scroll position.
   useLayoutEffect(() => {
     if (content.current) content.current.scrollTop = 0;
   }, [section]);
+  // Nothing on screen for the query: say so rather than showing an empty page.
+  useLayoutEffect(() => {
+    setNoResults(
+      !!query.trim() &&
+        !content.current?.querySelector(
+          'section .preferences-row, section .preferences-theme-setting, section .preferences-command, section .preferences-copy',
+        ),
+    );
+  }, [query, update]);
   const host = useRef<HTMLDivElement>(null);
   const previous = useRef<HTMLElement | null>(null);
   const present = useIsPresent();
@@ -131,13 +141,25 @@ export default function Settings({
     setReset(false);
     onChange({ ...value, [key]: next });
   };
-  const matches = (text: string) =>
-    !query.trim() || text.toLowerCase().includes(query.trim().toLowerCase());
-  const show = (id: string) => query.trim() || section === id;
+  // The section being rendered. show() is called at the top of each section, before its rows,
+  // so a search for "terminal" also finds every setting in the Terminal section.
+  let scope = '';
+  // Section names only count once three letters are typed, so one letter does not pull in a whole section.
+  const matches = (text: string, keywords = '') =>
+    matchesSearch(query, text, keywords, query.trim().length >= 3 ? scope : '');
+  const show = (id: string) => {
+    scope = sectionWords[id] ?? '';
+    return query.trim() || section === id;
+  };
   // A control given as a function is a dropdown: it is named by the row title, and the row is a
   // plain div so clicking the text does not reach into the control.
-  const row = (title: string, description: string, control: ReactNode | ((title: string) => ReactNode)) => {
-    if (!matches(title + ' ' + description)) return false;
+  const row = (
+    title: string,
+    description: string,
+    control: ReactNode | ((title: string) => ReactNode),
+    keywords = '',
+  ) => {
+    if (!matches(title + ' ' + description, keywords)) return false;
     const text = (
       <span>
         <strong>{title}</strong>
@@ -256,6 +278,7 @@ export default function Settings({
           <main
             ref={content}
             className="preferences-content"
+            data-searching={query.trim() ? '' : undefined}
             tabIndex={0}
             aria-label="Settings content"
           >
@@ -271,22 +294,28 @@ export default function Settings({
                     'Font size',
                     'Text size in the editor and diff view.',
                     choose('fontSize', numbers(fontSizes, ' px')),
+                    'text zoom bigger smaller typography',
                   )}
                   {row(
                     'Font family',
                     'Monospace font for the editor. Fonts that are not installed fall back to Cascadia Code.',
                     choose('fontFamily', fonts),
+                    'typeface monospace code',
                   )}
-                  {row('Word wrap', 'Wrap long lines to fit the editor width.', toggle('wordWrap'))}
+                  {row('Word wrap', 'Wrap long lines to fit the editor width.', toggle('wordWrap'),
+                    'wrap lines overflow horizontal scroll',
+                  )}
                   {row(
                     'Tab size',
                     'Number of spaces displayed for a tab.',
                     choose('tabSize', numbers([2, 4, 8], ' spaces')),
+                    'indent indentation spaces tabs',
                   )}
                   {row(
                     'Minimap',
                     'Show an overview of your code beside the editor.',
                     toggle('minimap'),
+                    'overview outline scrollbar',
                   )}
                 </div>
                 {!query && (
@@ -326,11 +355,13 @@ export default function Settings({
                     'Terminal font size',
                     'Adjust the size of shell and coding agent output.',
                     choose('terminalFontSize', numbers(fontSizes, ' px')),
+                    'text zoom console shell bigger smaller',
                   )}
                   {row(
                     'Terminal font',
                     'Font for shell and coding agent output.',
                     choose('terminalFontFamily', [['editor', 'Same as editor'], ...fonts]),
+                    'typeface console shell family',
                   )}
                   {shells.length > 1 &&
                     row(
@@ -349,16 +380,19 @@ export default function Settings({
                           onChange={(next) => change('defaultShell', next)}
                         />
                       ),
-                    )}
+                    'powershell cmd bash zsh command prompt',
+                  )}
                   {row(
                     'Blinking cursor',
                     'Make the terminal cursor blink while active.',
                     toggle('cursorBlink'),
+                    'caret blink',
                   )}
                   {row(
                     'Scrollback',
                     'Maximum lines kept in each terminal. Lowering this discards older output.',
                     choose('scrollback', numbers([1000, 5000, 10000, 20000], ' lines')),
+                    'history buffer lines output',
                   )}
                 </div>
                 {!query && (
@@ -379,7 +413,7 @@ export default function Settings({
               <section>
                 <h3>Appearance</h3>
                 <p className="preferences-description">How the workspace looks and moves.</p>
-                {matches('color theme graphite light appearance') && (
+                {matches('Color theme Applies to the workspace, editor, and terminal.', ['dark light color colour', ...Object.values(themes).map((t) => `${t.label} ${t.description}`), ...pluginThemes.map((t) => `${t.label} ${t.plugin}`)].join(' ')) && (
                   <div className="preferences-theme-setting">
                     <strong>Color theme</strong>
                     <small>Applies to the workspace, editor, and terminal.</small>
@@ -437,6 +471,7 @@ export default function Settings({
                     'Reduce motion',
                     'Open and close panels, menus and dialogs instantly instead of animating them.',
                     toggle('reduceMotion'),
+                    'animation animations transitions accessibility',
                   )}
                 </div>
               </section>
@@ -454,6 +489,7 @@ export default function Settings({
                     <button type="button" className="secondary-button" onClick={onOpenPlugins}>
                       Open Plugins
                     </button>,
+                    'extensions marketplace install mcp',
                   )}
                 </div>
               </section>
@@ -470,6 +506,7 @@ export default function Settings({
                       ['last', 'Reopen last project'],
                       ['none', 'Start with no project open'],
                     ]),
+                    'launch open restore reopen project last',
                   )}
                 </div>
               </section>
@@ -490,6 +527,7 @@ export default function Settings({
                       ['claude', 'Claude Code'],
                       ['ollama', 'Ollama'],
                     ]),
+                    'model codex claude ollama ai agent',
                   )}
                   {row(
                     'Default permissions',
@@ -499,6 +537,7 @@ export default function Settings({
                       ['ask', 'Ask for approval'],
                       ['auto', 'Approve safe actions'],
                     ]),
+                    'approval approve ask access safe',
                   )}
                 </div>
               </section>
@@ -510,26 +549,31 @@ export default function Settings({
                   Plan usage alerts for Claude Code and Codex.
                 </p>
                 <div className="preferences-group">
-                  {row('Agent done sound', 'Play a chime when an agent finishes working.', toggle('doneSound'))}
+                  {row('Agent done sound', 'Play a chime when an agent finishes working.', toggle('doneSound'),
+                    'chime audio beep finished complete',
+                  )}
                   {row(
                     'Usage alerts',
                     'Notify when plan usage passes a threshold, reaches its limit, or resets.',
                     toggle('usageAlerts'),
+                    'limit quota plan rate',
                   )}
                   {row(
                     'Warning threshold',
                     'First alert for each usage window.',
                     choose('usageWarningAt', numbers(usageWarningLevels, '%'), !value.usageAlerts),
+                    'percent alert limit quota',
                   )}
                   {row(
                     'Critical threshold',
                     'Second alert, before the limit is reached.',
                     choose('usageCriticalAt', numbers(usageCriticalLevels, '%'), !value.usageAlerts),
+                    'percent alert limit quota',
                   )}
                 </div>
               </section>
             )}
-            {show('commands') && commands.some((c) => matches(c.label + ' command')) && (
+            {show('commands') && commands.some((c) => matches(c.label + ' command', c.hint)) && (
               <section>
                 <h3>Commands</h3>
                 <p className="preferences-description">
@@ -537,7 +581,7 @@ export default function Settings({
                 </p>
                 <div className="preferences-commands">
                   {commands
-                    .filter((command) => matches(command.label + ' command'))
+                    .filter((command) => matches(command.label + ' command', command.hint))
                     .map(({ label, hint, action, icon: Icon }) => (
                       <button
                         type="button"
@@ -582,7 +626,7 @@ export default function Settings({
                   ['Paste into terminal', 'Ctrl + V / Ctrl + Shift + V'],
                   ['Close dialog', 'Esc'],
                 ]
-                  .filter(([label]) => matches(label))
+                  .filter(([label, keys]) => matches(label, keys))
                   .map(([label, keys]) => (
                     <div className="preferences-row" key={label}>
                       <strong>{label}</strong>
@@ -592,37 +636,51 @@ export default function Settings({
                 </div>
               </section>
             )}
+            {show('updates') && (
+              <section>
+                <h3>Updates</h3>
+                <p className="preferences-description">
+                  Veyo looks for new releases in the background and downloads them for you.
+                </p>
+                <div className="preferences-group">
+                  {row('Current version', 'The version installed on this device.', <span>{version}</span>)}
+                  {update &&
+                    row(
+                      update.status === 'ready' ? `Veyo ${update.latest} is ready` : 'Check for updates',
+                      `${updateSummary(update)}${update.supported && update.status !== 'checking' && update.status !== 'downloading' ? ` ${checkedAgo(update.checkedAt)}.` : ''}`,
+                      update.status === 'ready' ? (
+                        <button type="button" className="primary-button" aria-label="Restart to update" onClick={() => onInstallUpdate?.()}>
+                          Restart to update
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          aria-label="Check for updates"
+                          disabled={!update.supported || update.status === 'checking' || update.status === 'downloading'}
+                          onClick={() => void window.workspace?.updateCheck()}
+                        >
+                          {update.status === 'checking' ? 'Checking…' : 'Check for updates'}
+                        </button>
+                      ),
+                      'upgrade new release download install restart latest',
+                    )}
+                </div>
+              </section>
+            )}
             {show('about') && (
               <section>
                 <h3>About & data</h3>
                 <p className="preferences-description">Veyo · Local desktop coding workspace</p>
                 <div className="preferences-group">
-                  {matches('version Veyo') && (
+                  {matches('Version Veyo', 'build release number') && (
                     <div className="preferences-row">
                       <strong>Version</strong>
                       <span>{version}</span>
                     </div>
                   )}
-                  {update && row(
-                    'Updates',
-                    updateSummary(update),
-                    update.status === 'ready' ? (
-                      <button type="button" className="secondary-button" onClick={() => void window.workspace?.updateInstall()}>
-                        Restart to update
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        disabled={!update.supported || update.status === 'checking' || update.status === 'downloading'}
-                        onClick={() => void window.workspace?.updateCheck()}
-                      >
-                        Check for updates
-                      </button>
-                    ),
-                  )}
                 </div>
-                {matches('local data storage privacy projects drafts') && (
+                {matches('Stored on your device Connected tools Returning to work', 'local data storage privacy projects drafts terminals presets') && (
                   <div className="preferences-copy">
                     <h4>Stored on your device</h4>
                     <p>
@@ -644,10 +702,15 @@ export default function Settings({
                 )}
               </section>
             )}
+            {noResults && (
+              <p className="preferences-search-empty" role="status">
+                No settings match “{query.trim()}”.
+              </p>
+            )}
             {query && (
               <p className="preferences-search-help">
-                Search matches setting names and descriptions. Clear the search to browse all
-                settings.
+                Search matches setting names, descriptions and related words, in any order. Clear
+                the search to browse all settings.
               </p>
             )}
           </main>

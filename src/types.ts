@@ -537,6 +537,8 @@ export type UpdateState = {
   /** Newer version found, when there is one. */
   latest?: string;
   percent?: number;
+  /** When the last check finished (ms since epoch). */
+  checkedAt?: number;
   error?: string;
   /** False in development and unpacked builds, which cannot update themselves. */
   supported: boolean;

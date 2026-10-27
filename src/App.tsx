@@ -65,6 +65,7 @@ import { editorPath } from './editorModel';
 import TerminalPane from './TerminalPane';
 import { useTerminalReorder } from './useTerminalReorder';
 import Settings from './Settings';
+import { UpdateButton, useUpdateState } from './Updates';
 import { usePreferences } from './preferences';
 import { playDoneSound } from './doneSound';
 import AgentLauncher from './AgentLauncher';
@@ -161,6 +162,7 @@ export default function App() {
     browserContainerWidth,
     browserPanelWidth,
     browserPanelMinWidth,
+    browserPanelSize,
     panelSeparator,
   } = usePanelWidths({
     projectsPanelRef,
@@ -342,6 +344,44 @@ export default function App() {
   } | null>(null);
   const { items: notifications, setItems: setNotifications, push: pushNotification } =
     useNotifications();
+  const updateState = useUpdateState();
+  // Saves open work, then restarts into the downloaded update. Unsaved files stop it: a restart
+  // would otherwise ask about them in the middle of closing.
+  async function installUpdate() {
+    if (!api) return;
+    const dirty = Object.values(stateRef.current.workspaces).some((w) =>
+      w.files.some((f) => f.content !== f.saved),
+    );
+    if (dirty) {
+      setToastAction(null);
+      setToast('Save your open files, then restart to update.');
+      return;
+    }
+    try {
+      for (const [id, current] of Object.entries(stateRef.current.workspaces))
+        await api.saveSession(id, sessionFor(current));
+      await api.updateInstall();
+    } catch (value) {
+      setToast(`Could not install the update: ${String(value)}`);
+    }
+  }
+  const announcedUpdate = useRef('');
+  // Tell the user once per version when an update is ready to install.
+  useEffect(() => {
+    if (updateState?.status !== 'ready' || !updateState.latest) return;
+    if (announcedUpdate.current === updateState.latest) return;
+    announcedUpdate.current = updateState.latest;
+    const text = `Veyo ${updateState.latest} is ready to install.`;
+    pushNotification({
+      id: `update-${updateState.latest}`,
+      title: 'Update ready',
+      detail: `${text} Use Update in the title bar to restart.`,
+      timestamp: Date.now(),
+      success: true,
+    });
+    setToastAction({ text, label: 'Restart to update', run: () => void installUpdate() });
+    setToast(text);
+  }, [updateState?.status, updateState?.latest]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [closingFile, setClosingFile] = useState<{ projectId: string; path: string } | null>(null);
@@ -382,6 +422,20 @@ export default function App() {
   );
   const explorerHidden = useCollapse(() => explorerPanelRef.current, explorer);
   const projectsHidden = useCollapse(() => projectsPanelRef.current, projectsPanel);
+  // With the explorer open the dashboard stacks under it. While it leaves it stays in that
+  // stack, so the explorer can grow into the space as the dashboard shrinks, rather than
+  // both jumping to their lone layouts at once.
+  const [dashboardLeaving, setDashboardLeaving] = useState(false);
+  useLayoutEffect(() => {
+    if (dashboardOpen) setDashboardLeaving(false);
+    else if (explorer && dashboardDocked && !motionReduced()) setDashboardLeaving(true);
+  }, [dashboardOpen]);
+  const stackDock = explorer && !explorerHidden && dashboardOpen && dashboardDocked;
+  const stackLeaving = explorer && !explorerHidden && !dashboardOpen && dashboardLeaving && dashboardDocked;
+  // While the explorer slides away the dashboard stays in the stack but grows to the size of
+  // the column it is about to take, with that room reserved as it grows (see .stack-expanding).
+  // When the slide ends the layout swaps to the real column, which is then identical.
+  const stackExpanding = !explorer && !explorerHidden && dashboardOpen && dashboardDocked && !motionReduced();
   // The title bar's leading cluster spans the code sidebar, so the title lines up with the content.
   useEffect(() => {
     const panel = projectsPanelRef.current;
@@ -502,8 +556,14 @@ export default function App() {
     browserOpen,
     { anchor: 'end', instant: browserFullscreen },
   );
-  const maxTerminalColumns =
-    terminalAreaWidth >= 960 ? 3 : terminalAreaWidth >= 620 ? 2 : 1;
+  // Columns follow the window, not the room left beside the side panels: opening or closing the
+  // explorer, browser, dashboard or projects list only narrows or widens the panes, it never
+  // rearranges them. (The window width stands in for the work area with every panel closed.)
+  // Only panes squeezed below 120px, too narrow to read, give up a column.
+  const windowWidth = window.innerWidth;
+  let maxTerminalColumns = windowWidth >= 1200 ? 3 : windowWidth >= 860 ? 2 : 1;
+  while (maxTerminalColumns > 1 && terminalAreaWidth / Math.min(maxTerminalColumns, terminalViews.length) < 120)
+    maxTerminalColumns--;
   const terminalColumnCount = Math.min(terminalViews.length, maxTerminalColumns);
   const terminalGridRemainder = terminalColumnCount
     ? terminalViews.length % terminalColumnCount
@@ -2230,6 +2290,7 @@ export default function App() {
               </button>
             </div>
           )}
+          <UpdateButton update={updateState} onInstall={installUpdate} />
           <div className="window-controls">
             <button aria-label="Minimize" onClick={() => api.windowAction('minimize')}>
               <Minus size={14} />
@@ -2298,7 +2359,7 @@ export default function App() {
       <div
         // With the explorer open, a docked dashboard stacks under it in the same column (as
         // Claude stacks its side panes) instead of taking a fourth column of its own.
-        className={`app-body ${!explorerHidden && dashboardOpen && dashboardDocked ? 'stack-dock' : ''}`}
+        className={`app-body ${stackDock || stackLeaving || stackExpanding ? 'stack-dock' : ''} ${stackLeaving ? 'stack-leaving' : ''} ${stackExpanding ? 'stack-expanding' : ''}`}
         ref={appBodyRef}
         style={{
           display: shownMode === 'code' ? undefined : 'none',
@@ -2852,9 +2913,9 @@ export default function App() {
                     : browserFullscreen
                       ? undefined
                       : {
-                          width: browserPanelWidth,
-                          flexBasis: browserPanelWidth,
-                          minWidth: browserPanelMinWidth,
+                          width: browserPanelSize.width,
+                          flexBasis: browserPanelSize.width,
+                          minWidth: browserPanelSize.minWidth,
                         }
                 }
                 onClose={closeBrowser}
@@ -2864,7 +2925,12 @@ export default function App() {
             )}
           </div>
         </main>
-        <AnimatePresence onExitComplete={settleDashboardLayout}>
+        <AnimatePresence
+          onExitComplete={() => {
+            setDashboardLeaving(false);
+            settleDashboardLayout();
+          }}
+        >
           {dashboardOpen && (
             <motion.div
               key="agent-dashboard-drawer"
@@ -2884,7 +2950,9 @@ export default function App() {
               style={dashboardDocked ? { width: dashboardDrawerMotionWidth } : undefined}
               exit={
                 dashboardDocked
-                  ? { width: 0, opacity: 0, pointerEvents: 'none' }
+                  ? stackDock
+                    ? { height: 0, opacity: 0, pointerEvents: 'none' }
+                    : { width: 0, opacity: 0, pointerEvents: 'none' }
                   : motionReduced()
                     ? { opacity: 0, x: 0, pointerEvents: 'none' }
                     : { opacity: 0, x: 20, pointerEvents: 'none' }
@@ -3108,6 +3176,10 @@ export default function App() {
             onClose={() => setSettings(false)}
             commands={allCommands.filter((c) => c.label !== 'Workspace settings')}
             pluginThemes={pluginContributions.themes}
+            onInstallUpdate={() => {
+              setSettings(false);
+              void installUpdate();
+            }}
             onOpenPlugins={() => {
               setSettings(false);
               setPluginsOpen(true);

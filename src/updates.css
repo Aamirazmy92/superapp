@@ -1,0 +1,78 @@
+/* Title bar update button and its confirmation popover. */
+.update-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+.update-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  cursor: pointer;
+}
+.update-button:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.update-button.downloading {
+  color: var(--muted);
+  background: var(--hover);
+  cursor: default;
+}
+.update-button.ready::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: update-pulse 2s ease-in-out infinite;
+}
+.update-spin {
+  animation: update-rotate 1.2s linear infinite;
+}
+@keyframes update-rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes update-pulse {
+  50% { opacity: 0.35; }
+}
+.update-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  padding: 14px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.update-popover strong {
+  display: block;
+  font-size: 13px;
+}
+.update-popover p {
+  margin: 6px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.update-popover > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-spin, .update-button.ready::after { animation: none; }
+}

@@ -20,6 +20,56 @@ const terminalFont = (preferences: Preferences) =>
       : preferences.terminalFontFamily,
   );
 
+// Refits after a panel opens or closes run one terminal per frame. Each one resizes a WebGL
+// canvas, which takes tens of milliseconds; doing every terminal in the same frame stalled the
+// page for a few hundred.
+const fitQueue: (() => void)[] = [];
+let fitQueueFrame: number | null = null;
+function queueFit(fit: () => void) {
+  if (!fitQueue.includes(fit)) fitQueue.push(fit);
+  if (fitQueueFrame === null) fitQueueFrame = requestAnimationFrame(drainFitQueue);
+}
+function drainFitQueue() {
+  fitQueueFrame = null;
+  fitQueue.shift()?.();
+  if (fitQueue.length) fitQueueFrame = requestAnimationFrame(drainFitQueue);
+}
+function unqueueFit(fit: () => void) {
+  const index = fitQueue.indexOf(fit);
+  if (index >= 0) fitQueue.splice(index, 1);
+}
+
+/*
+ * The WebGL renderer watches its canvas's device-pixel size and reallocates the canvas whenever
+ * it changes. At fractional display scaling (125%, 150%) a pane sliding through fractional
+ * positions changes that size by a pixel on most frames, so every terminal reallocated its
+ * canvas (20-40ms each) on every frame of a panel animation, which is what made the terminals
+ * stutter. Those one-pixel changes are held while a panel slides and the last one is applied
+ * once it settles. This reaches into the addon's renderer, so it does nothing if that changes.
+ */
+function holdCanvasResizesDuringSlides(webgl: WebglAddon) {
+  const renderer = (webgl as unknown as { _renderer?: Record<string, unknown> })._renderer;
+  const original = renderer?._setCanvasDevicePixelDimensions;
+  if (!renderer || typeof original !== 'function') return () => {};
+  let held: [number, number] | null = null;
+  renderer._setCanvasDevicePixelDimensions = (width: number, height: number) => {
+    if (document.body.classList.contains('dashboard-layout-transitioning')) {
+      held = [width, height];
+      return;
+    }
+    held = null;
+    original.call(renderer, width, height);
+  };
+  const release = () => {
+    if (!held) return;
+    const [width, height] = held;
+    held = null;
+    original.call(renderer, width, height);
+  };
+  window.addEventListener('dashboard-layout-settled', release);
+  return () => window.removeEventListener('dashboard-layout-settled', release);
+}
+
 export default function TerminalPane({
   info,
   preferences,
@@ -117,10 +167,12 @@ export default function TerminalPane({
     term.open(host.current!);
     // The WebGL renderer draws block/box characters as full-cell shapes, so art like the
     // Claude logo stays solid despite lineHeight; the DOM renderer leaves gaps between rows.
+    let releaseCanvasHold = () => {};
     try {
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => webgl.dispose());
       term.loadAddon(webgl);
+      releaseCanvasHold = holdCanvasResizesDuringSlides(webgl);
     } catch {
       // WebGL unavailable: keep the default DOM renderer.
     }
@@ -228,8 +280,8 @@ export default function TerminalPane({
     };
     const resize = () => {
       if (disposed) return;
-      // Output was already fitted to the final size when the dashboard started
-      // moving; refitting every frame would reflow it mid-animation.
+      // While a side panel slides, the terminal keeps its size (the pane clips or pads it) and
+      // refits once the slide has settled; refitting every frame would reflow it mid-animation.
       if (document.body.classList.contains('dashboard-layout-transitioning')) {
         dashboardResizePending = true;
         return;
@@ -244,17 +296,21 @@ export default function TerminalPane({
         fitNow();
       });
     };
-    // Dispatched while the page is momentarily laid out at the dashboard's
-    // final width, so this fit matches where the pane is about to glide to.
+    // Dispatched while the page is momentarily laid out at its final size, as a panel starts to
+    // slide. Fitting here made every terminal resize its canvas at once, right as the motion
+    // began, which dropped its first frames; the fit now waits until the slide settles.
     const fitToDashboardLayout = () => {
       if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
       resizeFrame = null;
-      fitNow();
+      dashboardResizePending = true;
+    };
+    const fitQueued = () => {
+      if (!disposed) fitNow();
     };
     const resizeAfterDashboardLayout = () => {
       if (!dashboardResizePending) return;
       dashboardResizePending = false;
-      resize();
+      queueFit(fitQueued);
     };
     resizeRef.current = resize;
     api
@@ -290,6 +346,8 @@ export default function TerminalPane({
       observer.disconnect();
       window.removeEventListener('dashboard-layout-preview', fitToDashboardLayout);
       window.removeEventListener('dashboard-layout-settled', resizeAfterDashboardLayout);
+      unqueueFit(fitQueued);
+      releaseCanvasHold();
       if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
       clearTimeout(ptyResizeTimer);
       term.dispose();

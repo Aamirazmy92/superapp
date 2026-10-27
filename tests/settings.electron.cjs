@@ -96,6 +96,27 @@ const { _electron } = require('playwright');
     }
     await page.getByLabel('Search settings').fill('scrollback');
     assert.equal(await page.getByLabel('Scrollback').count(), 1);
+    const search = page.getByLabel('Search settings');
+    const visibleRows = () => dialog.locator('main section .preferences-row, main section .preferences-theme-setting').count();
+    // Words in any order, a typo, and a related word all find the setting.
+    await search.fill('wrap word');
+    assert.equal(await dialog.getByRole('switch', { name: 'Word wrap' }).count(), 1);
+    await search.fill('scrolback');
+    assert.equal(await dialog.getByLabel('Scrollback').count(), 1);
+    await search.fill('dark');
+    assert.equal(await dialog.getByRole('button', { name: /Ember/ }).count(), 1);
+    // A section name finds everything in that section, and sections with no match disappear.
+    await search.fill('terminal');
+    assert.ok((await visibleRows()) >= 4);
+    assert.equal(await dialog.locator('main section:visible h3').filter({ hasText: 'Editor' }).count(), 0);
+    // A partial word finds only words that start with it, not look-alikes.
+    await search.fill('redu');
+    assert.equal(await dialog.getByRole('switch', { name: 'Reduce motion' }).count(), 1);
+    assert.equal(await visibleRows(), 1);
+    assert.equal(await dialog.getByText('Returning to work').count(), 0);
+    await search.fill('zzzzqq');
+    assert.equal(await visibleRows(), 0);
+    assert.match(await dialog.getByRole('status').filter({ hasText: 'No settings match' }).innerText(), /zzzzqq/);
     await page.getByLabel('Search settings').fill('');
     await page.getByRole('button', { name: 'Restore defaults' }).click();
     await page.getByRole('button', { name: 'Confirm reset' }).click();

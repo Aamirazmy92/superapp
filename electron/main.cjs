@@ -1398,7 +1398,17 @@ app
     registerIPC();
     handle('update:state', () => appUpdater.state());
     handle('update:check', () => appUpdater.check());
-    handle('update:install', () => appUpdater.install());
+    handle('update:install', async () => {
+      // Same hand-off as closing the window: saved state is on disk before the app exits.
+      await Promise.all([saveQueue, chatSaveQueue, browserHistoryService?.flush().catch(() => {})]);
+      closeApproved = true;
+      try {
+        appUpdater.install();
+      } catch (error) {
+        closeApproved = false;
+        throw error;
+      }
+    });
     // `scripts/dev.mjs` may bind Vite to any available localhost port. Use
     // the URL it passed through instead of assuming the old default port;
     // otherwise `npm run dev` silently opens the stale production bundle.
@@ -1409,9 +1419,10 @@ app
     else await win.loadFile(path.join(__dirname, '../dist/index.html'));
     win.show();
     setTimeout(probeDetach, 300);
-    // Quiet check shortly after launch, then every few hours while the app stays open.
-    setTimeout(() => void appUpdater.check(), 15000);
-    setInterval(() => void appUpdater.check(), 4 * 60 * 60 * 1000).unref();
+    // Quiet check just after launch, then every few minutes while the app stays open, so a
+    // new release shows up in the title bar soon after it is published.
+    setTimeout(() => void appUpdater.check(), 5000);
+    setInterval(() => void appUpdater.check(), 10 * 60 * 1000).unref();
   })
   .catch((error) => {
     dialog.showErrorBox('Veyo could not start', error.message);

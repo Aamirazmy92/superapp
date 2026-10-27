@@ -229,6 +229,13 @@
   color: var(--pane-accent);
   background: var(--pane-accent-bg);
 }
+/* An open pane keeps its blue on hover (the plain hover rule above is more specific). */
+:root:root:root:root .titlebar .titlebar-workspace-action.active:hover:not(:disabled),
+:root:root:root:root .titlebar .titlebar-workspace-action.chat-pane-toggle.active:hover:not(:disabled) {
+  color: var(--pane-accent);
+  background: var(--pane-accent-bg);
+  filter: brightness(1.2);
+}
 :root:root:root:root .titlebar .window-controls { display: flex; height: 100%; }
 :root:root:root:root .titlebar .window-controls button {
   display: grid;
@@ -749,11 +756,50 @@
 }
 :root:root:root:root :is(.panel-separator-browser, .panel-separator-explorer, .panel-separator-dashboard)::after { display: none; }
 :root:root:root:root .dashboard-drawer.docked > .panel-separator-dashboard { width: 0; }
+/* The card sits 14px inside the drawer (6px of drawer gap plus the 8px the card is narrowed
+   by), so centre the grab zone on the card's left border rather than the drawer's edge. */
+:root:root:root:root .dashboard-drawer.docked > .panel-separator-dashboard::before { inset: 0 -19px 0 9px; }
+
+/* The explorer's height is stated, not stretched, so it can animate when the dashboard under it
+   comes or goes. */
+@media (min-width: 1081px) {
+  :root:root:root:root .app-body > .workspace-sidebar {
+    align-self: flex-start;
+    height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
+    transition: height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
 
 /* Explorer and dashboard together: one column, explorer above, dashboard below. */
 :root:root:root:root .app-body.stack-dock > .workspace-sidebar {
   align-self: flex-start;
   height: calc((100% - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
+}
+/* While the dashboard leaves, the explorer grows back to full height over it. The dashboard keeps
+   its card at the stacked height and is revealed from the bottom as the drawer shrinks. */
+:root:root:root:root .app-body.stack-dock.stack-leaving > .workspace-sidebar {
+  height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
+}
+/* The explorer is closing: the dashboard grows from the stack into the column it will occupy, and
+   the room for that column is reserved over the same time. When the slide ends these rules drop
+   away and the real column takes over at the same size. (The transitions live here, so they run
+   on the way in but not on the swap.) */
+:root:root:root:root .app-body.stack-expanding {
+  padding-right: calc(8px + var(--dashboard-width, clamp(340px, 28vw, 400px)) + 6px);
+  transition: padding-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:root:root:root:root .app-body.stack-dock.stack-expanding > .dashboard-drawer.docked {
+  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) + 6px) !important;
+  height: calc(100% - var(--shell-titlebar-h) - 4px - 8px);
+  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1), height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:root:root:root:root .app-body.stack-dock.stack-expanding > .dashboard-drawer.docked > .agent-dashboard {
+  width: calc(var(--dashboard-width, clamp(340px, 28vw, 400px)) - 8px);
+  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:root:root:root:root .app-body.stack-leaving > .dashboard-drawer.docked > .agent-dashboard {
+  top: auto;
+  height: calc((100vh - var(--shell-titlebar-h) - 4px - 8px - 8px) / 2);
 }
 :root:root:root:root .app-body.stack-dock > .dashboard-drawer.docked {
   position: absolute;
@@ -840,3 +886,50 @@
     margin-left: max(24px, calc((100% - var(--side-room) - var(--chat-column)) / 2));
   }
 }
+
+/* Chat follows code mode ---------------------------------------------------------------
+   Same rows, labels, cards and chips as the code sidebar and home page: plain 26px nav rows,
+   13px muted section labels, borderless raised cards, and filled 28px chips. */
+:root:root:root:root .chat-layout .chat-sidebar-top { gap: 0.5px; }
+/* New chat first, then Search, like New workspace and Find file. */
+:root:root:root:root .chat-layout .chat-new-button { order: 1; color: var(--text-soft); background: transparent; }
+:root:root:root:root .chat-layout .chat-new-button:hover { color: var(--text); background: var(--shell-active); }
+:root:root:root:root .chat-layout .chat-search {
+  order: 2;
+  gap: 9px;
+  margin: 0;
+  padding: 0 10px;
+  border-color: transparent;
+  color: var(--shell-icon);
+  background: transparent;
+}
+:root:root:root:root .chat-layout .chat-search:hover { background: var(--shell-active); }
+:root:root:root:root .chat-layout .chat-search:focus-within {
+  border-color: var(--shell-field-border);
+  background: var(--shell-field);
+}
+:root:root:root:root .chat-layout .chat-search input::placeholder { color: var(--text-soft); }
+:root:root:root:root .chat-layout .chat-group-toggle { font-size: 13px; }
+
+/* Welcome: the same heading tracking and 13px secondary text as the code home page, and
+   starter cards like its home cards (raised, no outline). */
+:root:root:root:root .chat-layout .chat-welcome h1 { letter-spacing: -0.02em; }
+:root:root:root:root .chat-layout .chat-welcome p { font-size: var(--type-small); }
+:root:root:root:root .chat-layout .chat-starter { border-color: transparent; background: var(--raised); }
+:root:root:root:root .chat-layout .chat-starter:hover { background: var(--tile); }
+:root:root:root:root .chat-layout .chat-starter span { color: var(--muted); }
+
+/* Composer chips fill like the code home chips (28px, 8px corners); the model picker on the
+   right stays plain until hovered. */
+:root:root:root:root .chat-layout .chat-compose-toolbar { min-height: 28px; }
+:root:root:root:root .chat-layout .chat-compose-toolbar :is(.chat-select, .chat-context-chip, .chat-attach) {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+:root:root:root:root .chat-layout .chat-compose-tools :is(.chat-select, .chat-context-chip, .chat-attach) {
+  background: var(--tile);
+}
+:root:root:root:root .chat-layout .chat-compose-tools :is(.chat-select, .chat-context-chip, .chat-attach):hover:not(:disabled),
+:root:root:root:root .chat-layout .chat-compose-tools .chat-select.open { background: var(--surface-active); }

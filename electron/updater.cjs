@@ -14,9 +14,9 @@ function createUpdater({ app, send, loadUpdater = () => require('electron-update
     updater.autoInstallOnAppQuit = true;
     updater.on('checking-for-update', () => set({ status: 'checking', error: undefined }));
     updater.on('update-available', (info) => set({ status: 'downloading', latest: info.version, percent: 0 }));
-    updater.on('update-not-available', () => set({ status: 'current', latest: undefined }));
+    updater.on('update-not-available', () => set({ status: 'current', latest: undefined, checkedAt: Date.now() }));
     updater.on('download-progress', (p) => set({ status: 'downloading', percent: Math.round(p.percent) }));
-    updater.on('update-downloaded', (info) => set({ status: 'ready', latest: info.version, percent: 100 }));
+    updater.on('update-downloaded', (info) => set({ status: 'ready', latest: info.version, percent: 100, checkedAt: Date.now() }));
     updater.on('error', (error) => set({ status: 'error', error: String(error?.message || error).split('\n')[0] }));
     return updater;
   }

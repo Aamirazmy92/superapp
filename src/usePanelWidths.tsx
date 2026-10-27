@@ -79,6 +79,16 @@ export function usePanelWidths({
       Math.min(browserPanelMaxWidth, panelWidths.browser ?? browserContainerWidth * 0.48),
     ),
   );
+  // Until the user drags it, the browser takes about half the work area. That is stated in CSS,
+  // against the work area's live width, so it follows a panel sliding in or out frame by frame
+  // instead of snapping once the measured width settles.
+  const browserPanelSize =
+    panelWidths.browser == null
+      ? {
+          width: `max(min(${panelLimits.browser.min}px, 100% - 326px), min(48%, ${panelLimits.browser.max}px, 100% - 326px))`,
+          minWidth: `min(${panelLimits.browser.min}px, 100% - 326px)`,
+        }
+      : { width: browserPanelWidth, minWidth: browserPanelMinWidth };
   useLayoutEffect(() => {
     const workspace = workspaceRef.current;
     if (!workspace) return;
@@ -116,7 +126,12 @@ export function usePanelWidths({
     return panel === 'browser' ? browserPanelMinWidth : panelLimits[panel].min;
   }
   function panelMaxWidth(panel: ResizablePanel, currentWidth: number) {
-    if (panel === 'browser') return browserPanelMaxWidth;
+    // Measured now rather than from the last settled layout, which the browser's own CSS width
+    // no longer waits for.
+    if (panel === 'browser') {
+      const live = workAreaRef.current?.getBoundingClientRect().width;
+      return live ? Math.min(panelLimits.browser.max, Math.max(0, live - 326)) : browserPanelMaxWidth;
+    }
     const mainWidth = workspaceRef.current?.getBoundingClientRect().width || 0;
     return Math.max(
       panelLimits[panel].min,
@@ -248,6 +263,7 @@ export function usePanelWidths({
     browserContainerWidth,
     browserPanelWidth,
     browserPanelMinWidth,
+    browserPanelSize,
     panelSeparator,
   };
 }
